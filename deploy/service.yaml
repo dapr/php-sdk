@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: dev
+  labels:
+    app: dev
+spec:
+  selector:
+    app: dev
+  ports:
+    - protocol: TCP
+      port: 9501
+      targetPort: 80
+  type: LoadBalancer

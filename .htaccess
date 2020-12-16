@@ -1,0 +1,4 @@
+RewriteEngine On
+RewriteRule ^src/lib/.*$ src/index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ src/index.php [QSA,L]

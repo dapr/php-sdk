@@ -1,0 +1,8 @@
+# Don't include these files in the package
+/tests export-ignore
+/src/index.php export-ignore
+/.github export-ignore
+/components export-ignore
+/deploy export-ignore
+/images export-ignore
+.htaccess export-ignore

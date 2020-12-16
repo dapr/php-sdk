@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dev
+  labels:
+    app: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dev
+  template:
+    metadata:
+      labels:
+        app: dev
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "dev"
+        dapr.io/port: "80"
+    spec:
+      containers:
+        - name: dapr-dev
+          image: dapr/php-sdk-dev:latest
+          ports:
+            - containerPort: 80
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /var/www/html
+              name: storage
+      volumes:
+        - name: storage
+          hostPath:
+            path: /run/desktop/mnt/host/wsl/dapr-in-php
+            type: DirectoryOrCreate
