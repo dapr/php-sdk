@@ -146,6 +146,12 @@ class SimpleState extends State
 ActorRuntime::register_actor('SimpleActor', SimpleActor::class);
 Subscribe::to_topic('pubsub', 'test', 'testsub');
 Runtime::register_method('do_tests', 'do_tests');
+Runtime::register_method(
+    'say_something',
+    function ($message) {
+        assert_equals('My Message', $message);
+    }
+);
 $uri         = $_SERVER['REQUEST_URI'];
 $http_method = $_SERVER['REQUEST_METHOD'];
 header('Content-Type: application/json');
@@ -426,28 +432,38 @@ RAW
     unlink('/tmp/sub-received');
 }
 
+function test_invoke_serialization()
+{
+    $result = Runtime::invoke_method('dev', 'say_something', 'My Message');
+    assert_equals(200, $result->code, 'Should receive a 200 response');
+}
+
 
 function do_tests()
 {
     header('Content-Type: text/html; charset=UTF-8');
     $tests = [
-        'state_test'            => [
+        'state_test'             => [
             'description' => 'Test setting and getting state',
         ],
-        'state_concurrency'     => [
+        'state_concurrency'      => [
             'description' => 'Tests concurrency of state changes',
         ],
-        'transaction_test'      => [
+        'transaction_test'       => [
             'description' => 'Test transactional state',
         ],
-        'multiple_transactions' => [
+        'multiple_transactions'  => [
             'description' => 'Test multiple concurrent transactions',
         ],
-        'test_actor'            => [
+        'test_actor'             => [
             'description' => 'Testing some basic actors',
         ],
-        'test_pubsub'           => [
+        'test_pubsub'            => [
             'description' => 'Testing publish/subscribe pattern',
+        ],
+        'test_invoke_serialization' => [
+            'description' =>
+                'See <a href="https://v1-rc2.docs.dapr.io/developing-applications/sdks/serialization/">the docs</a>',
         ],
     ];
 
