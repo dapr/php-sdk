@@ -122,7 +122,7 @@ abstract class DaprClient
      *
      * @return DaprResponse The parsed response.
      */
-    public static function post(string $url, array $data): DaprResponse
+    public static function post(string $url, mixed $data): DaprResponse
     {
         $curl = curl_init($url);
         curl_setopt_array(

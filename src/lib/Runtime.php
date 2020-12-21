@@ -31,10 +31,10 @@ abstract class Runtime
     public static function invoke_method(
         string $app_id,
         string $method,
-        array $param = [],
+        mixed $param = [],
         $http_method = 'POST'
     ): DaprResponse {
-        $url = "/invoke/$app_id/$method";
+        $url = "/invoke/$app_id/method/$method";
         switch ($http_method) {
             case 'GET':
                 return DaprClient::get(DaprClient::get_api($url, $param));
