@@ -1,0 +1,32 @@
+{
+  "name": "dapr/actor-example",
+  "type": "project",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Rob Landers",
+      "email": "landers.robert@gmail.com",
+      "role": "maintainer"
+    }
+  ],
+  "description": "A simple actor example",
+  "require": {
+    "php": "8.*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "ext-curl": "*",
+    "dapr/php-sdk": "dev-main"
+  },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "../../"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Actor\\": "actor",
+      "Client\\": "client"
+    }
+  }
+}
