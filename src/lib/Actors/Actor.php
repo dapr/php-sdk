@@ -3,8 +3,7 @@
 namespace Dapr\Actors;
 
 use Dapr\DaprClient;
-use Dapr\exceptions\ActorNotFound;
-use Dapr\exceptions\RequestFailed;
+use Dapr\exceptions\DaprException;
 
 /**
  * Trait Actor
@@ -21,8 +20,7 @@ trait Actor
      * @param Reminder $reminder The reminder to create
      *
      * @return bool True if successful
-     * @throws ActorNotFound
-     * @throws RequestFailed
+     * @throws DaprException
      */
     public function create_reminder(
         Reminder $reminder
@@ -42,16 +40,7 @@ trait Actor
             $reminder->to_array()
         );
 
-        switch ($result->code) {
-            case 200:
-            case 204:
-                return true;
-            case 500:
-            default:
-                throw new RequestFailed("Request Failed");
-            case 400:
-                throw new ActorNotFound("Actor not found or malformed request");
-        }
+        return true;
     }
 
     /**
@@ -59,8 +48,8 @@ trait Actor
      *
      * @param string $name The name of the reminder
      *
-     * @return Reminder The reminder
-     * @throws RequestFailed
+     * @return Reminder|null The reminder
+     * @throws DaprException
      */
     public function get_reminder(
         string $name
@@ -76,13 +65,7 @@ trait Actor
         $id = $this->get_id();
 
         $result = DaprClient::get(DaprClient::get_api("/actors/$type/$id/reminders/$name"));
-        switch ($result->code) {
-            case 200:
-                return Reminder::from_api($name, $result->data);
-            case 500:
-            default:
-                throw new RequestFailed("Request failed");
-        }
+        return Reminder::from_api($name, $result->data);
     }
 
     /**
@@ -91,7 +74,7 @@ trait Actor
      * @param string $name The reminder to delete
      *
      * @return bool True if successful
-     * @throws RequestFailed
+     * @throws DaprException
      */
     public function delete_reminder(string $name): bool
     {
@@ -105,15 +88,8 @@ trait Actor
         // end function
         $id = $this->get_id();
 
-        $result = DaprClient::delete(DaprClient::get_api("/actors/$type/$id/reminders/$name"));
-        switch ($result->code) {
-            case 204:
-            case 200:
-                return true;
-            case 500:
-            default:
-                throw new RequestFailed("Request failed");
-        }
+        DaprClient::delete(DaprClient::get_api("/actors/$type/$id/reminders/$name"));
+        return true;
     }
 
     /**
@@ -122,8 +98,7 @@ trait Actor
      * @param Timer $timer The timer to create
      *
      * @return bool True if successful
-     * @throws ActorNotFound
-     * @throws RequestFailed
+     * @throws DaprException
      */
     public function create_timer(
         Timer $timer,
@@ -142,16 +117,7 @@ trait Actor
             DaprClient::get_api("/actors/$type/$id/timers/{$timer->name}"),
             $timer->to_array()
         );
-        switch ($result->code) {
-            case 200:
-            case 204:
-                return true;
-            case 400:
-                throw new ActorNotFound("Actor not found or malformed request");
-            case 500:
-            default:
-                throw new RequestFailed("Request failed");
-        }
+        return true;
     }
 
     /**
@@ -160,7 +126,7 @@ trait Actor
      * @param string $name The name of the timer
      *
      * @return bool True if successful
-     * @throws RequestFailed
+     * @throws DaprException
      */
     public function delete_timer(string $name): bool
     {
@@ -175,13 +141,6 @@ trait Actor
         $id = $this->get_id();
 
         $result = DaprClient::delete(DaprClient::get_api("/actors/$type/$id/timers/$name"));
-        switch ($result->code) {
-            case 204:
-            case 200:
-                return true;
-            case 500:
-            default:
-                throw new RequestFailed("Request failed");
-        }
+        return true;
     }
 }

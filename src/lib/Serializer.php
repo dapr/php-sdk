@@ -2,6 +2,8 @@
 
 namespace Dapr;
 
+use Dapr\exceptions\DaprException;
+
 abstract class Serializer
 {
     private const REM_DT = ['S0F', 'M0S', 'H0M', 'DT0H', 'M0D', 'P0Y', 'Y0M', 'P0M'];
@@ -41,6 +43,10 @@ abstract class Serializer
 
                 return $item;
             case is_object($item):
+                if($item instanceof \Exception) {
+                    return DaprException::serialize_to_array($item);
+                }
+
                 $type_name = get_class($item);
                 if (isset(self::$types[$type_name])) {
                     $callback = self::$types[$type_name];

@@ -2,6 +2,8 @@
 
 namespace Dapr;
 
+use Dapr\exceptions\DaprException;
+
 /**
  * Helper functions for accessing the dapr api.
  * @package Dapr
@@ -46,6 +48,7 @@ abstract class DaprClient
      * @param string $url The URL to get.
      *
      * @return DaprResponse The parsed response.
+     * @throws DaprException
      */
     public static function get(string $url): DaprResponse
     {
@@ -63,6 +66,10 @@ abstract class DaprClient
         $return->data = Deserializer::maybe_deserialize(json_decode($result, true));
         $return->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
+
+        if($return->data instanceof \Exception) {
+            throw $return->data;
+        }
 
         return $return;
     }
@@ -121,6 +128,7 @@ abstract class DaprClient
      * @param array $data The data to post as a JSON document.
      *
      * @return DaprResponse The parsed response.
+     * @throws DaprException
      */
     public static function post(string $url, mixed $data): DaprResponse
     {
@@ -141,6 +149,10 @@ abstract class DaprClient
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
 
+        if($response->data instanceof \Exception) {
+            throw $response->data;
+        }
+
         return $response;
     }
 
@@ -155,6 +167,7 @@ abstract class DaprClient
      * @param string $url The url to delete
      *
      * @return DaprResponse The response
+     * @throws DaprException
      */
     public static function delete(string $url): DaprResponse
     {
@@ -172,6 +185,10 @@ abstract class DaprClient
         $response->data = Deserializer::maybe_deserialize(json_decode(curl_exec($curl), true));
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
+
+        if($response->data instanceof \Exception) {
+            throw $response->data;
+        }
 
         return $response;
     }

@@ -2,7 +2,9 @@
 
 namespace Dapr;
 
+use Closure;
 use Dapr\Actors\ActorRuntime;
+use Dapr\exceptions\DaprException;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Subscribe;
 use JetBrains\PhpStorm\ArrayShape;
@@ -15,19 +17,45 @@ abstract class Runtime
     #[ArrayShape(['string' => 'callable'])]
     private static array $methods = [];
 
+    /**
+     * Register a method for determining health checks
+     *
+     * @param callable $callback
+     */
     public static function add_health_check(callable $callback)
     {
         self::$health_checks[] = $callback;
     }
 
-    public static function register_method(string $method, ?callable $callback = null)
-    {
+    /**
+     * Register a method to be called by the runtime
+     *
+     * @param string $method_name
+     * @param callable|null $callback
+     * @param string $http_method
+     */
+    public static function register_method(
+        string $method_name,
+        ?callable $callback = null,
+        string $http_method = 'POST'
+    ) {
         if ($callback === null) {
-            $callback = $method;
+            $callback = $method_name;
         }
-        self::$methods[$method] = $callback;
+        self::$methods[$http_method][$method_name] = $callback;
     }
 
+    /**
+     * Invoke a remote method
+     *
+     * @param string $app_id
+     * @param string $method
+     * @param mixed|array $param
+     * @param string $http_method
+     *
+     * @return DaprResponse
+     * @throws DaprException
+     */
     public static function invoke_method(
         string $app_id,
         string $method,
@@ -44,24 +72,44 @@ abstract class Runtime
             case 'DELETE':
                 return DaprClient::delete(DaprClient::get_api($url));
             default:
-                trigger_error('Unknown HTTP method: '.$http_method, E_USER_ERROR);
+                throw new DaprException('Unknown http method: '.$http_method);
         }
     }
 
-    public static function get_handler_for_route(string $http_method, string $uri)
+    /**
+     * Determine the route handler
+     *
+     * @param string $http_method
+     * @param string $uri
+     *
+     * @return Closure
+     */
+    public static function get_handler_for_route(string $http_method, string $uri): Closure
     {
         $handler = self::find_handler($http_method, $uri);
 
         return function () use ($handler) {
-            $result = $handler();
-            if (isset($result['body']) && ! is_string($result['body'])) {
-                $result['body'] = json_encode($result['body']);
-            }
+            try {
+                $result = $handler();
+                if (isset($result['body']) && ! is_string($result['body'])) {
+                    $result['body'] = json_encode($result['body']);
+                }
 
-            return $result;
+                return $result;
+            } catch (\Exception $exception) {
+                return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
+            }
         };
     }
 
+    /**
+     * Find a handler
+     *
+     * @param string $http_method
+     * @param string $uri
+     *
+     * @return callable|null
+     */
     private static function find_handler(string $http_method, string $uri): callable|null
     {
         if (str_starts_with(haystack: $uri, needle: '/actors')) {
@@ -72,7 +120,7 @@ abstract class Runtime
             };
         }
         if (str_starts_with(haystack: $uri, needle: '/dapr/runtime/sub/')) {
-            $id = str_replace('/dapr/runtime/sub/', '', $uri);
+            $id    = str_replace('/dapr/runtime/sub/', '', $uri);
             $event = CloudEvent::parse(ActorRuntime::get_input());
 
             return function () use ($id, $event) {
@@ -91,7 +139,7 @@ abstract class Runtime
                             $callback();
                         }
                     } catch (\Throwable $ex) {
-                        return ['code' => 500];
+                        return ['code' => 500, 'body' => json_encode(Serializer::as_json($ex))];
                     }
 
                     return ['code' => 200];
@@ -111,8 +159,8 @@ abstract class Runtime
                         };
                     }
 
-                    return function () use ($method_parts, $body) {
-                        return self::handle_method($method_parts[1], $body);
+                    return function () use ($method_parts, $body, $http_method) {
+                        return self::handle_method($http_method, $method_parts[1], $body);
                     };
                 }
 
@@ -120,19 +168,29 @@ abstract class Runtime
         }
     }
 
-    public static function handle_method(string $method, mixed $params): array
+    public static function handle_method(string $http_method, string $method, mixed $params): array
     {
-        if ( ! isset(self::$methods[$method])) {
-            return ['code' => 404];
-        }
-        if (is_array($params)) {
-            $result = call_user_func_array(self::$methods[$method], $params);
-        } else {
-            $result = call_user_func(self::$methods[$method], $params);
+        if ( ! isset(self::$methods[$http_method][$method])) {
+            return [
+                'code' => 404,
+                'body' => json_encode(
+                    Serializer::as_json(new \BadFunctionCallException('unable to locate handler for method'))
+                ),
+            ];
         }
 
-        if (is_array($result) && isset($result['code'])) {
-            return $result;
+        try {
+            if (is_array($params)) {
+                $result = call_user_func_array(self::$methods[$http_method][$method], $params);
+            } else {
+                $result = call_user_func(self::$methods[$http_method][$method], $params);
+            }
+
+            if (is_array($result) && isset($result['code'])) {
+                return $result;
+            }
+        } catch (\Exception $exception) {
+            return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
         }
 
         return ['code' => 200, 'body' => $result];

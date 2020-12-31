@@ -5,8 +5,7 @@ namespace Dapr\State;
 use Dapr\consistency\Consistency;
 use Dapr\consistency\EventualLastWrite;
 use Dapr\DaprClient;
-use Dapr\exceptions\NoStorage;
-use Dapr\exceptions\SaveStateFailure;
+use Dapr\exceptions\DaprException;
 use Dapr\Serializer;
 use JetBrains\PhpStorm\Pure;
 use ReflectionClass;
@@ -49,6 +48,7 @@ class State
      * @param array $meta Any metadata to send to the request.
      *
      * @return State A configured state object with the key set.
+     * @throws \Dapr\exceptions\DaprException
      */
     public static function get_single(
         string $store_name,
@@ -60,27 +60,16 @@ class State
             DaprClient::get_api("/state/$store_name/$key", array_merge(['consistency' => $consistency], $meta))
         );
 
-        // todo: add etag
-        switch ($result->code) {
-            case 200:
-                $state       = new State($store_name);
-                $state->$key = $result->data;
+        // todo: handle etag
+        $state       = new State($store_name);
+        $state->$key = $result?->data ?? null;
 
-                return $state;
-            case 204:
-                $state       = new State($store_name);
-                $state->$key = null;
-
-                return $state;
-            case 400:
-            case 500:
-            default:
-                throw new NoStorage("State store is missing or misconfigured");
-        }
+        return $state;
     }
 
     /**
      * Saves state to the store.
+     * @throws DaprException
      */
     public function save_state(): void
     {
@@ -114,17 +103,6 @@ class State
         }
 
         $result = DaprClient::post(DaprClient::get_api("/state/{$this->store_name}"), $state);
-
-        switch ($result->code) {
-            case 201:
-            case 204:
-                return;
-            case 400:
-                throw new NoStorage("State store is missing or misconfigured or malformed request");
-            case 500:
-            default:
-                throw new SaveStateFailure("Failed to save state");
-        }
     }
 
     /**
@@ -175,8 +153,7 @@ class State
      *
      * @param array|null $metadata Metadata to send to the store.
      *
-     * @throws NoStorage
-     * @throws SaveStateFailure
+     * @throws DaprException
      */
     public function load(?array $metadata = null): void
     {
@@ -190,37 +167,27 @@ class State
             ]
         );
 
-        switch ($result->code) {
-            case 200:
-                if ( ! is_array($result->data)) {
-                    return;
-                }
-                foreach ($result->data as $value) {
-                    $key         = trim($value['key']);
-                    $key         = str_replace($this->key_prepend, '', $key);
-                    $data        = $value['data'] ?? null;
-                    $etag        = $value['etag'] ?? null;
-                    $etag_key    = "${key}__etag";
-                    $options_key = "${key}__options";
-                    // only set the state if the etag set, otherwise, use the class's default value
-                    if ($key !== null && $etag !== null) {
-                        $this->$key      = $data;
-                        $this->$etag_key = $etag;
-                    } elseif ($key !== null) {
-                        $this->$etag_key = $etag;
-                    }
-                    $this->$options_key = [
-                        'consistency' => $this->consistency->get_consistency(),
-                        'concurrency' => $this->consistency->get_concurrency(),
-                    ];
-                }
-
-                return;
-            case 400:
-                throw new NoStorage("State store is missing or misconfigured");
-            case 500:
-            default:
-                throw new SaveStateFailure("Get bulk state failed");
+        if ( ! is_array($result->data)) {
+            return;
+        }
+        foreach ($result->data as $value) {
+            $key         = trim($value['key']);
+            $key         = str_replace($this->key_prepend, '', $key);
+            $data        = $value['data'] ?? null;
+            $etag        = $value['etag'] ?? null;
+            $etag_key    = "${key}__etag";
+            $options_key = "${key}__options";
+            // only set the state if the etag set, otherwise, use the class's default value
+            if ($key !== null && $etag !== null) {
+                $this->$key      = $data;
+                $this->$etag_key = $etag;
+            } elseif ($key !== null) {
+                $this->$etag_key = $etag;
+            }
+            $this->$options_key = [
+                'consistency' => $this->consistency->get_consistency(),
+                'concurrency' => $this->consistency->get_concurrency(),
+            ];
         }
     }
 

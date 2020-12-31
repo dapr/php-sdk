@@ -3,6 +3,7 @@
 namespace Dapr\PubSub;
 
 use Dapr\DaprClient;
+use Dapr\exceptions\DaprException;
 
 class Topic
 {
@@ -23,13 +24,11 @@ class Topic
             $event = $event->to_array();
         }
 
-        $result = DaprClient::post(DaprClient::get_api("/publish/{$this->pubsub}/{$this->topic}"), $event);
-        switch ($result->code) {
-            case 200:
-                return true;
-            case 500:
-            default:
-                return false;
+        try {
+            $result = DaprClient::post(DaprClient::get_api("/publish/{$this->pubsub}/{$this->topic}"), $event);
+            return true;
+        } catch (DaprException $exception) {
+            return false;
         }
     }
 }

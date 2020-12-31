@@ -3,7 +3,6 @@
 namespace Dapr\Actors;
 
 use Dapr\DaprClient;
-use Dapr\exceptions\RequestFailed;
 use Dapr\Serializer;
 use LogicException;
 use ReflectionClass;
@@ -66,12 +65,7 @@ abstract class ActorProxy
                             DaprClient::get_api("/actors/$type/$id/method/$method_name"),
                             Serializer::as_json($params)
                         );
-                        switch ($result->code) {
-                            case 500:
-                                throw new RequestFailed('Failed request');
-                            default:
-                                return $result->data;
-                        }
+                        return $result->data;
                     };
                     break;
             }

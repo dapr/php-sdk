@@ -5,8 +5,6 @@ namespace Dapr\State;
 use Dapr\consistency\Consistency;
 use Dapr\consistency\EventualLastWrite;
 use Dapr\DaprClient;
-use Dapr\exceptions\CommitFailed;
-use Dapr\exceptions\NoStorage;
 use Dapr\exceptions\SaveStateFailure;
 use Dapr\exceptions\StateAlreadyCommitted;
 use Dapr\Serializer;
@@ -78,15 +76,12 @@ class TransactionalState
      * @param array $metadata The metadata.
      *
      * @return true
-     * @throws CommitFailed
+     * @throws StateAlreadyCommitted
+     * @throws \Dapr\exceptions\DaprException
      */
     public static function commit(State|TransactionalState $state, array $metadata = []): bool
     {
-        try {
-            return $state->_commit($metadata);
-        } catch (NoStorage | SaveStateFailure $e) {
-            throw new CommitFailed();
-        }
+        return $state->_commit($metadata);
     }
 
     /**
@@ -96,8 +91,8 @@ class TransactionalState
      * @param bool $full
      *
      * @return true
-     * @throws NoStorage
-     * @throws SaveStateFailure
+     * @throws StateAlreadyCommitted
+     * @throws \Dapr\exceptions\DaprException
      */
     protected function _commit(array $metadata = [], bool $full = true): bool
     {
@@ -120,16 +115,7 @@ class TransactionalState
         // do not try to serialize here!
         // if metadata is empty, it needs to remain an object
         $result = DaprClient::post(DaprClient::get_api($this->get_save_endpoint()), $transaction);
-        switch ($result->code) {
-            case 201:
-            case 204:
-                return $this->committed = true;
-            case 400:
-                throw new NoStorage('State store is missing or misconfigured or malformed request');
-            case 500:
-            default:
-                throw new SaveStateFailure('Request failed');
-        }
+        return $this->committed = true;
     }
 
     /**
@@ -205,8 +191,10 @@ class TransactionalState
      * Get a value from underlying state.
      *
      * @param string $name The key to retrieve.
+     *
+     * @return mixed
      */
-    public function __get($name)
+    public function __get(string $name): mixed
     {
         return $this->state->$name;
     }
@@ -219,7 +207,7 @@ class TransactionalState
      *
      * @throws StateAlreadyCommitted
      */
-    public function __set($name, $value)
+    public function __set(string $name, mixed $value): void
     {
         $this->throw_if_committed();
         $this->transaction[] = [
@@ -230,14 +218,13 @@ class TransactionalState
             ],
         ];
 
-        return $this->state->$name = $value;
+        $this->state->$name = $value;
     }
 
     /**
      * Throws an exception if this object has been committed.
      *
      * @return void
-     * @throws StateAlreadyCommitted
      */
     protected function throw_if_committed(): void
     {
@@ -253,7 +240,7 @@ class TransactionalState
      *
      * @return bool
      */
-    public function __isset($name): bool
+    public function __isset(string $name): bool
     {
         return isset($this->state->$name);
     }

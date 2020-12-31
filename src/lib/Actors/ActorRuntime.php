@@ -3,7 +3,7 @@
 namespace Dapr\Actors;
 
 use Dapr\Deserializer;
-use Dapr\exceptions\CommitFailed;
+use Dapr\exceptions\DaprException;
 use Dapr\Formats;
 use Dapr\Serializer;
 use Exception;
@@ -75,7 +75,14 @@ class ActorRuntime
         ])] array $description
     ): array {
         if ($description['type'] === null || ! class_exists($description['type'])) {
-            return ['code' => 404];
+            return [
+                'code' => 404,
+                'body' => json_encode(
+                    Serializer::as_json(
+                        new \UnexpectedValueException("class ${description['type']} not found")
+                    )
+                ),
+            ];
         }
 
         try {
@@ -89,16 +96,17 @@ class ActorRuntime
 
             return [
                 'code' => 500,
-                'body' => [
-                    'error' => $ex->getMessage(),
-                ],
+                'body' => Serializer::as_json($ex),
             ];
         }
 
         if ( ! $is_actor) {
             trigger_error('Actor does not implement IActor interface', E_USER_WARNING);
 
-            return ['code' => 404];
+            return [
+                'code' => 404,
+                'body' => Serializer::as_json(new \LogicException('Actor does not implement IActor interface.')),
+            ];
         }
 
         $state_config = null;
@@ -107,7 +115,7 @@ class ActorRuntime
             /**
              * @psalm-suppress UndefinedClass
              */
-            $state        = InternalActorState::begin_actor(
+            $state = InternalActorState::begin_actor(
                 $description['dapr_type'],
                 $description['id'],
                 $state_config['type'],
@@ -173,10 +181,10 @@ class ActorRuntime
         if ($has_state) {
             try {
                 InternalActorState::commit($state, $state_config['metadata'] ?? []);
-            } catch (CommitFailed $ex) {
+            } catch (DaprException $ex) {
                 trigger_error($ex->getMessage(), E_USER_WARNING);
 
-                return ['code' => 500, 'body' => ['error' => $ex->getMessage()]];
+                return ['code' => 500, 'body' => Serializer::as_json($ex)];
             }
         }
 
@@ -199,7 +207,7 @@ class ActorRuntime
 
             return $reflection->getValue();
         } catch (Exception $ex) {
-            trigger_error("Class $type is using ActorState but lacking a STATE_TYPE constant.", E_USER_ERROR);
+            throw new \LogicException("Actor $type is using actor state, but is missing a STATE_TYPE const");
         }
     }
 

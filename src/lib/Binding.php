@@ -11,6 +11,15 @@ abstract class Binding
         self::$bindings[$name] = $callback;
     }
 
+    /**
+     * @param string $name
+     * @param string $operation
+     * @param array $metadata
+     * @param array $data
+     *
+     * @return DaprResponse
+     * @throws exceptions\DaprException
+     */
     public static function invoke_output(
         string $name,
         string $operation,
@@ -34,18 +43,28 @@ abstract class Binding
     public static function handle_method(string $method, mixed $params): array
     {
         if ( ! isset(self::$bindings[$method])) {
-            return ['code' => 404];
+            return [
+                'code' => 404,
+                'body' => json_encode(
+                    Serializer::as_json(
+                        new \BadFunctionCallException('Unable to locate binding handler for '.$method)
+                    )
+                ),
+            ];
         }
-        if (is_array($params)) {
-            $result = call_user_func_array(self::$bindings[$method], $params);
-        } else {
-            $result = call_user_func(self::$bindings[$method], $params);
-        }
+        try {
+            if (is_array($params)) {
+                $result = call_user_func_array(self::$bindings[$method], $params);
+            } else {
+                $result = call_user_func(self::$bindings[$method], $params);
+            }
+            if (is_array($result) && isset($result['code'])) {
+                return $result;
+            }
 
-        if (is_array($result) && isset($result['code'])) {
-            return $result;
+            return ['code' => 200, 'body' => $result];
+        } catch (\Exception $exception) {
+            return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
         }
-
-        return ['code' => 200, 'body' => $result];
     }
 }
