@@ -2,6 +2,7 @@
 
 require_once __DIR__.'/Fixtures/TestObj.php';
 
+use Dapr\exceptions\DaprException;
 use Fixtures\TestObj;
 use PHPUnit\Framework\TestCase;
 
@@ -63,5 +64,50 @@ final class DeserializerTest extends TestCase
         $this->assertFalse(class_exists($obj['$type']));
         $this->expectException(LogicException::class);
         \Dapr\Deserializer::maybe_deserialize($obj);
+    }
+
+    public function testDaprException()
+    {
+        $obj       = [
+            'errorCode' => 'ERR_ACTOR_INSTANCE_MISSING',
+            'message'   => 'Error getting an actor instance. This means that actor is now hosted in some other service replica.',
+        ];
+        $exception = \Dapr\Deserializer::maybe_deserialize($obj);
+        $this->assertSame($obj['errorCode'], $exception->get_dapr_error_code());
+        $this->assertSame($obj['message'], $exception->getMessage());
+    }
+
+    public function testPHPException()
+    {
+        $obj       = [
+            'errorCode' => LogicException::class,
+            'message'   => 'should not happen',
+            'file'      => __FILE__,
+            'line'      => 123,
+        ];
+        $exception = \Dapr\Deserializer::maybe_deserialize($obj);
+        $this->assertSame($obj['errorCode'], $exception->get_dapr_error_code());
+        $this->assertSame($obj['message'], $exception->getMessage());
+        $this->assertSame($obj['file'], $exception->getFile());
+        $this->assertSame($obj['line'], $exception->getLine());
+        $this->assertSame(null, $exception->getPrevious());
+    }
+
+    public function testExceptionChain()
+    {
+        $obj       = [
+            'errorCode' => LogicException::class,
+            'message'   => 'test message',
+            'file'      => __FILE__,
+            'line'      => 123,
+            'inner'     => [
+                'errorCode' => DaprException::class,
+                'message'   => 'ok',
+                'file'      => __FILE__,
+                'line'      => 123,
+            ],
+        ];
+        $exception = \Dapr\Deserializer::maybe_deserialize($obj);
+        $this->assertInstanceOf(DaprException::class, $exception->getPrevious());
     }
 }

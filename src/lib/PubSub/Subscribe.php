@@ -2,12 +2,20 @@
 
 namespace Dapr\PubSub;
 
+use Dapr\Serializer;
+use JetBrains\PhpStorm\ArrayShape;
+
 abstract class Subscribe
 {
     private static array $subscribed_topics = [];
     private static array $handlers = [];
 
-    public static function to_topic(string $pubsub, string $topic, callable $handler)
+    /**
+     * @param string $pubsub
+     * @param string $topic
+     * @param callable $handler
+     */
+    public static function to_topic(string $pubsub, string $topic, callable $handler): void
     {
         self::$subscribed_topics[] = [
             'pubsubname' => $pubsub,
@@ -17,6 +25,10 @@ abstract class Subscribe
         self::$handlers[$topic]    = $handler;
     }
 
+    /**
+     * @return array
+     */
+    #[ArrayShape(['code' => "int", 'body' => "false|string"])]
     public static function get_subscriptions(): array
     {
         return [
@@ -25,14 +37,28 @@ abstract class Subscribe
         ];
     }
 
-    public static function handle_subscription($id, $event)
+    /**
+     * @param $id
+     * @param $event
+     *
+     * @return array
+     */
+    #[ArrayShape(['code' => "int", 'body' => "false|string"])]
+    public static function handle_subscription($id, $event): array
     {
         if (isset(self::$handlers[$id])) {
-            $result = call_user_func(self::$handlers[$id], $event);
+            try {
+                $result = call_user_func(self::$handlers[$id], $event);
+            } catch (\Exception $exception) {
+                return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
+            }
 
-            return ['code' => 200, 'body' => json_encode($result)];
+            return ['code' => 200, 'body' => json_encode(Serializer::as_json($result))];
         }
 
-        return ['code' => 404];
+        return [
+            'code' => 404,
+            'body' => json_encode(Serializer::as_json(new \BadFunctionCallException('Unable to handle subscription'))),
+        ];
     }
 }

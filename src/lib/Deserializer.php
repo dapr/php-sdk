@@ -2,6 +2,8 @@
 
 namespace Dapr;
 
+use Dapr\exceptions\DaprException;
+
 abstract class Deserializer
 {
     private static array $types = [];
@@ -59,6 +61,8 @@ abstract class Deserializer
 
                         return $instance;
                 }
+            case is_array($obj) && isset($obj['errorCode']) && isset($obj['message']):
+                return DaprException::deserialize_from_array($obj);
             case is_array($obj):
                 foreach ($obj as &$value) {
                     $value = self::maybe_deserialize($value);

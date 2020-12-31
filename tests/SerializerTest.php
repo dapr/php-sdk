@@ -58,4 +58,15 @@ final class SerializerTest extends TestCase
         $expected   = json_decode(json_encode($expected), true);
         $this->assertSame($expected, $serialized);
     }
+
+    public function testException() {
+        $serialized = \Dapr\Serializer::as_json(new Exception('testing'));
+        $this->assertSame([
+            'message' => 'testing',
+            'errorCode' => 'Exception',
+            'file' => __FILE__,
+            'line' => 63,
+            'inner' => null,
+        ], $serialized);
+    }
 }

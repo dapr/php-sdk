@@ -23,7 +23,6 @@ class SecretTest extends DaprTests
 
     public function testSecretNoExist()
     {
-        $this->expectException(\Dapr\exceptions\NoSecretStore::class);
         \Dapr\DaprClient::register_get('/secrets/store/test', 204, null);
         $secret = \Dapr\Secret::retrieve('store', 'test');
         $this->assertSame(null, $secret);

@@ -62,19 +62,34 @@ class RuntimeTest extends DaprTests
     public function testFailedHealthCheck()
     {
         $health_check = function () {
-            throw new Exception();
+            throw new LogicException('test');
         };
         Runtime::add_health_check($health_check);
         $result = Runtime::get_handler_for_route('GET', '/healthz')();
-        $this->assertSame(['code' => 500], $result);
+        $this->assertSame(
+            [
+                'code' => 500,
+                'body' => json_encode(
+                    [
+                        'message'   => 'test',
+                        'errorCode' => LogicException::class,
+                        'file'      => __FILE__,
+                        'line'      => 65,
+                        'inner'     => null,
+                    ]
+                ),
+            ],
+            $result
+        );
     }
 
     public function testMethods()
     {
         $called_method = false;
         Runtime::register_method(
-            'test',
-            function () use (&$called_method) {
+            method_name: 'test',
+            http_method: 'GET',
+            callback: function () use (&$called_method) {
                 $called_method = true;
 
                 return ['hello world'];
