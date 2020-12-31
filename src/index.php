@@ -145,7 +145,7 @@ class SimpleState extends State
 
 ActorRuntime::register_actor('SimpleActor', SimpleActor::class);
 Subscribe::to_topic('pubsub', 'test', 'testsub');
-Runtime::register_method('do_tests', 'do_tests');
+Runtime::register_method('do_tests', 'do_tests', 'GET');
 Runtime::register_method(
     'say_something',
     function ($message) {
