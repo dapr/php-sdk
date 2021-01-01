@@ -38,7 +38,7 @@ abstract class Runtime
         string $method_name,
         ?callable $callback = null,
         string $http_method = 'POST'
-    ) {
+    ): void {
         if ($callback === null) {
             $callback = $method_name;
         }
