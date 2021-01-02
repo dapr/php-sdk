@@ -2,7 +2,7 @@
 
 - Getting Started
 - [Service Invocation](service-invocation.md)
-- State Management
+- [State Management](state-management.md)
 - Publish & Subscribe
 - Bindings
 - Actors
