@@ -35,7 +35,7 @@ trait Actor
         // end function
         $id = $this->get_id();
 
-        $result = DaprClient::post(
+        DaprClient::post(
             DaprClient::get_api("/actors/$type/$id/reminders/{$reminder->name}", null),
             $reminder->to_array()
         );
@@ -113,7 +113,7 @@ trait Actor
         // end function
         $id = $this->get_id();
 
-        $result = DaprClient::post(
+        DaprClient::post(
             DaprClient::get_api("/actors/$type/$id/timers/{$timer->name}"),
             $timer->to_array()
         );
@@ -140,7 +140,7 @@ trait Actor
         // end function
         $id = $this->get_id();
 
-        $result = DaprClient::delete(DaprClient::get_api("/actors/$type/$id/timers/$name"));
+        DaprClient::delete(DaprClient::get_api("/actors/$type/$id/timers/$name"));
         return true;
     }
 }
