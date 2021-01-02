@@ -191,7 +191,7 @@ class ActorRuntime
     }
 
     /**
-     * Read a given type for a constant with the name STATE_TYPE.
+     * Read a state type from attributes
      *
      * @param string $type The type to read from.
      *
@@ -204,7 +204,7 @@ class ActorRuntime
 
             return $reflection->getAttributes(ActorState::class)[0]?->newInstance();
         } catch (Exception $ex) {
-            throw new \LogicException("Actor $type is using actor state, but is missing a STATE_TYPE const");
+            throw new \LogicException("Actor $type is using actor state, but is not properly configured.");
         }
     }
 

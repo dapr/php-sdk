@@ -32,12 +32,11 @@ abstract class ActorProxy
         $type = $reflected_interface->getAttributes(DaprType::class)[0]?->newInstance()->type;
 
         if (empty($type)) {
-            throw new LogicException("$interface must have a DAPR_TYPE constant");
+            throw new LogicException("$interface must have a DaprType attribute");
         }
 
         $methods = $reflected_interface->getMethods(ReflectionMethod::IS_PUBLIC);
 
-        $proxy->DAPR_TYPE = $type;
         foreach ($methods as $method) {
             $method_name = $method->getName();
             switch ($method_name) {
