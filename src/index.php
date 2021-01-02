@@ -8,6 +8,7 @@ use Dapr\Actors\Actor;
 use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorRuntime;
 use Dapr\Actors\ActorState;
+use Dapr\Actors\DaprType;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
@@ -33,10 +34,9 @@ function testsub(): void
     );
 }
 
+#[DaprType('SimpleActor')]
 interface ISimpleActor extends IActor
 {
-    public const DAPR_TYPE = 'SimpleActor';
-
     function increment($amount = 1);
 
     function get_count(): int;
@@ -62,16 +62,11 @@ class SimpleActorState extends State
     public SimpleObject $complex_object;
 }
 
+#[DaprType('SimpleActor')]
+#[ActorState('statestore', SimpleActorState::class)]
 class SimpleActor implements ISimpleActor
 {
     use Actor;
-    use ActorState;
-
-    public const STATE_TYPE = [
-        'store'       => 'statestore',
-        'type'        => SimpleActorState::class,
-        'consistency' => StrongLastWrite::class,
-    ];
 
     /**
      * SimpleActor constructor.
@@ -143,7 +138,7 @@ class SimpleState extends State
     }
 }
 
-ActorRuntime::register_actor('SimpleActor', SimpleActor::class);
+ActorRuntime::register_actor(SimpleActor::class);
 Subscribe::to_topic('pubsub', 'test', 'testsub');
 Runtime::register_method('do_tests', 'do_tests', 'GET');
 Runtime::register_method(
@@ -443,22 +438,22 @@ function do_tests()
 {
     header('Content-Type: text/html; charset=UTF-8');
     $tests = [
-        'state_test'             => [
+        'state_test'                => [
             'description' => 'Test setting and getting state',
         ],
-        'state_concurrency'      => [
+        'state_concurrency'         => [
             'description' => 'Tests concurrency of state changes',
         ],
-        'transaction_test'       => [
+        'transaction_test'          => [
             'description' => 'Test transactional state',
         ],
-        'multiple_transactions'  => [
+        'multiple_transactions'     => [
             'description' => 'Test multiple concurrent transactions',
         ],
-        'test_actor'             => [
+        'test_actor'                => [
             'description' => 'Testing some basic actors',
         ],
-        'test_pubsub'            => [
+        'test_pubsub'               => [
             'description' => 'Testing publish/subscribe pattern',
         ],
         'test_invoke_serialization' => [
