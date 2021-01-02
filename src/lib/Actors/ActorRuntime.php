@@ -134,7 +134,7 @@ class ActorRuntime
         }
 
         $activation_tracker = hash('sha256', $description['dapr_type'].$description['id']);
-        $activation_tracker = rtrim(sys_get_temp_dir(), '/').'/dapr_'.$activation_tracker;
+        $activation_tracker = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'dapr_'.$activation_tracker;
 
         $is_activated = file_exists($activation_tracker);
 
@@ -218,8 +218,7 @@ class ActorRuntime
     {
         $reflected_type             = new ReflectionClass($actor_type);
         $attributes = $reflected_type->getAttributes(DaprType::class);
-        $dapr_type = $attributes[0] ?? null;
-        $dapr_type = $dapr_type?->newInstance()->type ?? $reflected_type->getShortName();
+        $dapr_type = ($attributes[0] ?? null)?->newInstance()->type ?? $reflected_type->getShortName();
         self::$actors[$dapr_type]   = $actor_type;
         self::$config['entities'][] = $dapr_type;
     }

@@ -44,6 +44,8 @@ interface ISimpleActor extends IActor
     function set_object(SimpleObject $object): void;
 
     function get_object(): SimpleObject;
+
+    function a_function(): bool;
 }
 
 class SimpleObject
@@ -123,6 +125,11 @@ class SimpleActor implements ISimpleActor
     function get_object(): SimpleObject
     {
         return $this->state->complex_object;
+    }
+
+    function a_function(): bool
+    {
+        return true;
     }
 }
 
@@ -336,7 +343,8 @@ function test_actor(): void
     $read_reminder = $actor->get_reminder('increment');
     assert_equals(
         $reminder->due_time->format(\Dapr\Formats::FROM_INTERVAL),
-        $read_reminder->due_time->format(\Dapr\Formats::FROM_INTERVAL)
+        $read_reminder->due_time->format(\Dapr\Formats::FROM_INTERVAL),
+        'time formats are delivered ok'
     );
 
     $timer = new Timer(
@@ -362,6 +370,8 @@ function test_actor(): void
     $saved_object = $actor->get_object();
     assert_equals($object->bar, $saved_object->bar, "[object] saved array should match");
     assert_equals($object->foo, $saved_object->foo, "[object] saved string should match");
+
+    assert_equals(true, $actor->a_function(), 'actor can return a simple value');
 }
 
 function test_pubsub(): void

@@ -5,6 +5,7 @@ use Fixtures\ActorClass;
 
 require_once __DIR__.'/DaprTests.php';
 require_once __DIR__.'/Fixtures/Actor.php';
+require_once __DIR__.'/Fixtures/BrokenActor.php';
 
 class ActorTest extends DaprTests
 {
@@ -145,11 +146,11 @@ class ActorTest extends DaprTests
         $proxy->delete_reminder('reminder');
 
         \Dapr\DaprClient::register_post(
-            "/actors/TestActor/$id/method/a_function",
-            200,
-            [],
-            [
-                null,
+            path: "/actors/TestActor/$id/method/a_function",
+            code: 200,
+            response_data: true,
+            expected_request: [
+                'value' => null,
             ]
         );
         $proxy->a_function(null);
@@ -189,5 +190,12 @@ class ActorTest extends DaprTests
         $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ITestActor::class, $id);
         $this->expectException(LogicException::class);
         $proxy->remind('', '');
+    }
+
+    public function testNoDaprType() {
+        $id = uniqid();
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('IBrokenActor must have a DaprType attribute');
+        $proxy = \Dapr\Actors\ActorProxy::get(IBrokenActor::class, $id);
     }
 }
