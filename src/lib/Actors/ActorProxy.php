@@ -29,7 +29,7 @@ abstract class ActorProxy
         $reflected_interface = new ReflectionClass($interface);
         $proxy               = new InternalProxy();
 
-        $type = (new ReflectionClassConstant($interface, 'DAPR_TYPE'))->getValue();
+        $type = $reflected_interface->getAttributes(DaprType::class)[0]?->newInstance()->type;
 
         if (empty($type)) {
             throw new LogicException("$interface must have a DAPR_TYPE constant");

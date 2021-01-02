@@ -11,7 +11,7 @@ class ActorTest extends DaprTests
     public function testActorInvoke()
     {
         $id = uniqid();
-        ActorRuntime::register_actor('ActorClass', ActorClass::class);
+        ActorRuntime::register_actor( ActorClass::class);
         $this->inject_state(['value'], $id);
         $this->assertState(
             [
@@ -21,7 +21,7 @@ class ActorTest extends DaprTests
         );
         $this->set_body(['new value']);
         $result = ActorRuntime::handle_invoke(
-            ActorRuntime::extract_parts_from_request('PUT', "/actors/ActorClass/$id/method/a_function")
+            ActorRuntime::extract_parts_from_request('PUT', "/actors/TestActor/$id/method/a_function")
         );
         $this->assertSame(200, $result['code']);
         $this->assertTrue(\Dapr\Deserializer::maybe_deserialize(json_decode($result['body'])));
@@ -42,7 +42,7 @@ class ActorTest extends DaprTests
             code: 200,
             response_data: $state,
             expected_request: [
-                'keys'        => ["ActorClass||$id||value"],
+                'keys'        => ["TestActor||$id||value"],
                 'parallelism' => 10,
             ]
         );
@@ -63,13 +63,13 @@ class ActorTest extends DaprTests
                 ];
             }
         }
-        \Dapr\DaprClient::register_post("/actors/ActorClass/$id/state", 201, [], $return);
+        \Dapr\DaprClient::register_post("/actors/TestActor/$id/state", 201, [], $return);
     }
 
     public function testActorRuntime()
     {
         $id = uniqid();
-        ActorRuntime::register_actor('ActorClass', ActorClass::class);
+        ActorRuntime::register_actor( ActorClass::class);
         $this->inject_state(['value'], $id);
         $this->assertState(
             [
@@ -78,7 +78,7 @@ class ActorTest extends DaprTests
             $id
         );
         $this->set_body(['new value']);
-        $result = \Dapr\Runtime::get_handler_for_route('PUT', "/actors/ActorClass/$id/method/a_function")();
+        $result = \Dapr\Runtime::get_handler_for_route('PUT', "/actors/TestActor/$id/method/a_function")();
         $this->assertSame(200, $result['code']);
         $this->assertTrue(\Dapr\Deserializer::maybe_deserialize(json_decode($result['body'])));
     }
@@ -88,13 +88,13 @@ class ActorTest extends DaprTests
         $id = uniqid();
 
         /**
-         * @var \Fixtures\ActorInterface $proxy
+         * @var \Fixtures\ITestActor $proxy
          */
-        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ActorInterface::class, $id);
+        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ITestActor::class, $id);
 
         $this->assertSame($id, $proxy->get_id());
         \Dapr\DaprClient::register_get(
-            "/actors/ActorClass/$id/reminders/reminder",
+            "/actors/TestActor/$id/reminders/reminder",
             200,
             [
                 "dueTime" => '1s',
@@ -108,7 +108,7 @@ class ActorTest extends DaprTests
         $this->assertSame([0], $reminder->data);
 
         \Dapr\DaprClient::register_post(
-            "/actors/ActorClass/$id/timers/timer",
+            "/actors/TestActor/$id/timers/timer",
             200,
             [],
             [
@@ -123,7 +123,7 @@ class ActorTest extends DaprTests
         );
 
         \Dapr\DaprClient::register_post(
-            "/actors/ActorClass/$id/reminders/reminder",
+            "/actors/TestActor/$id/reminders/reminder",
             200,
             [],
             [
@@ -138,14 +138,14 @@ class ActorTest extends DaprTests
             )
         );
 
-        \Dapr\DaprClient::register_delete("/actors/ActorClass/$id/timers/timer", 204);
+        \Dapr\DaprClient::register_delete("/actors/TestActor/$id/timers/timer", 204);
         $proxy->delete_timer('timer');
 
-        \Dapr\DaprClient::register_delete("/actors/ActorClass/$id/reminders/reminder", 204);
+        \Dapr\DaprClient::register_delete("/actors/TestActor/$id/reminders/reminder", 204);
         $proxy->delete_reminder('reminder');
 
         \Dapr\DaprClient::register_post(
-            "/actors/ActorClass/$id/method/a_function",
+            "/actors/TestActor/$id/method/a_function",
             200,
             [],
             [
@@ -160,9 +160,9 @@ class ActorTest extends DaprTests
         $id = uniqid();
 
         /**
-         * @var \Fixtures\ActorInterface $proxy
+         * @var \Fixtures\ITestActor $proxy
          */
-        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ActorInterface::class, $id);
+        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ITestActor::class, $id);
         $this->expectException(LogicException::class);
         $proxy->on_activation();
     }
@@ -172,9 +172,9 @@ class ActorTest extends DaprTests
         $id = uniqid();
 
         /**
-         * @var \Fixtures\ActorInterface $proxy
+         * @var \Fixtures\ITestActor $proxy
          */
-        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ActorInterface::class, $id);
+        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ITestActor::class, $id);
         $this->expectException(LogicException::class);
         $proxy->on_deactivation();
     }
@@ -184,9 +184,9 @@ class ActorTest extends DaprTests
         $id = uniqid();
 
         /**
-         * @var \Fixtures\ActorInterface $proxy
+         * @var \Fixtures\ITestActor $proxy
          */
-        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ActorInterface::class, $id);
+        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ITestActor::class, $id);
         $this->expectException(LogicException::class);
         $proxy->remind('', '');
     }

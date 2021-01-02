@@ -3,32 +3,28 @@
 namespace Fixtures;
 
 use Dapr\Actors\Actor;
+use Dapr\Actors\ActorState;
+use Dapr\Actors\DaprType;
 use Dapr\Actors\IActor;
 use Dapr\consistency\StrongLastWrite;
 use Dapr\State\State;
 
-interface ActorInterface extends IActor
+#[DaprType('TestActor')]
+interface ITestActor extends IActor
 {
-    public const DAPR_TYPE = 'ActorClass';
-
     public function a_function($value): bool;
 }
 
-class ActorState extends State
+class TestActorState extends State
 {
     public string $value = "";
 }
 
-class ActorClass implements ActorInterface
+#[DaprType('TestActor')]
+#[ActorState('store', TestActorState::class)]
+class ActorClass implements ITestActor
 {
     use Actor;
-    use \Dapr\Actors\ActorState;
-
-    public const STATE_TYPE = [
-        'store'       => 'store',
-        'type'        => ActorState::class,
-        'consistency' => StrongLastWrite::class,
-    ];
 
     /**
      * ActorClass constructor.
