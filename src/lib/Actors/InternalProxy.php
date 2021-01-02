@@ -4,7 +4,6 @@ namespace Dapr\Actors;
 
 /**
  * Class InternalProxy
- * @property mixed DAPR_TYPE The dapr actor type
  * @package Dapr
  */
 class InternalProxy

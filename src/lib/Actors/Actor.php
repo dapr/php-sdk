@@ -26,16 +26,21 @@ trait Actor
         Reminder $reminder
     ): bool {
         // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
+        if(isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $type = explode('\\', get_class($this));
-            $type = array_pop($type);
+            $class      = new \ReflectionClass($this);
+            $attributes = $class->getAttributes(DaprType::class);
+            if ( ! empty($attributes)) {
+                $type = $attributes[0]->newInstance()->type;
+            } else {
+                $type = $class->getShortName();
+            }
         }
         // end function
         $id = $this->get_id();
 
-        $result = DaprClient::post(
+        DaprClient::post(
             DaprClient::get_api("/actors/$type/$id/reminders/{$reminder->name}", null),
             $reminder->to_array()
         );
@@ -55,16 +60,22 @@ trait Actor
         string $name
     ): ?Reminder {
         // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
+        if(isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $type = explode('\\', get_class($this));
-            $type = array_pop($type);
+            $class      = new \ReflectionClass($this);
+            $attributes = $class->getAttributes(DaprType::class);
+            if ( ! empty($attributes)) {
+                $type = $attributes[0]->newInstance()->type;
+            } else {
+                $type = $class->getShortName();
+            }
         }
         // end function
         $id = $this->get_id();
 
         $result = DaprClient::get(DaprClient::get_api("/actors/$type/$id/reminders/$name"));
+
         return Reminder::from_api($name, $result->data);
     }
 
@@ -79,16 +90,22 @@ trait Actor
     public function delete_reminder(string $name): bool
     {
         // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
+        if(isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $type = explode('\\', get_class($this));
-            $type = array_pop($type);
+            $class      = new \ReflectionClass($this);
+            $attributes = $class->getAttributes(DaprType::class);
+            if ( ! empty($attributes)) {
+                $type = $attributes[0]->newInstance()->type;
+            } else {
+                $type = $class->getShortName();
+            }
         }
         // end function
         $id = $this->get_id();
 
         DaprClient::delete(DaprClient::get_api("/actors/$type/$id/reminders/$name"));
+
         return true;
     }
 
@@ -104,19 +121,25 @@ trait Actor
         Timer $timer,
     ): bool {
         // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
+        if(isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $type = explode('\\', get_class($this));
-            $type = array_pop($type);
+            $class      = new \ReflectionClass($this);
+            $attributes = $class->getAttributes(DaprType::class);
+            if ( ! empty($attributes)) {
+                $type = $attributes[0]->newInstance()->type;
+            } else {
+                $type = $class->getShortName();
+            }
         }
         // end function
         $id = $this->get_id();
 
-        $result = DaprClient::post(
+        DaprClient::post(
             DaprClient::get_api("/actors/$type/$id/timers/{$timer->name}"),
             $timer->to_array()
         );
+
         return true;
     }
 
@@ -131,16 +154,22 @@ trait Actor
     public function delete_timer(string $name): bool
     {
         // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
+        if(isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $type = explode('\\', get_class($this));
-            $type = array_pop($type);
+            $class      = new \ReflectionClass($this);
+            $attributes = $class->getAttributes(DaprType::class);
+            if ( ! empty($attributes)) {
+                $type = $attributes[0]->newInstance()->type;
+            } else {
+                $type = $class->getShortName();
+            }
         }
         // end function
         $id = $this->get_id();
 
-        $result = DaprClient::delete(DaprClient::get_api("/actors/$type/$id/timers/$name"));
+        DaprClient::delete(DaprClient::get_api("/actors/$type/$id/timers/$name"));
+
         return true;
     }
 }

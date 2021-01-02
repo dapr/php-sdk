@@ -8,14 +8,14 @@ class RuntimeTest extends DaprTests
 {
     public function testConfig()
     {
-        ActorRuntime::register_actor('test', 'test');
+        ActorRuntime::register_actor(\Fixtures\ActorClass::class);
         ActorRuntime::set_drain_timeout(new DateInterval('PT10S'));
         ActorRuntime::set_idle_timeout(new DateInterval('PT10M'));
         ActorRuntime::set_scan_interval(new DateInterval('PT5S'));
         ActorRuntime::do_drain_actors(true);
         $expected_config = [
             'entities'                => [
-                'test',
+                'TestActor',
             ],
             'drainOngoingCallTimeout' => '0h0m10s0us',
             'actorIdleTimeout'        => '0h10m0s0us',

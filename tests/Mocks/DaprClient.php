@@ -23,29 +23,29 @@ class DaprClient
 
     public static function get(string $url): DaprResponse
     {
-        self::validate('GET', $url);
+        self::validate('GET', $url, '');
         $next = array_shift(self::$responses['GET'][$url]);
         if ($next === null) {
-            self::report_unregistered('GET', $url);
+            self::report_unregistered('GET', $url, '');
         }
         self::clean('GET', $url);
 
         return $next;
     }
 
-    private static function validate(string $method, string $url)
+    private static function validate(string $method, string $url, string $body)
     {
         if ( ! isset(self::$responses[$method])) {
-            self::report_unregistered($method, $url);
+            self::report_unregistered($method, $url, $body);
         }
         if ( ! isset(self::$responses[$method][$url])) {
-            self::report_unregistered($method, $url);
+            self::report_unregistered($method, $url, $body);
         }
     }
 
-    private static function report_unregistered(string $method, string $url)
+    private static function report_unregistered(string $method, string $url, string $body)
     {
-        throw new \Exception('unregistered '.$method.' performed on '.$url);
+        throw new \Exception('unregistered '.$method.' performed on '.$url."\n$body");
     }
 
     private static function clean(string $method, string $url)
@@ -68,10 +68,10 @@ class DaprClient
 
     public static function post(string $url, array $data): DaprResponse
     {
-        self::validate('POST', $url);
+        self::validate('POST', $url, json_encode($data, JSON_PRETTY_PRINT));
         $next = array_shift(self::$responses['POST'][$url]);
         if ($next === null) {
-            self::report_unregistered('POST', $url);
+            self::report_unregistered('POST', $url, json_encode($data, JSON_PRETTY_PRINT));
         }
         self::clean('POST', $url);
         if (is_callable($next['cleaner'])) {
@@ -101,10 +101,10 @@ class DaprClient
 
     public static function delete(string $url): DaprResponse
     {
-        self::validate('DELETE', $url);
+        self::validate('DELETE', $url, '');
         $next = array_shift(self::$responses['DELETE'][$url]);
         if ($next === null) {
-            self::report_unregistered('DELETE', $url);
+            self::report_unregistered('DELETE', $url, '');
         }
         self::clean('DELETE', $url);
 

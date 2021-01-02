@@ -9,7 +9,6 @@ use Dapr\Serializer;
 use Exception;
 use JetBrains\PhpStorm\ArrayShape;
 use ReflectionClass;
-use ReflectionClassConstant;
 
 /**
  * The Actor Runtime
@@ -87,8 +86,8 @@ class ActorRuntime
 
         try {
             $reflection = new ReflectionClass($description['type']);
-            $traits     = $reflection->getTraitNames();
-            $has_state  = in_array('Dapr\Actors\ActorState', $traits);
+            $attributes = $reflection->getAttributes(ActorState::class);
+            $has_state  = ! empty($attributes);
             $is_actor   = $reflection->implementsInterface('Dapr\Actors\IActor')
                           && $reflection->isInstantiable() && $reflection->isUserDefined();
         } catch (\ReflectionException $ex) {
@@ -118,9 +117,9 @@ class ActorRuntime
             $state = InternalActorState::begin_actor(
                 $description['dapr_type'],
                 $description['id'],
-                $state_config['type'],
-                $state_config['store'],
-                new $state_config['consistency']
+                $state_config->type,
+                $state_config->store,
+                new $state_config->consistency
             );
 
             /**
@@ -135,7 +134,7 @@ class ActorRuntime
         }
 
         $activation_tracker = hash('sha256', $description['dapr_type'].$description['id']);
-        $activation_tracker = rtrim(sys_get_temp_dir(), '/').'/dapr_'.$activation_tracker;
+        $activation_tracker = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'dapr_'.$activation_tracker;
 
         $is_activated = file_exists($activation_tracker);
 
@@ -180,7 +179,7 @@ class ActorRuntime
 
         if ($has_state) {
             try {
-                InternalActorState::commit($state, $state_config['metadata'] ?? []);
+                InternalActorState::commit($state, $state_config->metadata ?? []);
             } catch (DaprException $ex) {
                 trigger_error($ex->getMessage(), E_USER_WARNING);
 
@@ -192,22 +191,20 @@ class ActorRuntime
     }
 
     /**
-     * Read a given type for a constant with the name STATE_TYPE.
+     * Read a state type from attributes
      *
      * @param string $type The type to read from.
      *
-     * @return mixed The state type definition.
-     *
-     * @psalm-return array<array-key, scalar>|null|scalar
+     * @return ActorState The state type definition
      */
-    private static function get_state_type(string $type): mixed
+    private static function get_state_type(string $type): ActorState
     {
         try {
-            $reflection = new ReflectionClassConstant($type, 'STATE_TYPE');
+            $reflection = new ReflectionClass($type);
 
-            return $reflection->getValue();
+            return $reflection->getAttributes(ActorState::class)[0]?->newInstance();
         } catch (Exception $ex) {
-            throw new \LogicException("Actor $type is using actor state, but is missing a STATE_TYPE const");
+            throw new \LogicException("Actor $type is using actor state, but is not properly configured.");
         }
     }
 
@@ -217,8 +214,11 @@ class ActorRuntime
      * @param string $dapr_type The Dapr type
      * @param string $actor_type The actor to initialize when invoked
      */
-    public static function register_actor(string $dapr_type, string $actor_type): void
+    public static function register_actor(string $actor_type): void
     {
+        $reflected_type             = new ReflectionClass($actor_type);
+        $attributes = $reflected_type->getAttributes(DaprType::class);
+        $dapr_type = ($attributes[0] ?? null)?->newInstance()->type ?? $reflected_type->getShortName();
         self::$actors[$dapr_type]   = $actor_type;
         self::$config['entities'][] = $dapr_type;
     }

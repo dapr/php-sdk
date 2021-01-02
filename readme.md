@@ -125,14 +125,13 @@ for easy calling from other services.
 ```php
 <?php
 
-use Dapr\Actors\IActor;
+use Dapr\Actors\DaprType;use Dapr\Actors\IActor;
 
 /**
  * Actor that keeps a count
  */
+ #[DaprType('Counter')]
 interface ICounter extends IActor {
-    public const DAPR_TYPE = 'Counter';
-
     /**
      * Increment a counter
      */
@@ -145,19 +144,13 @@ Once the interface is defined, you'll need to implement the behavior and registe
 ```php
 <?php
 
-use Dapr\Actors\{Actor,ActorRuntime,ActorState};
+use Dapr\Actors\{Actor,ActorRuntime,ActorState,DaprType};
 use Dapr\consistency\StrongFirstWrite;
 
+#[DaprType('Counter')]
+#[ActorState(store: 'statestore', type: CountState::class, consistency: StrongFirstWrite::class, metadata: [])]
 class Counter implements ICounter {
     use Actor;
-    use ActorState;
-
-    public const STATE_TYPE = [
-        'store' => 'statestore',
-        'type' => CountState::class,
-        'consistency' => StrongFirstWrite::class,
-        'metadata' => []
-    ];
 
     /**
      * @var int
@@ -209,12 +202,12 @@ class Counter implements ICounter {
 }
 
 // register the actor with the runtime
-ActorRuntime::register_actor(dapr_type: 'Counter', actor_type: Counter::class);
+ActorRuntime::register_actor(Counter::class);
 ```
 
-There are two crucial traits: `Actor` and `ActorState`. If you include `ActorState`, then you'll have a second parameter
-passed to your constructor which is the state object, you must include a `DAPR_TYPE` constant in the interface for
-determining the type of state for Dapr to understand. State is automatically saved for you if you make any changes to it
+If you include an `ActorState` attribute, then you'll have a second parameter
+passed to your constructor which is the state object, you must include a `DaprType` attribute in the interface for
+Dapr to know which actor to proxy for you. State is automatically saved for you if you make any changes to it
 during the method call using transactional state.
 
 The `Actor` trait gives you access to some helper functions and implements most of `IActor`:
@@ -250,7 +243,7 @@ In order to call an actor, simply call the `ActorProxy` and get a proxy object:
 use Dapr\Actors\ActorProxy;
 
 /**
- * @var Counter
+ * @var Counter $counter
  */
 $counter = ActorProxy::get(ICounter::class, $id);
 $counter->increment();
