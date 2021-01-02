@@ -101,13 +101,13 @@ CLASS;
     /**
      * Returns an actor proxy
      *
-     * @param string $interface
+     * @param class-string<IActor> $interface
      * @param mixed $id The id to proxy for
      *
-     * @return InternalProxy
+     * @return object
      * @throws \ReflectionException
      */
-    public static function get(string $interface, $id)
+    public static function get(string $interface, mixed $id): object
     {
         $reflected_interface = new ReflectionClass($interface);
         $type                = ($reflected_interface->getAttributes(DaprType::class)[0] ?? null)?->newInstance()->type;
@@ -120,6 +120,7 @@ CLASS;
         switch (self::$mode) {
             case ProxyModes::GENERATED_CACHED:
             case ProxyModes::GENERATED:
+            default:
                 if ( ! class_exists($full_type)) {
                     eval(self::_generate_proxy_class($reflected_interface, $interface, $type));
                 }

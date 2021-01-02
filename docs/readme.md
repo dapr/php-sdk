@@ -5,6 +5,6 @@
 - [State Management](state-management.md)
 - [Publish & Subscribe](pubsub.md)
 - Bindings
-- Actors
+- [Actors](actors.md)
 - Observability
 - Secrets
