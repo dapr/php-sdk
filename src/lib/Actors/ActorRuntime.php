@@ -211,8 +211,9 @@ class ActorRuntime
     /**
      * Register an actor that this app support.
      *
-     * @param string $dapr_type The Dapr type
      * @param string $actor_type The actor to initialize when invoked
+     *
+     * @throws \ReflectionException
      */
     public static function register_actor(string $actor_type): void
     {

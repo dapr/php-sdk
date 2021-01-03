@@ -6,6 +6,8 @@ Add the library to your `composer.json`:
 
 > composer require dapr/php-sdk
 
+Some basic documentation is below, more documentation can be found [in the docs](docs); 
+
 # Accessing Secrets
 
 You can access secrets easily:
