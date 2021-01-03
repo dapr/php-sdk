@@ -90,8 +90,9 @@ inherit from a single class. This allows you to define a family of actors as you
 
 We also have two attributes:
 
-1. `DaprType`, which should be familiar from the defining the interface.
-2. `ActorState`, which allows you to define the state you wish to be given to you when the actor is instantiated.
+1. `DaprType`, which should be familiar from defining the interface.
+2. `ActorState`, which allows you to define the state you wish to be given to you when the actor is instantiated. If it
+   is not included, no state will be passed in the constructor; the second argument is omitted.
 
 Here's our counter actor:
 
@@ -117,14 +118,13 @@ class Counter implements ICount {
 The most important bit is the constructor. It takes two arguments:
 
 1. The actor's id.
-2. The actor's state for that id.
+2. The actor's state for that id; if the `ActorState` attribute is defined.
 
 An actor is instantiated via the constructor on every request. You can use it to calculate ephemeral state or handle any
 kind of request-specific startup you require, such as setting up other clients or connections.
 
 After the actor is instantiated, the `on_activation()` method may be called. This method is called any time the actor "
-wakes up"
-or when it is created for the first time.
+wakes up" or when it is created for the first time. It is not called on every request.
 
 Next, the actor method is called. This may be from a timer, reminder, or from a client. You may perform any work that
 needs to be done and/or throw an exception.
@@ -135,7 +135,7 @@ the dapr sidecar crashes, or some other error occurs.
 
 ### Actor Methods
 
-Most of the boilerplate for `IActor` is handled by the `Actor` trait. However, here are those methods and what they do:
+Most of the boilerplate for `IActor` is handled by the `Actor` trait. Here are those methods and what they do:
 
 #### create_reminder()
 
@@ -195,7 +195,7 @@ Though the `Actor` trait covers most methods, there are still some you must impl
 function get_id(): mixed;
 ```
 
-You must return the id passed to the constructor.
+You must return the id passed to the constructor. If you do not, the behavior is undefined.
 
 #### remind()
 
@@ -203,8 +203,8 @@ You must return the id passed to the constructor.
 function remind(string $name, $data): void;
 ```
 
-When a reminder is created, it calls this method. The name will be the name of the reminder and the data will be the data
-you passed to the reminder.
+When a reminder is created, it calls this method. The name will be the name of the reminder and the data will be the
+data you passed to the reminder.
 
 #### on_activation()
 
