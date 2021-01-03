@@ -41,3 +41,6 @@ jobs:
 
     - name: Run lint
       run: composer run-script lint
+
+    - name: upload coverage
+      run: bash <(curl -s https://codecov.io/bash)

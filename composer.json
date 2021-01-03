@@ -27,7 +27,7 @@
     }
   },
   "scripts": {
-    "test": "./vendor/bin/phpunit --testdox tests",
+    "test": "./vendor/bin/phpunit --testdox tests --coverage-clover coverage.xml tests --whitelist src",
     "start": "PHP_CLI_SERVER_WORKERS=100 dapr run -i dev -p 9502 -- php -S 0.0.0.0:9502 -t src",
     "lint": "./vendor/bin/psalm"
   }
