@@ -6,5 +6,4 @@
 - [Publish & Subscribe](pubsub.md)
 - Bindings
 - [Actors](actors.md)
-- Observability
-- Secrets
+- [Secrets](secrets.md)
