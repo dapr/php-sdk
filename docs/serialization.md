@@ -29,7 +29,15 @@ For example, to override how `my_type` is serialized:
 ```
 
 The custom serializer should return an array with at least a key with the name `$type`, which will allow it to be
-deserialized with a matching custom deserializer. It will need to be `json_encode`-able
+deserialized with a matching custom deserializer. It will need to be `json_encode`-able. Here's an example array of
+how `DateInterval` is serialized:
+
+```php
+[
+    '$type' => '\DateInterval',
+    '$obj' => 'PT5S'
+];
+```
 
 ### Overriding all serialization
 
