@@ -4,6 +4,6 @@
 - [Service Invocation](service-invocation.md)
 - [State Management](state-management.md)
 - [Publish & Subscribe](pubsub.md)
-- Bindings
+- Bindings (TODO)
 - [Actors](actors.md)
 - [Secrets](secrets.md)
