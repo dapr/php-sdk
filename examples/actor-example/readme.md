@@ -27,6 +27,8 @@ Run `composer install`
 cd examples/actor-example
 # Linux/OSX
 export MODE=service
+# windows (powershell)
+$env:MODE = "service"
 dapr run --app-id actor-example --app-port 3000 -- php -S 0.0.0.0:3000
 ```
 
@@ -36,11 +38,28 @@ dapr run --app-id actor-example --app-port 3000 -- php -S 0.0.0.0:3000
 cd examples/actor-example
 # Linux/OSX
 export MODE=client
+# windows (powershell)
+$env:MODE = "client"
 dapr run --app-id actor-client --app-port 3001 -- php -S 0.0.0.0:3001
 ```
 
 3. Call the client in another terminal window:
 
 ```
-curl localhost:3001/start
+curl 'localhost:3001/start?id=test&amount=1'
 ```
+
+Experiment with different ids and amounts!
+
+## Output
+
+In the service logs, you'll see:
+
+```
+== APP == [Sun Jan  3 10:13:31 2021] Actor woke up: test
+== APP == [Sun Jan  3 10:13:31 2021] 127.0.0.1:59980 [200]: PUT /actors/Counter/test/method/increment
+== APP == [Sun Jan  3 10:13:31 2021] 127.0.0.1:59994 [200]: PUT /actors/Counter/test/method/get_count
+== APP == [Sun Jan  3 10:13:41 2021] Actor going to sleep: test
+== APP == [Sun Jan  3 10:13:41 2021] 127.0.0.1:60032 [200]: DELETE /actors/Counter/test
+```
+

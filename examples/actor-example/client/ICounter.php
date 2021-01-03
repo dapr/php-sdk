@@ -2,11 +2,11 @@
 
 namespace Client;
 
+use Dapr\Actors\DaprType;
 use Dapr\Actors\IActor;
 
+#[DaprType('Counter')]
 interface ICounter extends IActor {
-    public const DAPR_TYPE = 'Counter';
-
     /**
      * @return int The current count
      */

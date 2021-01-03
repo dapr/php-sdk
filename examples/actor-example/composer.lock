@@ -12,7 +12,7 @@
             "source": {
                 "type": "git",
                 "url": "../../",
-                "reference": "2ab860c527b1f4e5945f7ab184f1c1ab847e4be4"
+                "reference": "a636891fc5593dbd7d663638c2e9540ca3adead8"
             },
             "require": {
                 "ext-curl": "*",
@@ -34,7 +34,7 @@
             },
             "scripts": {
                 "test": [
-                    "./vendor/bin/phpunit --testdox tests"
+                    "./vendor/bin/phpunit --testdox tests --coverage-clover coverage.xml tests --whitelist src"
                 ],
                 "start": [
                     "PHP_CLI_SERVER_WORKERS=100 dapr run -i dev -p 9502 -- php -S 0.0.0.0:9502 -t src"
@@ -53,7 +53,7 @@
                 }
             ],
             "description": "Dapr Implementation in PHP",
-            "time": "2020-12-21T16:14:03+00:00"
+            "time": "2021-01-03T08:59:36+00:00"
         }
     ],
     "packages-dev": [],

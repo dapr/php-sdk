@@ -9,7 +9,7 @@ set_error_handler(
         http_response_code(500);
         echo json_encode(
             [
-                'errorCode' => $err_no,
+                'errorCode' => 'Exception',
                 'message'   => $err_str,
                 'file'      => $err_file,
                 'line'      => $err_line,
@@ -18,10 +18,14 @@ set_error_handler(
     }
 );
 
-\Dapr\Actors\ActorRuntime::register_actor('Counter', \Actor\Counter::class);
+\Dapr\Actors\ActorRuntime::set_scan_interval(new DateInterval('PT10S'));
+\Dapr\Actors\ActorRuntime::set_idle_timeout(new DateInterval('PT5S'));
+\Dapr\Actors\ActorRuntime::do_drain_actors(false);
+
+\Dapr\Actors\ActorRuntime::register_actor(\Actor\Counter::class);
 
 header('Content-Type: application/json');
-$result = \Dapr\Runtime::get_handler_for_route($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'])();
+$result = \Dapr\Runtime::get_handler_for_route($_SERVER['REQUEST_METHOD'], strtok($_SERVER['REQUEST_URI'], '?'))();
 http_response_code($result['code']);
 if (isset($result['body'])) {
     echo $result['body'];
