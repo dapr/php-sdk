@@ -3,3 +3,4 @@
 /make/
 /.idea/
 .phpunit.result.cache
+coverage.xml
