@@ -45,7 +45,7 @@ class DaprClient
 
     private static function report_unregistered(string $method, string $url, string $body)
     {
-        throw new \Exception('unregistered '.$method.' performed on '.$url."\n$body");
+        throw new \Exception('unregistered '.$method.' performed on '.$url."\n$body\n\nExpected:\n".json_encode(self::$responses[$method][0]??null, JSON_PRETTY_PRINT));
     }
 
     private static function clean(string $method, string $url)

@@ -6,7 +6,7 @@ Add the library to your `composer.json`:
 
 > composer require dapr/php-sdk
 
-Some basic documentation is below, more documentation can be found [in the docs](docs); 
+Some basic documentation is below, more documentation can be found [in the docs](docs);
 
 # Accessing Secrets
 
@@ -23,12 +23,15 @@ echo Secret::retrieve('my_secret_store', 'secret_name');
 
 # Accessing State
 
+State is just Plain Old PHP Objects (POPO's) with an attribute:
+
 ```php
 <?php
 
 use Dapr\State\State;
 
-class MyState extends State {
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualLastWrite::class)]
+class MyState {
     /**
      * @var string
      */
@@ -50,13 +53,6 @@ class MyState extends State {
     public $counter = 0;
 
     /**
-     * Initialize the state
-     */
-    public function __construct() {
-        parent::__construct('name_of_state_store');
-    }
-
-    /**
      * Increment the counter
      * @param int $amount Amount to increment by
      */
@@ -67,15 +63,20 @@ class MyState extends State {
 
 // use state objects
 $state = new MyState();
-$state->load();
+State::load_state($state);
 echo $state->string_value;
 $state->string_value = 'hello world';
-$state->save_state();
+State::save_state($state);
 
 // load individual state
-$value = State::get_single('name_of_state_store', 'string_value');
-echo $value->string_value;
+$single_state = new #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualLastWrite::class)] class extends State {
+    public string $string_value;
+};
+State::load_state($single_state);
+echo $single_state->string_value;
 ```
+
+You may also put `State::load_state($this)` in your constructor, if you prefer.
 
 ## Transactional State
 
@@ -121,8 +122,8 @@ try {
 
 # Actors
 
-Actors are fully implemented and quite powerful. In order to define an actor, you must first define the interface. You'll likely want to put this in a separate library
-for easy calling from other services.
+Actors are fully implemented and quite powerful. In order to define an actor, you must first define the interface.
+You'll likely want to put this in a separate library for easy calling from other services.
 
 ```php
 <?php
@@ -207,10 +208,9 @@ class Counter implements ICounter {
 ActorRuntime::register_actor(Counter::class);
 ```
 
-If you include an `ActorState` attribute, then you'll have a second parameter
-passed to your constructor which is the state object, you must include a `DaprType` attribute in the interface for
-Dapr to know which actor to proxy for you. State is automatically saved for you if you make any changes to it
-during the method call using transactional state.
+If you include an `ActorState` attribute, then you'll have a second parameter passed to your constructor which is the
+state object, you must include a `DaprType` attribute in the interface for Dapr to know which actor to proxy for you.
+State is automatically saved for you if you make any changes to it during the method call using transactional state.
 
 The `Actor` trait gives you access to some helper functions and implements most of `IActor`:
 

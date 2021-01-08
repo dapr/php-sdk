@@ -2,9 +2,11 @@
 
 namespace Fixtures;
 
-use Dapr\State\State;
+use Dapr\consistency\EventualLastWrite;
+use Dapr\State\Attributes\StateStore;
 
-class TestState extends State
+#[StateStore('store', EventualLastWrite::class)]
+class TestState
 {
     public string $with_initial = "initial";
     public ?string $without_initial = null;
