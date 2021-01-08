@@ -76,20 +76,23 @@ Parameters:
 
 ## Transactions
 
-You can also interact with state using a transaction instead of transactionless. To begin a transaction,
-use `Dapr\State\TransactionalState`:
+You can also interact with state using a transaction instead of transactionless. To use state in a transaction, you must extend 
+`\Dapr\State\TransactionalState` with your state class. You can still use it as normal state too.
 
 ```php
-/**
-* @var HelloWorldState $state
- */
-$state = \Dapr\State\TransactionalState::begin(HelloWorldState::class, 'statestore', new \Dapr\consistency\StrongFirstWrite());
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
+class HelloWorldState extends \Dapr\State\TransactionalState {
+    public function __construct(public $hello_world = 'hello world') {
+        parent::__construct();
+    }
+}
+($state = new HelloWorldState())->begin();
 ```
 
 Once you've made your changes to the state, call `commit`
 
 ```php
-\Dapr\State\TransactionalState::commit($state);
+$state->commit();
 ```
 
 Once the transaction is committed, the state may no longer be modified.
@@ -97,36 +100,26 @@ Once the transaction is committed, the state may no longer be modified.
 ### TransactionalState::begin()
 
 ```
-public static function begin(
-        string $type,
-        ?string $store_name = null,
-        ?Consistency $consistency = null
-    ): TransactionalState
+public function begin(int $parallelism = 10, ?array $metadata = null): void
 ```
 
-This wraps the state in a proxy object that keeps track of updates/deletes
+This starts a new transaction. If called on a (un)committed object, starts a new transaction.
 
 Arguments:
 
-- type: The state type to wrap, it will instantiate the type with a singular argument: the state store.
-- store_name: The name of the store component
-- consistency: The type of consistency
-
-Returns:
-
-A `TransactionalState` object that proxies the actual state object.
+- parallelism: Set how many keys to load concurrently.
+- metadata: optional, component specific metadata.
 
 ### TransactionalState::commit()
 
 ```
-public static function commit(State|TransactionalState $state, array $metadata = []): bool
+public function commit(?array $metadata = null): void
 ```
 
 Arguments:
 
-- state: The TransactionalState object returned from `begin()`.
-- metadata: Any metadata to be passed to the component.
+- metadata: Optional, component specific metadata.
 
 Returns:
 
-True if the commit is successful. Throws a `DaprException` on failure.
+Throws a `DaprException` on failure.

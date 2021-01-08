@@ -6,7 +6,6 @@ use Dapr\Actors\Actor;
 use Dapr\Actors\ActorState;
 use Dapr\Actors\DaprType;
 use Dapr\Actors\IActor;
-use Dapr\consistency\StrongLastWrite;
 use Dapr\State\State;
 
 #[DaprType('TestActor')]
@@ -15,7 +14,7 @@ interface ITestActor extends IActor
     public function a_function($value): bool;
 }
 
-class TestActorState extends State
+class TestActorState
 {
     public string $value = "";
 }

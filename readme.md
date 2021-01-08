@@ -80,41 +80,40 @@ You may also put `State::load_state($this)` in your constructor, if you prefer.
 
 ## Transactional State
 
-You can also use transactional state to interact with state objects.
+You can also use transactional state to interact with state objects by extending `TransactionalState` with our state
+objects.
 
 ```php
 use Dapr\consistency\StrongFirstWrite;
 use Dapr\exceptions\StateAlreadyCommitted;
 use Dapr\State\TransactionalState;
 
-/*
- * Return a transactional state of the MyState type, with strong, first-write consistency
- * @var MyState $transaction_state
- */
-$state = TransactionalState::begin(MyState::class, 'name_of_state_store', new StrongFirstWrite);
-
-// state is loaded and the transaction is started for you
-echo $state->string_value;
+#[\Dapr\State\Attributes\StateStore('statestore', StrongFirstWrite::class)]
+class SomeState extends TransactionalState {
+    public string $value;
+    public function ok() {
+        $this->value = 'ok';
+    }
+}
+($state = new SomeState())->begin();
+echo $state->value;
 
 // we can change state
-$state->string_value = 'new value';
+$state->value = 'new value';
 
 // even via a helper function
-$state->increment(2);
+$state->ok();
 
-// calling delete is like calling unset(), these are both the same operation.
-$state->delete('object_type');
-unset($state->object_type);
+// delete a value from the store:
+unset($state->value);
 
 // once we're happy with our state, we can commit
-TransactionalState::commit($state);
+$state->commit();
 
-// once state is committed, state becomes read-only. All the following would throw.
+// once state is committed, state becomes read-only. The following would throw.
 try {
-    echo $state->string_value;
-    $state->string_value = 'failed';
-    $state->delete('object_type');
-    $state->commit();
+    echo $state->value;
+    $state->value = 'failed';
 }  catch (StateAlreadyCommitted $ex) {
     echo "Cannot alter already committed state!";
 }

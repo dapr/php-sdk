@@ -2,223 +2,89 @@
 
 namespace Dapr\State;
 
-use Dapr\consistency\Consistency;
-use Dapr\consistency\EventualLastWrite;
 use Dapr\DaprClient;
-use Dapr\exceptions\SaveStateFailure;
 use Dapr\exceptions\StateAlreadyCommitted;
-use Dapr\Serializer;
+use Dapr\State\Internal\StateHelpers;
+use Dapr\State\Internal\Transaction;
 use ReflectionClass;
 use ReflectionProperty;
 
-class TransactionalState
+abstract class TransactionalState
 {
-    /**
-     * @var array
-     */
-    protected array $transaction = [];
+    use StateHelpers;
 
-    /**
-     * @var bool
-     */
-    protected bool $committed = false;
+    private Transaction $_internal_transaction;
+    private ReflectionClass $_internal_reflection;
 
-    /**
-     * @var array
-     */
-    protected $consistency;
-
-    /**
-     * Create a new transactional state.
-     *
-     * @param State $state The state object.
-     * @param string $store_name The store name.
-     * @param Consistency $consistency_setting
-     *
-     * @todo handle null store names
-     */
-    protected function __construct(
-        protected State $state,
-        protected string $store_name,
-        Consistency $consistency_setting
-    ) {
-        $this->consistency = [
-            'consistency' => $consistency_setting->get_consistency(),
-            'concurrency' => $consistency_setting->get_concurrency(),
-        ];
-    }
-
-    /**
-     * Begin a new transaction.
-     *
-     * @param string $type The type of state to store.
-     * @param string|null $store_name The store name to use.
-     * @param Consistency|null $consistency
-     *
-     * @return TransactionalState The transactional state.
-     */
-    public static function begin(
-        string $type,
-        ?string $store_name = null,
-        ?Consistency $consistency = null
-    ): TransactionalState {
-        $state       = new $type($store_name);
-        $consistency = $consistency ?? new EventualLastWrite();
-        $state->load();
-
-        return new TransactionalState($state, $store_name, $consistency);
-    }
-
-    /**
-     * Commit a transaction.
-     *
-     * @param TransactionalState|State $state The transactional state to store.
-     * @param array $metadata The metadata.
-     *
-     * @return true
-     * @throws StateAlreadyCommitted
-     * @throws \Dapr\exceptions\DaprException
-     */
-    public static function commit(State|TransactionalState $state, array $metadata = []): bool
+    public function __construct()
     {
-        return $state->_commit($metadata);
+        $this->_internal_reflection = new ReflectionClass($this);
     }
 
-    /**
-     * Commit the transaction.
-     *
-     * @param array $metadata Metadata to send to the storage.
-     * @param bool $full
-     *
-     * @return true
-     * @throws StateAlreadyCommitted
-     * @throws \Dapr\exceptions\DaprException
-     */
-    protected function _commit(array $metadata = [], bool $full = true): bool
+    public function begin(int $parallelism = 10, ?array $metadata = null): void
+    {
+        State::load_state($this, $parallelism, $metadata);
+        $this->_internal_transaction = new Transaction();
+        foreach ($this->_internal_reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            $this->_internal_transaction->state[$property->name] = $this->{$property->name};
+            unset($this->{$property->name});
+        }
+    }
+
+    public function __set(string $key, mixed $value): void
     {
         $this->throw_if_committed();
-        $this->filter_transaction();
-
-        if (count($this->transaction) === 0) {
-            return true;
+        if ( ! $this->_internal_reflection->hasProperty($key)) {
+            throw new \InvalidArgumentException(
+                "$key on ".get_class($this)." is not defined and thus will not be stored."
+            );
         }
-
-        if ($full) {
-            $transaction = [
-                'operations' => array_values($this->transaction),
-                'metadata'   => (object)$metadata,
-            ];
-        } else {
-            $transaction = $this->transaction;
-        }
-
-        // do not try to serialize here!
-        // if metadata is empty, it needs to remain an object
-        $result = DaprClient::post(DaprClient::get_api($this->get_save_endpoint()), $transaction);
-        return $this->committed = true;
+        $this->_internal_transaction->upsert($key, $value);
     }
 
-    /**
-     * Run any special filters
-     *
-     * @return void
-     */
-    protected function filter_transaction(): void
+    public function __get(string $key): mixed
     {
-        $this->dedupe();
-        $this->add_etags();
-        $this->serialize();
+        return $this->_internal_transaction->state[$key];
     }
 
-    /**
-     * Dedupe the transaction log
-     *
-     * @return void
-     */
-    protected function dedupe(): void
+    public function __isset(string $key): bool
     {
-        $transaction = [];
-        $seen_keys   = [];
-        $total_ops   = count($this->transaction);
-        for ($i = $total_ops - 1; $i >= 0; $i--) {
-            $key = $this->transaction[$i]['request']['key'];
-            if (in_array($key, $seen_keys)) {
-                continue;
-            }
-            $seen_keys[]                      = $key;
-            $transaction[$total_ops - $i - 1] = $this->transaction[$i];
-        }
-        $this->transaction = $transaction;
+        return isset($this->_internal_transaction[$key]);
     }
 
-    /**
-     * Add etags to the transaction
-     *
-     * @return void
-     */
-    protected function add_etags(): void
-    {
-        foreach ($this->transaction as &$t) {
-            $key = $t['request']['key'].'__etag';
-
-            if (isset($this->state->$key)) {
-                $t['request']['etag'] = $this->state->$key;
-                if (isset($this->consistency)) {
-                    $t['request']['options'] = $this->consistency;
-                }
-            }
-        }
-    }
-
-    protected function serialize(): void
-    {
-        $this->transaction = Serializer::as_json($this->transaction);
-    }
-
-    /**
-     * Get the save endpoint
-     *
-     * @return string The save endpoint
-     */
-    protected function get_save_endpoint(): string
-    {
-        $store = $this->store_name;
-
-        return "/state/$store/transaction";
-    }
-
-    /**
-     * Get a value from underlying state.
-     *
-     * @param string $name The key to retrieve.
-     *
-     * @return mixed
-     */
-    public function __get(string $name): mixed
-    {
-        return $this->state->$name;
-    }
-
-    /**
-     * Set a value on the underlying state and add to transaction.
-     *
-     * @param string $name The key.
-     * @param mixed $value The value to set.
-     *
-     * @throws StateAlreadyCommitted
-     */
-    public function __set(string $name, mixed $value): void
+    public function __unset(string $key): void
     {
         $this->throw_if_committed();
-        $this->transaction[] = [
-            'operation' => 'upsert',
-            'request'   => [
-                'key'   => $name,
-                'value' => $value,
-            ],
-        ];
+        $this->_internal_transaction->delete($key);
+    }
 
-        $this->state->$name = $value;
+    public function commit(?array $metadata = null): void
+    {
+        $this->throw_if_committed();
+        $state_store = self::get_description($this->_internal_reflection);
+        $transaction = [
+            'operations' => array_map(
+                fn($t) => State::get_etag($this, $t['request']['key']) ? array_merge(
+                    $t,
+                    [
+                        'etag'    => State::get_etag($this, $t['request']['key']),
+                        'options' => [
+                            'consistency' => (new $state_store->consistency)->get_consistency(),
+                            'concurrency' => (new $state_store->consistency)->get_concurrency(),
+                        ],
+                    ]
+                ) : $t,
+                $this->_internal_transaction->get_transaction()
+            ),
+        ];
+        if(isset($metadata)) {
+            $transaction['metadata'] = $metadata;
+        }
+
+        if ( ! empty($transaction['operations'])) {
+            DaprClient::post(DaprClient::get_api("/state/{$state_store->name}/transaction"), $transaction);
+        }
+        $this->_internal_transaction->is_closed = true;
     }
 
     /**
@@ -228,135 +94,8 @@ class TransactionalState
      */
     protected function throw_if_committed(): void
     {
-        if ($this->committed) {
+        if ($this->_internal_transaction->is_closed) {
             throw new StateAlreadyCommitted();
         }
-    }
-
-    /**
-     * Determine if an underlying value is set.
-     *
-     * @param string $name The key to check.
-     *
-     * @return bool
-     */
-    public function __isset(string $name): bool
-    {
-        return isset($this->state->$name);
-    }
-
-    /**
-     * Delete an underlying value.
-     *
-     * @param string $name The key to delete.
-     *
-     * @throws StateAlreadyCommitted
-     */
-    public function __unset(string $name)
-    {
-        $this->throw_if_committed();
-        unset($this->state->$name);
-        $this->transaction[] = [
-            'operation' => 'delete',
-            'request'   => [
-                'key' => $name,
-            ],
-        ];
-    }
-
-    /**
-     * Proxy a method call to the underlying state and determine the transaction.
-     *
-     * @param string $name The method to call.
-     * @param array $arguments Arguments to the method.
-     *
-     * @return mixed
-     * @throws SaveStateFailure|StateAlreadyCommitted
-     */
-    public function __call(string $name, array $arguments): mixed
-    {
-        if ($name === 'save_state') {
-            throw new SaveStateFailure('State cannot be manually saved during a commit.');
-        }
-        $initial                = $this->extract_state();
-        $result                 = call_user_func_array([$this->state, $name], $arguments);
-        $changed_state          = $this->extract_state();
-        $additional_transaction = $this->extract_diff($initial, $changed_state);
-        if (count($additional_transaction) > 0) {
-            $this->throw_if_committed();
-        }
-
-        $this->transaction = array_merge($this->transaction, $additional_transaction);
-
-        return $result;
-    }
-
-    /**
-     * Extract a shallow state snapshot.
-     * @return array A state snapshot.
-     */
-    protected function extract_state(): array
-    {
-        $state = [];
-        foreach ($this->get_keys() as $key) {
-            $state[$key] = $this->state->$key;
-        }
-
-        return $state;
-    }
-
-    /**
-     * Get keys of the state class.
-     * @return array The list of keys on the type.
-     */
-    protected function get_keys(): array
-    {
-        $keys = new ReflectionClass($this->state);
-
-        return array_map(
-            function (ReflectionProperty $item) {
-                return $item->getName();
-            },
-            $keys->getProperties(ReflectionProperty::IS_PUBLIC)
-        );
-    }
-
-    /**
-     * Calculate a transaction based on changes in state snapshot.
-     *
-     * @param array $initial The initial state.
-     * @param array $new The new state.
-     *
-     * @return array Additional transaction items.
-     */
-    protected function extract_diff(array $initial, array $new): array
-    {
-        $diff = [];
-        foreach ($initial as $key => $value) {
-            if (($new[$key] ?? null) !== $value) {
-                $diff[$key] = $new[$key];
-            }
-        }
-        $transaction = [];
-        foreach ($diff as $changed_key => $changed_value) {
-            if (isset($new[$changed_key])) {
-                $transaction[] = [
-                    'operation' => 'upsert',
-                    'request'   => [
-                        'key'   => $changed_key,
-                        'value' => $changed_value,
-                    ],
-                ];
-            } else {
-                $transaction[] = [
-                    'operation' => 'delete',
-                    'request'   => [
-                        'key' => $changed_key,
-                    ],
-                ];
-            }
-        }
-
-        return $transaction;
     }
 }

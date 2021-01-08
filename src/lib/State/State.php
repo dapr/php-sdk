@@ -2,13 +2,9 @@
 
 namespace Dapr\State;
 
-use Dapr\consistency\Consistency;
-use Dapr\consistency\EventualLastWrite;
 use Dapr\DaprClient;
-use Dapr\exceptions\DaprException;
 use Dapr\Serializer;
-use Dapr\State\Attributes\StateStore;
-use JetBrains\PhpStorm\Pure;
+use Dapr\State\Internal\StateHelpers;
 use ReflectionClass;
 use ReflectionProperty;
 
@@ -17,37 +13,9 @@ use ReflectionProperty;
  * @package Dapr
  * @see https://v1-rc1.docs.dapr.io/reference/api/state_api/
  */
-abstract class State
+final class State
 {
-    /**
-     * @var Consistency
-     */
-    private Consistency $consistency;
-    private array $state_storage = [];
-
-    /**
-     * Create an object for holding state.
-     *
-     * @param string $store_name The store to connect to.
-     * @param Consistency|null $consistency
-     * @param string $key_prepend
-     * @param string $storage_strategy
-     */
-    #[Pure]
-    public function __construct(
-        private string $store_name,
-        ?Consistency $consistency = null,
-        private string $key_prepend = ''
-    ) {
-        $this->consistency = $consistency ?? new EventualLastWrite();
-        $reflection        = new ReflectionClass($this);
-        foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
-            $name                       = $property->name;
-            $this->state_storage[$name] = ['value' => $property->getDefaultValue()];
-            unset($this->$name);
-        }
-    }
-
+    use StateHelpers;
     private static \WeakMap $data;
 
     public static function save_state(object $obj, ?array $metadata = null): void
@@ -77,6 +45,10 @@ abstract class State
         }
 
         DaprClient::post(DaprClient::get_api("/state/{$store->name}"), $request);
+    }
+
+    public static function get_etag(object $obj, string $key) {
+        return ((self::$data[$obj] ?? [])[$key] ?? [])['etag'] ?? null;
     }
 
     public static function load_state(object $obj, int $parallelism = 10, ?array $metadata = null): void
@@ -112,13 +84,5 @@ abstract class State
 
         $map[$obj]  = $keys;
         self::$data = $map;
-    }
-
-    public static function get_description(ReflectionClass $reflection): StateStore
-    {
-        foreach ($reflection->getAttributes(StateStore::class) as $attribute) {
-            return $attribute->newInstance();
-        }
-        throw new \LogicException('Tried to load state without a Dapr\State\Attributes\StateStore attribute');
     }
 }
