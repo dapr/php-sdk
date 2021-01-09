@@ -132,9 +132,12 @@ class TransactionalStateTest extends DaprTests
                         ],
                     ],
                 ],
+                'metadata'   => [
+                    'test' => true,
+                ],
             ]
         );
-        $state->commit();
+        $state->commit(['test' => true]);
 
         $this->expectException(\Dapr\exceptions\StateAlreadyCommitted::class);
         $state->commit();
