@@ -6,7 +6,8 @@ use Dapr\Actors\Actor;
 use Dapr\Actors\ActorState;
 use Dapr\Actors\DaprType;
 use Dapr\Actors\IActor;
-use Dapr\State\State;
+use Dapr\consistency\StrongFirstWrite;
+use Dapr\State\Attributes\StateStore;
 
 #[DaprType('TestActor')]
 interface ITestActor extends IActor
@@ -14,13 +15,12 @@ interface ITestActor extends IActor
     public function a_function($value): bool;
 }
 
-class TestActorState
+class TestActorState extends ActorState
 {
     public string $value = "";
 }
 
 #[DaprType('TestActor')]
-#[ActorState('store', TestActorState::class)]
 class ActorClass implements ITestActor
 {
     use Actor;
@@ -31,7 +31,7 @@ class ActorClass implements ITestActor
      * @param string $id
      * @param ActorState $state
      */
-    public function __construct(private string $id, private $state)
+    public function __construct(private string $id, private TestActorState $state)
     {
     }
 

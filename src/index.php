@@ -55,7 +55,7 @@ class SimpleObject
     public array $bar = [];
 }
 
-class SimpleActorState
+class SimpleActorState extends ActorState
 {
     /**
      * @property int
@@ -66,7 +66,6 @@ class SimpleActorState
 }
 
 #[DaprType('SimpleActor')]
-#[ActorState('statestore', SimpleActorState::class)]
 class SimpleActor implements ISimpleActor
 {
     use Actor;
@@ -77,7 +76,7 @@ class SimpleActor implements ISimpleActor
      * @param string $id
      * @param SimpleActorState $state
      */
-    public function __construct(private string $id, private $state)
+    public function __construct(private string $id, private SimpleActorState $state)
     {
     }
 
