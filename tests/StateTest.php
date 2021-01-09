@@ -45,7 +45,7 @@ class StateTest extends DaprTests
 
     public function testSaveState()
     {
-        $state                        = new \Fixtures\TestState();
+        $state = new \Fixtures\TestState();
         \Dapr\DaprClient::register_post(
             '/state/store/bulk',
             code: 200,
@@ -89,7 +89,8 @@ class StateTest extends DaprTests
         State::save_state($state);
     }
 
-    public function test_not_able_to_load_state() {
+    public function test_not_able_to_load_state()
+    {
         $state = new class {
             public $never;
         };
@@ -98,5 +99,27 @@ class StateTest extends DaprTests
         $this->expectExceptionMessage('Tried to load state without a Dapr\State\Attributes\StateStore attribute');
 
         State::load_state($state);
+    }
+
+    public function test_set_to_null()
+    {
+        $state = new #[\Dapr\State\Attributes\StateStore('store', \Dapr\consistency\StrongFirstWrite::class)] class {
+            public $null = 1;
+        };
+
+        \Dapr\DaprClient::register_post(
+            '/state/store/bulk',
+            200,
+            [
+                ['key' => 'null', 'etag' => 1, 'data' => null],
+            ],
+            [
+                'keys'        => ['null'],
+                'parallelism' => 12,
+            ]
+        );
+
+        State::load_state($state, 12);
+        $this->assertNull($state->null);
     }
 }
