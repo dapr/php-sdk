@@ -79,7 +79,7 @@ abstract class TransactionalState
 
     public function __isset(string $key): bool
     {
-        return isset($this->_internal_transaction[$key]);
+        return isset($this->_internal_transaction->state[$key]);
     }
 
     public function __unset(string $key): void
@@ -90,7 +90,7 @@ abstract class TransactionalState
 
     /**
      * Commit the transaction.
-     * 
+     *
      * @param array|null $metadata Component specific metadata
      *
      * @throws StateAlreadyCommitted

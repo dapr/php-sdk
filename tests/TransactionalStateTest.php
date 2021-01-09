@@ -1,6 +1,5 @@
 <?php
 
-use Dapr\State\TransactionalState;
 use Fixtures\TestState;
 
 class TransactionalStateTest extends DaprTests
@@ -40,6 +39,31 @@ class TransactionalStateTest extends DaprTests
         $state = new TestState();
         $state->begin();
         $state->commit();
+    }
+
+    public function testInvalidKey()
+    {
+        $this->register_simple_load();
+        $state = new TestState();
+        $state->begin();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('not_exist on Fixtures\TestState is not defined and thus will not be stored.');
+
+        $state->not_exist = true;
+    }
+
+    public function testIsSet()
+    {
+        $this->register_simple_load();
+        $state = new TestState();
+        $state->begin();
+
+        $this->assertFalse(isset($state->complex));
+        $this->assertTrue(isset($state->with_initial));
+
+        $state->complex = new \Fixtures\TestObj();
+        $this->assertTrue(isset($state->complex));
     }
 
     public function testCommit()

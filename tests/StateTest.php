@@ -89,7 +89,7 @@ class StateTest extends DaprTests
         State::save_state($state);
     }
 
-    public function test_not_able_to_load_state()
+    public function testNotAbleToLoadState()
     {
         $state = new class {
             public $never;
@@ -101,7 +101,7 @@ class StateTest extends DaprTests
         State::load_state($state);
     }
 
-    public function test_set_to_null()
+    public function testSetToNull()
     {
         $state = new #[\Dapr\State\Attributes\StateStore('store', \Dapr\consistency\StrongFirstWrite::class)] class {
             public $null = 1;
