@@ -68,7 +68,24 @@ class TransactionalStateTest extends DaprTests
 
     public function testCommit()
     {
-        $this->register_simple_load();
+        \Dapr\DaprClient::register_post(
+            '/state/store/bulk',
+            200,
+            [
+                ['key' => 'with_initial'],
+                ['key' => 'without_initial', 'data' => 1, 'etag' => 1],
+                ['key' => 'complex'],
+            ],
+            [
+                'keys'        => [
+                    'with_initial',
+                    'without_initial',
+                    'complex',
+                ],
+                'parallelism' => 10,
+            ]
+        );
+
         $state = new TestState();
         $state->begin();
         $state->set_something();
@@ -87,8 +104,13 @@ class TransactionalStateTest extends DaprTests
                     [
                         'operation' => 'upsert',
                         'request'   => [
-                            'key'   => 'without_initial',
-                            'value' => 'something',
+                            'key'     => 'without_initial',
+                            'value'   => 'something',
+                            'etag'    => 1,
+                            'options' => [
+                                'consistency' => 'eventual',
+                                'concurrency' => 'last-write',
+                            ],
                         ],
                     ],
                     [
