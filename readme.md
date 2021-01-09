@@ -146,28 +146,20 @@ Once the interface is defined, you'll need to implement the behavior and registe
 ```php
 <?php
 
-use Dapr\Actors\{Actor,ActorRuntime,ActorState,DaprType};
-use Dapr\consistency\StrongFirstWrite;
+use Dapr\Actors\{Actor,ActorRuntime,DaprType};
+
+class CountState extends \Dapr\Actors\ActorState {
+    public int $count = 0;
+}
 
 #[DaprType('Counter')]
-#[ActorState(store: 'statestore', type: CountState::class, consistency: StrongFirstWrite::class, metadata: [])]
 class Counter implements ICounter {
     use Actor;
 
     /**
-     * @var int
-     */
-    private $id;
-
-    /**
-     * @var CountState
-     */
-    private $state;
-
-    /**
      * Initialize the class
      */
-    public function __construct($id, $state) {
+    public function __construct(private int $id, private CountState $state) {
         $this->id = $id;
         $this->state = $state;
     }
@@ -207,9 +199,9 @@ class Counter implements ICounter {
 ActorRuntime::register_actor(Counter::class);
 ```
 
-If you include an `ActorState` attribute, then you'll have a second parameter passed to your constructor which is the
-state object, you must include a `DaprType` attribute in the interface for Dapr to know which actor to proxy for you.
-State is automatically saved for you if you make any changes to it during the method call using transactional state.
+The state to inject is read from the constructor arguments, the state must derive from `ActorState` to be injected. You
+may use as many state classes as you'd like. State is automatically saved for you if you make any changes to it during
+the method call using transactional state.
 
 The `Actor` trait gives you access to some helper functions and implements most of `IActor`:
 

@@ -2,9 +2,7 @@
 
 namespace Dapr\Actors;
 
-use Dapr\consistency\Consistency;
 use Dapr\DaprClient;
-use Dapr\DaprResponse;
 use Dapr\exceptions\DaprException;
 use Dapr\State\Internal\StateHelpers;
 use Dapr\State\Internal\Transaction;
@@ -20,8 +18,8 @@ abstract class ActorState
 
     public function __construct(private string $_internal_dapr_type, private string $_internal_actor_id)
     {
-        $this->_internal_reflection         = new ReflectionClass($this);
-        $this->_internal_transaction        = new Transaction();
+        $this->_internal_reflection  = new ReflectionClass($this);
+        $this->_internal_transaction = new Transaction();
 
         foreach ($this->_internal_reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
             unset($this->{$property->name});
@@ -31,15 +29,22 @@ abstract class ActorState
     public function save_state(): void
     {
         $operations = $this->_internal_transaction->get_transaction();
+        if (empty($operations)) {
+            return;
+        }
 
-        DaprClient::post(DaprClient::get_api("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state"), $operations);
+        DaprClient::post(
+            DaprClient::get_api("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state"),
+            $operations
+        );
 
         $this->roll_back();
     }
 
-    public function roll_back(): void {
+    public function roll_back(): void
+    {
         $this->_internal_transaction = new Transaction();
-        $this->_internal_data = [];
+        $this->_internal_data        = [];
     }
 
     public function __set(string $key, mixed $value): void
