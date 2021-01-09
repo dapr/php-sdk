@@ -88,4 +88,15 @@ class StateTest extends DaprTests
         );
         State::save_state($state);
     }
+
+    public function test_not_able_to_load_state() {
+        $state = new class {
+            public $never;
+        };
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Tried to load state without a Dapr\State\Attributes\StateStore attribute');
+
+        State::load_state($state);
+    }
 }
