@@ -176,7 +176,8 @@ class ActorRuntime
      *
      * @param string $type The type to read from.
      *
-     * @return ActorState The state type definition
+     * @return ActorState[] The state type definition
+     * @throws \ReflectionException
      */
     private static function get_state_types(string $type, string $dapr_type, mixed $id): array
     {

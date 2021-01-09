@@ -4,13 +4,37 @@ namespace Dapr\State\Internal;
 
 use Dapr\Serializer;
 
+/**
+ * Class Transaction
+ * @package Dapr\State\Internal
+ */
 class Transaction
 {
+    /**
+     * @var array[] The current transactions
+     */
     private array $transaction = [];
+
+    /**
+     * @var mixed[] The current state
+     */
     public array $state = [];
+
+    /**
+     * @var int Consistent counter for determining order of the transaction
+     */
     private int $counter = 0;
+
+    /**
+     * @var bool Whether the transaction is closed
+     */
     public bool $is_closed = false;
 
+    /**
+     * Get the ordered transaction to commit
+     *
+     * @return array[]
+     */
     public function get_transaction(): array
     {
         $transaction = array_values($this->transaction);
@@ -29,6 +53,12 @@ class Transaction
         );
     }
 
+    /**
+     * Upsert a value in a transaction
+     *
+     * @param string $key
+     * @param mixed $value
+     */
     public function upsert(string $key, mixed $value): void
     {
         $this->state[$key]       = $value;
@@ -42,6 +72,11 @@ class Transaction
         ];
     }
 
+    /**
+     * Delete a value in a transaction
+     *
+     * @param string $key
+     */
     public function delete(string $key): void
     {
         unset($this->state[$key]);

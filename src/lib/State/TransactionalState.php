@@ -9,18 +9,38 @@ use Dapr\State\Internal\Transaction;
 use ReflectionClass;
 use ReflectionProperty;
 
+/**
+ * Class TransactionalState
+ * @package Dapr\State
+ */
 abstract class TransactionalState
 {
     use StateHelpers;
 
+    /**
+     * @var Transaction The current transaction
+     */
     private Transaction $_internal_transaction;
+
+    /**
+     * @var ReflectionClass
+     */
     private ReflectionClass $_internal_reflection;
 
+    /**
+     * TransactionalState constructor.
+     */
     public function __construct()
     {
         $this->_internal_reflection = new ReflectionClass($this);
     }
 
+    /**
+     * Begin a transaction
+     *
+     * @param int $parallelism The amount of parallelism to use in loading the state
+     * @param array|null $metadata Component specific metadata
+     */
     public function begin(int $parallelism = 10, ?array $metadata = null): void
     {
         $this->_internal_transaction = new Transaction();
@@ -33,6 +53,14 @@ abstract class TransactionalState
         }
     }
 
+    /**
+     * Upsert a value
+     *
+     * @param string $key
+     * @param mixed $value
+     *
+     * @throws StateAlreadyCommitted
+     */
     public function __set(string $key, mixed $value): void
     {
         $this->throw_if_committed();
@@ -60,6 +88,14 @@ abstract class TransactionalState
         $this->_internal_transaction->delete($key);
     }
 
+    /**
+     * Commit the transaction.
+     * 
+     * @param array|null $metadata Component specific metadata
+     *
+     * @throws StateAlreadyCommitted
+     * @throws \Dapr\exceptions\DaprException
+     */
     public function commit(?array $metadata = null): void
     {
         $this->throw_if_committed();
