@@ -4,8 +4,8 @@ namespace Dapr\Actors;
 
 use Dapr\consistency\Consistency;
 use Dapr\consistency\EventualLastWrite;
-use Dapr\State\State;
-use Dapr\State\TransactionalState;
+use Dapr\State\Internal\Internal\State;
+use Dapr\State\Internal\Internal\TransactionalState;
 use LogicException;
 
 /**

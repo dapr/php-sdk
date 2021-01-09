@@ -7,7 +7,7 @@ use Dapr\Serializer;
 class Transaction
 {
     private array $transaction = [];
-    public array $state;
+    public array $state = [];
     private int $counter = 0;
     public bool $is_closed = false;
 

@@ -72,7 +72,7 @@ final class State
 
         foreach ($result->data as $value) {
             $key = $value['key'];
-            if ($value['data'] ?? null !== null) {
+            if (isset($value['data']) && $value['data'] !== null) {
                 $obj->$key          = $value['data'];
                 $keys[$key]['etag'] = $value['etag'];
             } elseif (isset($value['etag'])) {

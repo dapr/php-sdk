@@ -23,11 +23,13 @@ abstract class TransactionalState
 
     public function begin(int $parallelism = 10, ?array $metadata = null): void
     {
-        State::load_state($this, $parallelism, $metadata);
         $this->_internal_transaction = new Transaction();
+        State::load_state($this, $parallelism, $metadata);
+
         foreach ($this->_internal_reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
-            $this->_internal_transaction->state[$property->name] = $this->{$property->name};
+            $value = $this->{$property->name};
             unset($this->{$property->name});
+            $this->_internal_transaction->state[$property->name] = $value;
         }
     }
 
@@ -67,17 +69,22 @@ abstract class TransactionalState
                 fn($t) => State::get_etag($this, $t['request']['key']) ? array_merge(
                     $t,
                     [
-                        'etag'    => State::get_etag($this, $t['request']['key']),
-                        'options' => [
-                            'consistency' => (new $state_store->consistency)->get_consistency(),
-                            'concurrency' => (new $state_store->consistency)->get_concurrency(),
-                        ],
+                        'request' => array_merge(
+                            $t['request'],
+                            [
+                                'etag'    => State::get_etag($this, $t['request']['key']),
+                                'options' => [
+                                    'consistency' => (new $state_store->consistency)->get_consistency(),
+                                    'concurrency' => (new $state_store->consistency)->get_concurrency(),
+                                ],
+                            ]
+                        ),
                     ]
                 ) : $t,
                 $this->_internal_transaction->get_transaction()
             ),
         ];
-        if(isset($metadata)) {
+        if (isset($metadata)) {
             $transaction['metadata'] = $metadata;
         }
 
