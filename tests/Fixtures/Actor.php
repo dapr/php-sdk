@@ -6,8 +6,6 @@ use Dapr\Actors\Actor;
 use Dapr\Actors\ActorState;
 use Dapr\Actors\DaprType;
 use Dapr\Actors\IActor;
-use Dapr\consistency\StrongFirstWrite;
-use Dapr\State\Attributes\StateStore;
 
 #[DaprType('TestActor')]
 interface ITestActor extends IActor
@@ -44,7 +42,7 @@ class ActorClass implements ITestActor
 
     function get_id(): mixed
     {
-        // TODO: Implement get_id() method.
+        return $this->id;
     }
 
     function remind(string $name, $data): void
