@@ -86,8 +86,11 @@ class ActorRuntime
 
         try {
             $reflection = new ReflectionClass($description['type']);
-            $attributes = $reflection->getAttributes(ActorState::class);
-            $has_state  = ! empty($attributes);
+
+            /**
+             * @var ActorState[] $states
+             */
+            $states = self::get_state_types($description['type'], $description['dapr_type'], $description['id']);
             $is_actor   = $reflection->implementsInterface('Dapr\Actors\IActor')
                           && $reflection->isInstantiable() && $reflection->isUserDefined();
         } catch (\ReflectionException $ex) {
@@ -109,29 +112,13 @@ class ActorRuntime
         }
 
         $state_config = null;
-        if ($has_state) {
-            $state_config = self::get_state_type($description['type']);
-            /**
-             * @psalm-suppress UndefinedClass
-             */
-            $state = InternalActorState::begin_actor(
-                $description['dapr_type'],
-                $description['id'],
-                $state_config->type,
-                $state_config->store,
-                new $state_config->consistency
-            );
+        $params = [$description['id']];
 
-            /**
-             * @var IActor
-             */
-            $actor = new $description['type']($description['id'], $state);
-        } else {
-            /**
-             * @var IActor
-             */
-            $actor = new $description['type']($description['id']);
+        foreach($states as $state) {
+            $params[] = $state;
         }
+
+        $actor = new $description['type'](...$params);
 
         $activation_tracker = hash('sha256', $description['dapr_type'].$description['id']);
         $activation_tracker = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'dapr_'.$activation_tracker;
@@ -177,14 +164,8 @@ class ActorRuntime
                 break;
         }
 
-        if ($has_state) {
-            try {
-                InternalActorState::commit($state, $state_config->metadata ?? []);
-            } catch (DaprException $ex) {
-                trigger_error($ex->getMessage(), E_USER_WARNING);
-
-                return ['code' => 500, 'body' => Serializer::as_json($ex)];
-            }
+        foreach($states as $state) {
+            $state->save_state();
         }
 
         return $return;
@@ -195,17 +176,28 @@ class ActorRuntime
      *
      * @param string $type The type to read from.
      *
-     * @return ActorState The state type definition
+     * @return ActorState[] The state type definition
+     * @throws \ReflectionException
      */
-    private static function get_state_type(string $type): ActorState
+    private static function get_state_types(string $type, string $dapr_type, mixed $id): array
     {
-        try {
-            $reflection = new ReflectionClass($type);
-
-            return $reflection->getAttributes(ActorState::class)[0]?->newInstance();
-        } catch (Exception $ex) {
-            throw new \LogicException("Actor $type is using actor state, but is not properly configured.");
+        $reflection = new ReflectionClass($type);
+        $constructor = $reflection->getMethod('__construct');
+        $states = [];
+        foreach($constructor->getParameters() as $parameter) {
+            $type = $parameter->getType();
+            if($type instanceof \ReflectionNamedType) {
+                $type_name = $type->getName();
+                if(class_exists($type_name)) {
+                    $reflected_type = new ReflectionClass($type_name);
+                    if($reflected_type->isSubclassOf(ActorState::class)) {
+                        $states[] = new $type_name($dapr_type, $id);
+                    }
+                }
+            }
         }
+
+        return $states;
     }
 
     /**

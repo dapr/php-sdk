@@ -2,13 +2,21 @@
 
 namespace Fixtures;
 
-use Dapr\State\State;
+use Dapr\consistency\EventualLastWrite;
+use Dapr\State\Attributes\StateStore;
+use Dapr\State\TransactionalState;
 
-class TestState extends State
+#[StateStore('store', EventualLastWrite::class)]
+class TestState extends TransactionalState
 {
     public string $with_initial = "initial";
     public ?string $without_initial = null;
     public ?TestObj $complex = null;
+
+    public function __construct()
+    {
+        parent::__construct();
+    }
 
     public function set_something()
     {

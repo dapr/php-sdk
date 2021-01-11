@@ -1,6 +1,5 @@
 <?php
 
-use Dapr\State\TransactionalState;
 use Fixtures\TestState;
 
 class TransactionalStateTest extends DaprTests
@@ -8,7 +7,8 @@ class TransactionalStateTest extends DaprTests
     public function testBegin()
     {
         $this->register_simple_load();
-        $state = TransactionalState::begin(TestState::class, 'store');
+        $state = new TestState();
+        $state->begin();
         $this->assertSame('initial', $state->with_initial);
     }
 
@@ -36,17 +36,58 @@ class TransactionalStateTest extends DaprTests
     public function testEmptyCommit()
     {
         $this->register_simple_load();
-        $state = TransactionalState::begin(TestState::class, 'store');
-        TransactionalState::commit($state);
+        $state = new TestState();
+        $state->begin();
+        $state->commit();
+    }
+
+    public function testInvalidKey()
+    {
+        $this->register_simple_load();
+        $state = new TestState();
+        $state->begin();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('not_exist on Fixtures\TestState is not defined and thus will not be stored.');
+
+        $state->not_exist = true;
+    }
+
+    public function testIsSet()
+    {
+        $this->register_simple_load();
+        $state = new TestState();
+        $state->begin();
+
+        $this->assertFalse(isset($state->complex));
+        $this->assertTrue(isset($state->with_initial));
+
+        $state->complex = new \Fixtures\TestObj();
+        $this->assertTrue(isset($state->complex));
     }
 
     public function testCommit()
     {
-        $this->register_simple_load();
-        /**
-         * @var TestState $state
-         */
-        $state = TransactionalState::begin(TestState::class, 'store');
+        \Dapr\DaprClient::register_post(
+            '/state/store/bulk',
+            200,
+            [
+                ['key' => 'with_initial'],
+                ['key' => 'without_initial', 'data' => 1, 'etag' => 1],
+                ['key' => 'complex'],
+            ],
+            [
+                'keys'        => [
+                    'with_initial',
+                    'without_initial',
+                    'complex',
+                ],
+                'parallelism' => 10,
+            ]
+        );
+
+        $state = new TestState();
+        $state->begin();
         $state->set_something();
         unset($state->with_initial);
         $state->complex      = new \Fixtures\TestObj();
@@ -63,12 +104,12 @@ class TransactionalStateTest extends DaprTests
                     [
                         'operation' => 'upsert',
                         'request'   => [
-                            'key'   => 'complex',
-                            'value' => [
-                                '$type' => 'Fixtures\TestObj',
-                                '$obj'  => [
-                                    'foo' => 'baz',
-                                ],
+                            'key'     => 'without_initial',
+                            'value'   => 'something',
+                            'etag'    => 1,
+                            'options' => [
+                                'consistency' => 'eventual',
+                                'concurrency' => 'last-write',
                             ],
                         ],
                     ],
@@ -81,21 +122,24 @@ class TransactionalStateTest extends DaprTests
                     [
                         'operation' => 'upsert',
                         'request'   => [
-                            'key'   => 'without_initial',
-                            'value' => 'something',
+                            'key'   => 'complex',
+                            'value' => [
+                                '$type' => 'Fixtures\TestObj',
+                                '$obj'  => [
+                                    'foo' => 'baz',
+                                ],
+                            ],
                         ],
                     ],
                 ],
-            ],
-            function ($data) {
-                unset($data['metadata']);
-
-                return $data;
-            }
+                'metadata'   => [
+                    'test' => true,
+                ],
+            ]
         );
-        TransactionalState::commit($state);
+        $state->commit(['test' => true]);
 
         $this->expectException(\Dapr\exceptions\StateAlreadyCommitted::class);
-        TransactionalState::commit($state);
+        $state->commit();
     }
 }

@@ -13,7 +13,6 @@ class ActorTest extends DaprTests
     {
         $id = uniqid();
         ActorRuntime::register_actor( ActorClass::class);
-        $this->inject_state(['value'], $id);
         $this->assertState(
             [
                 ['upsert' => ['value', 'new value']],
@@ -71,7 +70,6 @@ class ActorTest extends DaprTests
     {
         $id = uniqid();
         ActorRuntime::register_actor( ActorClass::class);
-        $this->inject_state(['value'], $id);
         $this->assertState(
             [
                 ['upsert' => ['value', 'new value']],

@@ -9,83 +9,90 @@ Dapr's [supported state stores](https://docs.dapr.io/operations/components/setup
 
 ## Defining State
 
-State is defined through the use of a class that inherits the `Dapr\State\State` class. For example, to declare a state
-that uses a `helloWorld` key:
+State is defined through the use of any Plain Old PHP Object (POPO) that has statically declared properties (using a
+stdClass won't work) and an attribute.
 
 ```php
-class HelloWorldState extends \Dapr\State\State {
-    public $helloWorld;
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
+class HelloWorldState {
+    public function __construct(public $hello_world) {}
 }
 ```
 
-Then to load the state from the store, we need to instantiate the class and call `load()`:
+Then to load the state from the store, we need to instantiate the class or load from our constructor, both of these are
+valid:
 
 ```php
-class HelloWorldState extends \Dapr\State\State {
-    public $helloWorld;
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
+class HelloWorldState {
+    public function __construct(public $hello_world = 'hello world') {}
 }
-$state = new HelloWorldState('statestore', new \Dapr\consistency\StrongFirstWrite());
-$state->load();
+$state = new HelloWorldState();
+\Dapr\State\State::load_state($state);
+
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
+class ConstructedState {
+    public function __construct(public $hello_world = 'hello world') { 
+        \Dapr\State\State::load_state($this);
+    }
+}
 ```
 
-If you have any default values defined in your class, they'll survive loading a `null`/non-existent value. Take care
+If you have any default values defined in your class, they'll survive loading a non-existent value. Take care
 when specifying a type on your state. If a non-nullable type is specified, then an error will be thrown by PHP when you
 try to access it with a `null` value.
 
 It is perfectly safe to add behavior to your state classes as well, the state changes will be captured, even in a
 transaction.
 
-### State Constructor
-
-```
-public function __construct(
-        private string $store_name,
-        ?Consistency $consistency = null,
-        private string $key_prepend = ''
-    )
-```
-
-Arguments:
-
-- store_name: The store component's name
-- consistency: One of `EventualFirstWrite`, `EventualLastWrite`, `StrongFirstWrite`, or `StrongLastWrite`.
-  See [the docs](https://docs.dapr.io/reference/api/state_api/#concurrency) for more information.
-- key_prepend: A prefix that is used when loading and saving keys, but is removed before storing to the class.
-
 ### Loading
 
 ```
-public function load(?array $metadata = null): void
+public static function load_state(object $obj, int $parallelism = 10, ?array $metadata = null): void
 ```
 
-Loads the data from the store, can optionally supply `metadata` which is passed directly to the component.
+Loads the data from the store as defined by the attribute.
+
+Parameters:
+
+- obj: The object to load state into
+- parallelism: the number of keys to load at one time
+- metadata: optional, component specific metadata
 
 ### Saving
 
 ```
-public function save_state(): void
+public static function save_state(object $obj, ?array $metadata = null): void
 ```
 
-Saves the data to the store, using the specified concurrency/consistency option passed when instantiated.
+Saves the data to the store, using the specified concurrency/consistency option defined in the attribute.
 
 Throws `DaprException` if it fails.
 
+Parameters:
+
+- obj: The object's state to read
+- metadata: optional, component specific metadata
+
 ## Transactions
 
-You can also interact with state using a transaction instead of transactionless. To begin a transaction,
-use `Dapr\State\TransactionalState`:
+You can also interact with state using a transaction instead of transactionless. To use state in a transaction, you must extend 
+`\Dapr\State\TransactionalState` with your state class. You can still use it as normal state too.
 
 ```php
-/**
-* @var HelloWorldState $state
- */
-$state = \Dapr\State\TransactionalState::begin(HelloWorldState::class, 'statestore', new \Dapr\consistency\StrongFirstWrite());
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
+class HelloWorldState extends \Dapr\State\TransactionalState {
+    public function __construct(public $hello_world = 'hello world') {
+        parent::__construct();
+    }
+}
+($state = new HelloWorldState())->begin();
 ```
 
 Once you've made your changes to the state, call `commit`
 
 ```php
-\Dapr\State\TransactionalState::commit($state);
+$state->commit();
 ```
 
 Once the transaction is committed, the state may no longer be modified.
@@ -93,36 +100,26 @@ Once the transaction is committed, the state may no longer be modified.
 ### TransactionalState::begin()
 
 ```
-public static function begin(
-        string $type,
-        ?string $store_name = null,
-        ?Consistency $consistency = null
-    ): TransactionalState
+public function begin(int $parallelism = 10, ?array $metadata = null): void
 ```
 
-This wraps the state in a proxy object that keeps track of updates/deletes
+This starts a new transaction. If called on a (un)committed object, starts a new transaction.
 
 Arguments:
 
-- type: The state type to wrap, it will instantiate the type with a singular argument: the state store.
-- store_name: The name of the store component
-- consistency: The type of consistency
-
-Returns:
-
-A `TransactionalState` object that proxies the actual state object.
+- parallelism: Set how many keys to load concurrently.
+- metadata: optional, component specific metadata.
 
 ### TransactionalState::commit()
 
 ```
-public static function commit(State|TransactionalState $state, array $metadata = []): bool
+public function commit(?array $metadata = null): void
 ```
 
 Arguments:
 
-- state: The TransactionalState object returned from `begin()`.
-- metadata: Any metadata to be passed to the component.
+- metadata: Optional, component specific metadata.
 
 Returns:
 
-True if the commit is successful. Throws a `DaprException` on failure.
+Throws a `DaprException` on failure.

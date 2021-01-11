@@ -2,12 +2,9 @@
 
 namespace Dapr\State;
 
-use Dapr\consistency\Consistency;
-use Dapr\consistency\EventualLastWrite;
 use Dapr\DaprClient;
-use Dapr\exceptions\DaprException;
 use Dapr\Serializer;
-use JetBrains\PhpStorm\Pure;
+use Dapr\State\Internal\StateHelpers;
 use ReflectionClass;
 use ReflectionProperty;
 
@@ -16,193 +13,76 @@ use ReflectionProperty;
  * @package Dapr
  * @see https://v1-rc1.docs.dapr.io/reference/api/state_api/
  */
-class State
+final class State
 {
-    /**
-     * @var Consistency
-     */
-    private Consistency $consistency;
+    use StateHelpers;
+    private static \WeakMap $data;
 
-    /**
-     * Create an object for holding state.
-     *
-     * @param string $store_name The store to connect to.
-     * @param Consistency|null $consistency
-     * @param string $key_prepend
-     */
-    #[Pure]
-    public function __construct(
-        private string $store_name,
-        ?Consistency $consistency = null,
-        private string $key_prepend = ''
-    ) {
-        $this->consistency = $consistency ?? new EventualLastWrite();
-    }
-
-    /**
-     * Get a single state value.
-     *
-     * @param string $store_name The store name to connect to.
-     * @param string $key The key to retrieve from the store.
-     * @param string $consistency The type of consistency to use.
-     * @param array $meta Any metadata to send to the request.
-     *
-     * @return State A configured state object with the key set.
-     * @throws \Dapr\exceptions\DaprException
-     */
-    public static function get_single(
-        string $store_name,
-        string $key,
-        ?string $consistency = null,
-        array $meta = []
-    ): State {
-        $result = DaprClient::get(
-            DaprClient::get_api("/state/$store_name/$key", array_merge(['consistency' => $consistency], $meta))
-        );
-
-        // todo: handle etag
-        $state       = new State($store_name);
-        $state->$key = $result?->data ?? null;
-
-        return $state;
-    }
-
-    /**
-     * Saves state to the store.
-     * @throws DaprException
-     */
-    public function save_state(): void
+    public static function save_state(object $obj, ?array $metadata = null): void
     {
-        $data  = $this->get_keys();
-        $state = [];
-        foreach ($data as $key) {
-            $value = $this->$key;
-
+        $map = self::$data ?? new \WeakMap();
+        $reflection = new ReflectionClass($obj);
+        $store = self::get_description($reflection);
+        $keys = $map[$obj] ?? [];
+        $request = [];
+        foreach($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            $key = $property->name;
             $item = [
-                'key'   => $key,
-                'value' => Serializer::as_json($value),
+                'key' => $key,
+                'value' => Serializer::as_json($obj->$key),
             ];
 
-            $meta_key    = "${key}__meta";
-            $etag_key    = "${key}__etag";
-            $options_key = "${key}__options";
-
-            if (isset($this->$meta_key)) {
-                $item['metadata'] = $this->$meta_key;
+            if(isset($keys[$key]['etag'])) {
+                $item['etag'] = $keys[$key]['etag'];
+                $item['options'] = [
+                    'consistency' => (new $store->consistency)->get_consistency(),
+                    'concurrency' => (new $store->consistency)->get_concurrency(),
+                ];
             }
 
-            if (isset($this->$etag_key)) {
-                $item['etag'] = $this->$etag_key;
-            }
-
-            if (isset($this->$options_key)) {
-                $item['options'] = $this->$options_key;
-            }
-
-            $state[] = $item;
+            if(isset($metadata)) $item['metadata'] = $metadata;
+            $request[] = $item;
         }
 
-        $result = DaprClient::post(DaprClient::get_api("/state/{$this->store_name}"), $state);
+        DaprClient::post(DaprClient::get_api("/state/{$store->name}"), $request);
     }
 
-    /**
-     * Get available keys defined on the object.
-     * @return array The keys on the object.
-     */
-    private function get_keys(): array
-    {
-        $keys = new ReflectionClass($this);
-
-        $unregistered_keys = array_filter(
-            array_keys((array)$this),
-            function ($key) {
-                return ! $this->is_special_key($key) && ctype_print($key);
-            }
-        );
-
-        return array_values(
-            array_unique(
-                array_merge(
-                    $unregistered_keys,
-                    array_map(
-                        function (ReflectionProperty $item) {
-                            return $item->getName();
-                        },
-                        $keys->getProperties(ReflectionProperty::IS_PUBLIC)
-                    )
-                )
-            )
-        );
+    public static function get_etag(object $obj, string $key) {
+        return ((self::$data[$obj] ?? [])[$key] ?? [])['etag'] ?? null;
     }
 
-    private function is_special_key($key)
+    public static function load_state(object $obj, int $parallelism = 10, ?array $metadata = null): void
     {
-        switch (true) {
-            case $key === 'store_name':
-            case strpos($key, '__meta') > 0:
-            case strpos($key, '__etag') > 0:
-            case strpos($key, '__options') > 0:
-                return true;
-            default:
-                return false;
+        $map        = self::$data ?? new \WeakMap();
+        $reflection = new ReflectionClass($obj);
+        $store      = self::get_description($reflection);
+        $keys       = [];
+        foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            $keys[$property->name] = [
+                'etag' => null,
+            ];
         }
-    }
-
-    /**
-     * Load state from the store.
-     *
-     * @param array|null $metadata Metadata to send to the store.
-     *
-     * @throws DaprException
-     */
-    public function load(?array $metadata = null): void
-    {
-        $keys = $this->prepend_keys($this->get_keys());
-
         $result = DaprClient::post(
-            DaprClient::get_api("/state/{$this->store_name}/bulk", $metadata),
+            DaprClient::get_api("/state/{$store->name}/bulk", $metadata),
             [
-                'keys'        => $keys,
-                'parallelism' => 10, //todo: make configurable
+                'keys'        => array_keys($keys),
+                'parallelism' => $parallelism,
             ]
         );
 
-        if ( ! is_array($result->data)) {
-            return;
-        }
         foreach ($result->data as $value) {
-            $key         = trim($value['key']);
-            $key         = str_replace($this->key_prepend, '', $key);
-            $data        = $value['data'] ?? null;
-            $etag        = $value['etag'] ?? null;
-            $etag_key    = "${key}__etag";
-            $options_key = "${key}__options";
-            // only set the state if the etag set, otherwise, use the class's default value
-            if ($key !== null && $etag !== null) {
-                $this->$key      = $data;
-                $this->$etag_key = $etag;
-            } elseif ($key !== null) {
-                $this->$etag_key = $etag;
+            $key = $value['key'];
+            if (isset($value['data']) && $value['data'] !== null) {
+                $obj->$key          = $value['data'];
+                $keys[$key]['etag'] = $value['etag'];
+            } elseif (isset($value['etag'])) {
+                // there's an etag set, but no value, set it to null
+                $obj->$key          = null;
+                $keys[$key]['etag'] = $value['etag'];
             }
-            $this->$options_key = [
-                'consistency' => $this->consistency->get_consistency(),
-                'concurrency' => $this->consistency->get_concurrency(),
-            ];
         }
-    }
 
-    /**
-     * @return string[]
-     *
-     * @psalm-return array<array-key, string>
-     */
-    private function prepend_keys(array $keys): array
-    {
-        return array_map(
-            function ($key) {
-                return $this->key_prepend.$key;
-            },
-            $keys
-        );
+        $map[$obj]  = $keys;
+        self::$data = $map;
     }
 }

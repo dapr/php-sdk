@@ -20,6 +20,7 @@ use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscribe;
 use Dapr\Runtime;
+use Dapr\State\Attributes\StateStore;
 use Dapr\State\State;
 use Dapr\State\TransactionalState;
 
@@ -54,7 +55,7 @@ class SimpleObject
     public array $bar = [];
 }
 
-class SimpleActorState extends State
+class SimpleActorState extends ActorState
 {
     /**
      * @property int
@@ -65,7 +66,6 @@ class SimpleActorState extends State
 }
 
 #[DaprType('SimpleActor')]
-#[ActorState('statestore', SimpleActorState::class)]
 class SimpleActor implements ISimpleActor
 {
     use Actor;
@@ -76,7 +76,7 @@ class SimpleActor implements ISimpleActor
      * @param string $id
      * @param SimpleActorState $state
      */
-    public function __construct(private string $id, private $state)
+    public function __construct(private string $id, private SimpleActorState $state)
     {
     }
 
@@ -133,7 +133,8 @@ class SimpleActor implements ISimpleActor
     }
 }
 
-class SimpleState extends State
+#[StateStore(STORE, StrongFirstWrite::class)]
+class SimpleState
 {
     public $data;
 
@@ -141,6 +142,14 @@ class SimpleState extends State
 
     public function increment(int $amount = 1): void
     {
+        $this->counter += $amount;
+    }
+}
+
+#[StateStore(STORE, StrongFirstWrite::class)]
+class TState extends TransactionalState {
+    public int $counter = 0;
+    public function increment(int $amount = 1): void {
         $this->counter += $amount;
     }
 }
@@ -200,73 +209,67 @@ function assert_throws($exception, $message, $callback): void
 
 function state_test(): void
 {
-    $state = new SimpleState(store_name: STORE);
-    $state->save_state();
+    $state = new SimpleState();
+    State::save_state($state);
     assert_equals(null, $state->data, 'state is empty');
     assert_equals(0, $state->counter, 'initial state is correct');
 
     $state->data = 'data';
-    $state->save_state();
+    State::save_state($state);
     assert_equals('data', $state->data, 'saved correct state');
 
-    $result = State::get_single(store_name: STORE, key: 'data');
-    assert_equals($state->data, $result->data, 'single state loading works');
-
-    $state = new SimpleState(store_name: STORE);
-    $state->load();
+    $state = new SimpleState();
+    State::load_state($state);
     assert_equals('data', $state->data, 'properly loaded saved state');
 }
 
 function state_concurrency(): void
 {
-    $last  = new SimpleState(store_name: STORE, consistency: new StrongLastWrite);
-    $first = new SimpleState(store_name: STORE, consistency: new StrongFirstWrite);
-    $last->save_state();
-    $last->load();
-    $first->load();
+    $last = new #[StateStore(STORE, StrongLastWrite::class)] class extends SimpleState {};
+    $first = new #[StateStore(STORE, StrongFirstWrite::class)] class extends SimpleState {};
+    assert_equals(0, $last->counter, 'initial value correct');
+    State::save_state($last);
+    State::load_state($last);
+    State::load_state($first);
     assert_equals(0, $last->counter, 'Starting from 0');
 
     $first->counter = 1;
     $last->counter  = 2;
-    $last->save_state();
-    $last->load();
+    State::save_state($last);
+    State::load_state($last);
     assert_equals(2, $last->counter, 'last-write update succeeds');
     assert_throws(
         SaveStateFailure::class,
         "first-write update fails",
         function () use ($first) {
-            $first->save_state();
+            State::save_state($first);
         }
     );
 }
 
 function transaction_test(): void
 {
-    $stored          = new SimpleState(store_name: STORE);
-    $stored->counter = 0;
-    $stored->save_state();
-
-    /**
-     * @var SimpleState $transaction
-     */
-    $transaction = TransactionalState::begin(type: SimpleState::class, store_name: STORE);
+    $reset_state = new TState();
+    State::save_state($reset_state);
+    ($transaction = new TState())->begin();
     assert_equals(0, $transaction->counter, 'initial count = 0');
     $transaction->counter += 1;
-    $stored->load();
-
     assert_equals(1, $transaction->counter, 'counter was incremented in transaction');
-    assert_equals(0, $stored->counter, 'counter not incremented outside transaction');
+
+    $committed_state = new TState();
+    State::load_state($committed_state);
+    assert_equals(0, $committed_state->counter, 'counter not incremented outside transaction');
 
     $transaction->increment(1);
-    $stored->load();
+    State::load_state($committed_state);
 
     assert_equals(2, $transaction->counter, 'counter was incremented in transaction via function');
-    assert_equals(0, $stored->counter, 'counter not incremented outside transaction');
+    assert_equals(0, $committed_state->counter, 'counter not incremented outside transaction');
 
-    TransactionalState::commit(state: $transaction);
-    $stored->load();
+    $transaction->commit();
+    State::load_state($committed_state);
     assert_equals(2, $transaction->counter, 'committed transaction can be read from');
-    assert_equals(2, $stored->counter, 'counter state is stored');
+    assert_equals(2, $committed_state->counter, 'counter state is stored');
     assert_throws(
         StateAlreadyCommitted::class,
         'cannot change committed state',
@@ -278,43 +281,29 @@ function transaction_test(): void
 
 function multiple_transactions(): void
 {
-    $store = new SimpleState(store_name: STORE);
-    $store->save_state();
-    /**
-     * @var SimpleState
-     */
-    $one = TransactionalState::begin(type: SimpleState::class, store_name: STORE, consistency: new StrongFirstWrite);
-
-    /**
-     * @var SimpleState
-     */
-    $two = TransactionalState::begin(type: SimpleState::class, store_name: STORE, consistency: new StrongLastWrite);
-
-    $first_etag = $one->counter__etag;
+    $store = new SimpleState();
+    State::save_state($store);
+    ($one = new #[StateStore(STORE, StrongFirstWrite::class)] class extends TState {})->begin();
+    ($two = new #[StateStore(STORE, StrongLastWrite::class)] class extends TState {})->begin();
 
     $one->counter = 1;
     $one->counter = 3;
     $two->counter = 1;
     $two->counter = 2;
-    TransactionalState::commit(state: $two);
-    /**
-     * @var SimpleState
-     */
-    $two = TransactionalState::begin(type: SimpleState::class, store_name: STORE, consistency: new StrongLastWrite);
+    $two->commit();
+    $two->begin();
 
-    assert_not_equals($first_etag, $two->counter__etag, 'etag should change');
     assert_equals(2, $two->counter, 'last-write transaction commits');
     assert_throws(
         SaveStateFailure::class,
         'fail to commit first-write transaction',
         function () use ($one) {
-            TransactionalState::commit(state: $one);
+            $one->commit();
         }
     );
-    /**
-     * @var SimpleState
-     */
-    $one = TransactionalState::begin(type: SimpleState::class, store_name: STORE, consistency: new StrongFirstWrite);
+    $one->begin();
+    $one = new TState();
+    $one->begin();
     assert_equals(2, $one->counter, 'first-write transaction failed');
 }
 

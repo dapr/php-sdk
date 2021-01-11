@@ -24,6 +24,16 @@ abstract class DaprTests extends TestCase
         $class->setStaticPropertyValue('bindings', []);
     }
 
+    public function tearDown(): void
+    {
+        parent::tearDown();
+        foreach(\Dapr\DaprClient::$responses as $method => $response) {
+            if(!empty($response)) {
+                throw new LogicException('Never handled: ' . $method . ' ' . json_encode($response));
+            }
+        }
+    }
+
     protected function deserialize(string $json)
     {
         return \Dapr\Deserializer::maybe_deserialize(json_decode($json, true));

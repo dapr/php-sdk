@@ -6,8 +6,6 @@ use Dapr\Actors\Actor;
 use Dapr\Actors\ActorState;
 use Dapr\Actors\DaprType;
 use Dapr\Actors\IActor;
-use Dapr\consistency\StrongLastWrite;
-use Dapr\State\State;
 
 #[DaprType('TestActor')]
 interface ITestActor extends IActor
@@ -15,13 +13,12 @@ interface ITestActor extends IActor
     public function a_function($value): bool;
 }
 
-class TestActorState extends State
+class TestActorState extends ActorState
 {
     public string $value = "";
 }
 
 #[DaprType('TestActor')]
-#[ActorState('store', TestActorState::class)]
 class ActorClass implements ITestActor
 {
     use Actor;
@@ -32,7 +29,7 @@ class ActorClass implements ITestActor
      * @param string $id
      * @param ActorState $state
      */
-    public function __construct(private string $id, private $state)
+    public function __construct(private string $id, private TestActorState $state)
     {
     }
 
@@ -45,7 +42,7 @@ class ActorClass implements ITestActor
 
     function get_id(): mixed
     {
-        // TODO: Implement get_id() method.
+        return $this->id;
     }
 
     function remind(string $name, $data): void

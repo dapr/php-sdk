@@ -6,7 +6,7 @@ Add the library to your `composer.json`:
 
 > composer require dapr/php-sdk
 
-Some basic documentation is below, more documentation can be found [in the docs](docs); 
+Some basic documentation is below, more documentation can be found [in the docs](docs);
 
 # Accessing Secrets
 
@@ -23,12 +23,15 @@ echo Secret::retrieve('my_secret_store', 'secret_name');
 
 # Accessing State
 
+State is just Plain Old PHP Objects (POPO's) with an attribute:
+
 ```php
 <?php
 
 use Dapr\State\State;
 
-class MyState extends State {
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualLastWrite::class)]
+class MyState {
     /**
      * @var string
      */
@@ -50,13 +53,6 @@ class MyState extends State {
     public $counter = 0;
 
     /**
-     * Initialize the state
-     */
-    public function __construct() {
-        parent::__construct('name_of_state_store');
-    }
-
-    /**
      * Increment the counter
      * @param int $amount Amount to increment by
      */
@@ -67,53 +63,57 @@ class MyState extends State {
 
 // use state objects
 $state = new MyState();
-$state->load();
+State::load_state($state);
 echo $state->string_value;
 $state->string_value = 'hello world';
-$state->save_state();
+State::save_state($state);
 
 // load individual state
-$value = State::get_single('name_of_state_store', 'string_value');
-echo $value->string_value;
+$single_state = new #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualLastWrite::class)] class extends State {
+    public string $string_value;
+};
+State::load_state($single_state);
+echo $single_state->string_value;
 ```
+
+You may also put `State::load_state($this)` in your constructor, if you prefer.
 
 ## Transactional State
 
-You can also use transactional state to interact with state objects.
+You can also use transactional state to interact with state objects by extending `TransactionalState` with our state
+objects.
 
 ```php
 use Dapr\consistency\StrongFirstWrite;
 use Dapr\exceptions\StateAlreadyCommitted;
 use Dapr\State\TransactionalState;
 
-/*
- * Return a transactional state of the MyState type, with strong, first-write consistency
- * @var MyState $transaction_state
- */
-$state = TransactionalState::begin(MyState::class, 'name_of_state_store', new StrongFirstWrite);
-
-// state is loaded and the transaction is started for you
-echo $state->string_value;
+#[\Dapr\State\Attributes\StateStore('statestore', StrongFirstWrite::class)]
+class SomeState extends TransactionalState {
+    public string $value;
+    public function ok() {
+        $this->value = 'ok';
+    }
+}
+($state = new SomeState())->begin();
+echo $state->value;
 
 // we can change state
-$state->string_value = 'new value';
+$state->value = 'new value';
 
 // even via a helper function
-$state->increment(2);
+$state->ok();
 
-// calling delete is like calling unset(), these are both the same operation.
-$state->delete('object_type');
-unset($state->object_type);
+// delete a value from the store:
+unset($state->value);
 
 // once we're happy with our state, we can commit
-TransactionalState::commit($state);
+$state->commit();
 
-// once state is committed, state becomes read-only. All the following would throw.
+// once state is committed, state becomes read-only. The following would throw.
 try {
-    echo $state->string_value;
-    $state->string_value = 'failed';
-    $state->delete('object_type');
-    $state->commit();
+    echo $state->value;
+    $state->value = 'failed';
 }  catch (StateAlreadyCommitted $ex) {
     echo "Cannot alter already committed state!";
 }
@@ -121,8 +121,8 @@ try {
 
 # Actors
 
-Actors are fully implemented and quite powerful. In order to define an actor, you must first define the interface. You'll likely want to put this in a separate library
-for easy calling from other services.
+Actors are fully implemented and quite powerful. In order to define an actor, you must first define the interface.
+You'll likely want to put this in a separate library for easy calling from other services.
 
 ```php
 <?php
@@ -146,28 +146,20 @@ Once the interface is defined, you'll need to implement the behavior and registe
 ```php
 <?php
 
-use Dapr\Actors\{Actor,ActorRuntime,ActorState,DaprType};
-use Dapr\consistency\StrongFirstWrite;
+use Dapr\Actors\{Actor,ActorRuntime,DaprType};
+
+class CountState extends \Dapr\Actors\ActorState {
+    public int $count = 0;
+}
 
 #[DaprType('Counter')]
-#[ActorState(store: 'statestore', type: CountState::class, consistency: StrongFirstWrite::class, metadata: [])]
 class Counter implements ICounter {
     use Actor;
 
     /**
-     * @var int
-     */
-    private $id;
-
-    /**
-     * @var CountState
-     */
-    private $state;
-
-    /**
      * Initialize the class
      */
-    public function __construct($id, $state) {
+    public function __construct(private int $id, private CountState $state) {
         $this->id = $id;
         $this->state = $state;
     }
@@ -207,10 +199,9 @@ class Counter implements ICounter {
 ActorRuntime::register_actor(Counter::class);
 ```
 
-If you include an `ActorState` attribute, then you'll have a second parameter
-passed to your constructor which is the state object, you must include a `DaprType` attribute in the interface for
-Dapr to know which actor to proxy for you. State is automatically saved for you if you make any changes to it
-during the method call using transactional state.
+The state to inject is read from the constructor arguments, the state must derive from `ActorState` to be injected. You
+may use as many state classes as you'd like. State is automatically saved for you if you make any changes to it during
+the method call using transactional state.
 
 The `Actor` trait gives you access to some helper functions and implements most of `IActor`:
 

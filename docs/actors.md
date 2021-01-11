@@ -73,8 +73,8 @@ significantly increase actor throughput.
 #### Generated_Cached
 
 This is the same as `ProxyModes::GENERATED` except the class is stored in a tmp file so it doesn't need to be
-regenerated on every request. It doesn't know when to update the cached class, so using it in development is
-discouraged.
+regenerated on every request. It doesn't know when to update the cached class, so using it in development is discouraged
+but is offered for when manually generating the files isn't possible.
 
 #### Dynamic
 
@@ -84,24 +84,18 @@ where code cannot be `eval`'d or generated.
 
 ## Writing Actors
 
-To create an actor, we need to implement the interface we defined earlier. We can also use the `Actor` trait to help us
-implement most of the boilerplate required. The reason a trait is used vs. a base class was because in PHP, you may only
-inherit from a single class. This allows you to define a family of actors as you see fit.
-
-We also have two attributes:
-
-1. `DaprType`, which should be familiar from defining the interface.
-2. `ActorState`, which allows you to define the state you wish to be given to you when the actor is instantiated. If it
-   is not included, no state will be passed in the constructor; the second argument is omitted.
+To create an actor, we need to implement the interface we defined earlier and also add the `DaprType` attribute. We can
+also use the `Actor` trait to help us implement most of the boilerplate required. The reason a trait is used vs. a base
+class was because in PHP, you may only inherit from a single class. This allows you to define a family of actors as you
+see fit.
 
 Here's our counter actor:
 
 ```php
 #[\Dapr\Actors\DaprType('Count')]
-#[\Dapr\Actors\ActorState('statestore', CountState::class)]
 class Counter implements ICount {
     use \Dapr\Actors\Actor;
-    function __construct(private $id, private $state) {}
+    function __construct(private $id, private CountState $state) {}
     
     function increment(int $amount = 1): void {
         $this->state->count += $amount;
@@ -115,23 +109,22 @@ class Counter implements ICount {
 
 ### Actor Lifecycle
 
-The most important bit is the constructor. It takes two arguments:
-
-1. The actor's id.
-2. The actor's state for that id; if the `ActorState` attribute is defined.
+The most important bit is the constructor. It takes at least one argument, the id of the actor. Any additional arguments
+need to have the type specified, which must extend `ActorType`.
 
 An actor is instantiated via the constructor on every request. You can use it to calculate ephemeral state or handle any
 kind of request-specific startup you require, such as setting up other clients or connections.
 
-After the actor is instantiated, the `on_activation()` method may be called. This method is called any time the actor "
-wakes up" or when it is created for the first time. It is not called on every request.
+After the actor is instantiated, the `on_activation()` method may be called. The `on_activation()` method is called any
+time the actor
+"wakes up" or when it is created for the first time. It is not called on every request.
 
 Next, the actor method is called. This may be from a timer, reminder, or from a client. You may perform any work that
 needs to be done and/or throw an exception.
 
 Finally, the result of the work is returned to the caller. After some time (depending on how you've configured the
 service), the actor will be deactivated and `on_deactivation()` will be called. This may not be called if the host dies,
-the dapr sidecar crashes, or some other error occurs.
+daprd crashes, or some other error occurs which prevents it from being called successfully.
 
 ### Actor Methods
 
@@ -229,3 +222,32 @@ Dapr expects to know what actors a service may host at startup. You can do this 
 ```php
 \Dapr\Actors\ActorRuntime::register_actor(Counter::class);
 ```
+
+## Actor State
+
+Actor state is a "Plain Old PHP Object" (POPO) that extends `ActorState`. The `ActorState` base class provides a couple
+of useful methods. Here's an example implementation:
+
+```php
+class CountState extends \Dapr\Actors\ActorState {
+    public int $count = 0;
+}
+```
+
+### ActorState::save_state
+
+```
+public function save_state(): void
+```
+
+This method commits the current transaction and restarts the transaction. This is automatically called for you when your
+method completes, but there may be cases where you want to call it manually.
+
+### ActorState::roll_back
+
+```
+public function roll_back(): void
+```
+
+This method rolls back the current transaction. This may be handy in certain situations where you want to reset the
+state back to how it was when the actor method was first called.
