@@ -2,6 +2,7 @@
 
 namespace Dapr\Mocks;
 
+use Dapr\Runtime;
 use Dapr\State\Internal\Transaction;
 use ReflectionClass;
 
@@ -17,6 +18,7 @@ trait TestActorState
 
     public function __construct()
     {
+        Runtime::$logger?->debug('Overriding Actor State');
         $this->_internal_transaction[] = new Transaction();
         $this->_internal_reflection    = new ReflectionClass($this);
 

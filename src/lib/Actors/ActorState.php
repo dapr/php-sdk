@@ -4,6 +4,7 @@ namespace Dapr\Actors;
 
 use Dapr\DaprClient;
 use Dapr\exceptions\DaprException;
+use Dapr\Runtime;
 use Dapr\State\Internal\Transaction;
 use ReflectionClass;
 
@@ -38,6 +39,10 @@ abstract class ActorState
         foreach ($this->_internal_reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
             unset($this->{$property->name});
         }
+        Runtime::$logger?->debug(
+            'Starting transaction for {t}||{i}',
+            ['t' => $this->_internal_dapr_type, 'i' => $this->_internal_actor_id]
+        );
     }
 
     /**
@@ -47,6 +52,10 @@ abstract class ActorState
      */
     public function save_state(): void
     {
+        Runtime::$logger?->debug(
+            'Committing transaction for {t}||{i}',
+            ['t' => $this->_internal_dapr_type, 'i' => $this->_internal_actor_id]
+        );
         $operations = $this->_internal_transaction->get_transaction();
         if (empty($operations)) {
             return;
@@ -65,6 +74,7 @@ abstract class ActorState
      */
     public function roll_back(): void
     {
+        Runtime::$logger?->debug('Rolled back transaction');
         $this->_internal_transaction = new Transaction();
         $this->_internal_data        = [];
     }

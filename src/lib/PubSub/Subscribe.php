@@ -2,6 +2,7 @@
 
 namespace Dapr\PubSub;
 
+use Dapr\Runtime;
 use Dapr\Serializer;
 use JetBrains\PhpStorm\ArrayShape;
 
@@ -17,6 +18,7 @@ abstract class Subscribe
      */
     public static function to_topic(string $pubsub, string $topic, callable $handler): void
     {
+        Runtime::$logger?->debug('Subscribing to {topic} on {p}', ['topic' => $topic, 'p' => $pubsub]);
         self::$subscribed_topics[] = [
             'pubsubname' => $pubsub,
             'topic'      => $topic,
@@ -44,12 +46,19 @@ abstract class Subscribe
      * @return array
      */
     #[ArrayShape(['code' => "int", 'body' => "false|string"])]
-    public static function handle_subscription($id, $event): array
-    {
+    public static function handle_subscription(
+        $id,
+        $event
+    ): array {
         if (isset(self::$handlers[$id])) {
             try {
                 $result = call_user_func(self::$handlers[$id], $event);
             } catch (\Exception $exception) {
+                Runtime::$logger?->critical(
+                    'Failed to handle message {id}: {exception}',
+                    ['id' => $id, 'exception' => $exception]
+                );
+
                 return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
             }
 

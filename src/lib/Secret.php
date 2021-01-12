@@ -20,7 +20,12 @@ abstract class Secret
      */
     public static function retrieve(string $secret_store, string $name, array $parameters = [])
     {
+        Runtime::$logger?->debug(
+            'Retrieving secret {name} from {secret_store}',
+            ['name' => $name, 'secret_store' => $secret_store]
+        );
         $result = DaprClient::get(DaprClient::get_api("/secrets/$secret_store/$name", $parameters));
+
         return $result->data;
     }
 }

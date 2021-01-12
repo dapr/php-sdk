@@ -19,8 +19,10 @@ abstract class Serializer
     public static function register(callable $serializer, ?array $types)
     {
         if ($types === null) {
+            Runtime::$logger?->debug('Registered custom default serializer');
             self::$default_serializer = $serializer;
         } else {
+            Runtime::$logger?->debug('Registered custom serializer for {types}', ['types' => $types]);
             foreach ($types as $type) {
                 self::$types[$type] = $serializer;
             }

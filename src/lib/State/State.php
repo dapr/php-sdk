@@ -3,6 +3,7 @@
 namespace Dapr\State;
 
 use Dapr\DaprClient;
+use Dapr\Runtime;
 use Dapr\Serializer;
 use Dapr\State\Internal\StateHelpers;
 use ReflectionClass;
@@ -20,6 +21,7 @@ final class State
 
     public static function save_state(object $obj, ?array $metadata = null): void
     {
+        Runtime::$logger?->debug('Saving state');
         $map = self::$data ?? new \WeakMap();
         $reflection = new ReflectionClass($obj);
         $store = self::get_description($reflection);
@@ -53,6 +55,7 @@ final class State
 
     public static function load_state(object $obj, int $parallelism = 10, ?array $metadata = null): void
     {
+        Runtime::$logger?->debug('Loading state');
         $map        = self::$data ?? new \WeakMap();
         $reflection = new ReflectionClass($obj);
         $store      = self::get_description($reflection);

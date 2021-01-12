@@ -3,10 +3,9 @@
 namespace Dapr\Actors;
 
 use Dapr\Deserializer;
-use Dapr\exceptions\DaprException;
 use Dapr\Formats;
+use Dapr\Runtime;
 use Dapr\Serializer;
-use Exception;
 use JetBrains\PhpStorm\ArrayShape;
 use ReflectionClass;
 
@@ -74,6 +73,8 @@ class ActorRuntime
         ])] array $description
     ): array {
         if ($description['type'] === null || ! class_exists($description['type'])) {
+            Runtime::$logger?->critical('Unable to locate an actor for {t}', ['t' => $description['type']]);
+
             return [
                 'code' => 404,
                 'body' => json_encode(
@@ -90,11 +91,11 @@ class ActorRuntime
             /**
              * @var ActorState[] $states
              */
-            $states = self::get_state_types($description['type'], $description['dapr_type'], $description['id']);
-            $is_actor   = $reflection->implementsInterface('Dapr\Actors\IActor')
-                          && $reflection->isInstantiable() && $reflection->isUserDefined();
+            $states   = self::get_state_types($description['type'], $description['dapr_type'], $description['id']);
+            $is_actor = $reflection->implementsInterface('Dapr\Actors\IActor')
+                        && $reflection->isInstantiable() && $reflection->isUserDefined();
         } catch (\ReflectionException $ex) {
-            trigger_error($ex->getMessage(), E_USER_WARNING);
+            Runtime::$logger?->critical('{exception}', ['exception' => $ex]);
 
             return [
                 'code' => 500,
@@ -103,7 +104,7 @@ class ActorRuntime
         }
 
         if ( ! $is_actor) {
-            trigger_error('Actor does not implement IActor interface', E_USER_WARNING);
+            Runtime::$logger?->critical('Actor does not implement the IActor interface');
 
             return [
                 'code' => 404,
@@ -112,20 +113,27 @@ class ActorRuntime
         }
 
         $state_config = null;
-        $params = [$description['id']];
+        $params       = [$description['id']];
 
-        foreach($states as $state) {
+        foreach ($states as $state) {
             $params[] = $state;
         }
 
         $actor = new $description['type'](...$params);
 
         $activation_tracker = hash('sha256', $description['dapr_type'].$description['id']);
-        $activation_tracker = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'dapr_'.$activation_tracker;
+        $activation_tracker = rtrim(
+                                  sys_get_temp_dir(),
+                                  DIRECTORY_SEPARATOR
+                              ).DIRECTORY_SEPARATOR.'dapr_'.$activation_tracker;
 
         $is_activated = file_exists($activation_tracker);
 
         if ( ! $is_activated) {
+            Runtime::$logger?->info(
+                'Activating {type}||{id}',
+                ['type' => $description['dapr_type'], 'id' => $description['id']]
+            );
             touch($activation_tracker);
             $actor->on_activation();
         }
@@ -138,6 +146,10 @@ class ActorRuntime
             case 'method':
                 switch ($description['method_name']) {
                     case 'remind':
+                        Runtime::$logger?->info(
+                            'Reminding {t}||{i}',
+                            ['t' => $description['dapr_type'], 'i' => $description['id']]
+                        );
                         $data = $description['body'];
                         $actor->remind(
                             $description['reminder_name'],
@@ -145,11 +157,23 @@ class ActorRuntime
                         );
                         break;
                     case 'timer':
+                        Runtime::$logger?->info(
+                            'Timer callback {t}||{i}',
+                            ['t' => $description['dapr_type'], 'i' => $description['id']]
+                        );
                         $data     = $description['body'];
                         $callback = $data['callback'];
                         call_user_func_array([$actor, $callback], $data['data'] ?? []);
                         break;
                     default:
+                        Runtime::$logger?->info(
+                            'Calling {t}||{i}->{m}',
+                            [
+                                't' => $description['dapr_type'],
+                                'i' => $description['id'],
+                                'm' => $description['method_name'],
+                            ]
+                        );
                         $result         = call_user_func_array(
                             [$actor, $description['method_name']],
                             $description['body']
@@ -159,12 +183,16 @@ class ActorRuntime
                 }
                 break;
             case 'delete':
+                Runtime::$logger?->info(
+                    'Deactivating {t}||{i}',
+                    ['t' => $description['dapr_type'], 'i' => $description['id']]
+                );
                 $actor->on_deactivation();
                 unlink($activation_tracker);
                 break;
         }
 
-        foreach($states as $state) {
+        foreach ($states as $state) {
             $state->save_state();
         }
 
@@ -181,17 +209,18 @@ class ActorRuntime
      */
     private static function get_state_types(string $type, string $dapr_type, mixed $id): array
     {
-        $reflection = new ReflectionClass($type);
+        $reflection  = new ReflectionClass($type);
         $constructor = $reflection->getMethod('__construct');
-        $states = [];
-        foreach($constructor->getParameters() as $parameter) {
+        $states      = [];
+        foreach ($constructor->getParameters() as $parameter) {
             $type = $parameter->getType();
-            if($type instanceof \ReflectionNamedType) {
+            if ($type instanceof \ReflectionNamedType) {
                 $type_name = $type->getName();
-                if(class_exists($type_name)) {
+                if (class_exists($type_name)) {
                     $reflected_type = new ReflectionClass($type_name);
-                    if($reflected_type->isSubclassOf(ActorState::class)) {
+                    if ($reflected_type->isSubclassOf(ActorState::class)) {
                         $states[] = new $type_name($dapr_type, $id);
+                        Runtime::$logger?->debug('Found state {t}', ['t' => $type_name]);
                     }
                 }
             }
@@ -209,9 +238,10 @@ class ActorRuntime
      */
     public static function register_actor(string $actor_type): void
     {
+        Runtime::$logger?->debug('Registering {t}', ['t' => $actor_type]);
         $reflected_type             = new ReflectionClass($actor_type);
-        $attributes = $reflected_type->getAttributes(DaprType::class);
-        $dapr_type = ($attributes[0] ?? null)?->newInstance()->type ?? $reflected_type->getShortName();
+        $attributes                 = $reflected_type->getAttributes(DaprType::class);
+        $dapr_type                  = ($attributes[0] ?? null)?->newInstance()->type ?? $reflected_type->getShortName();
         self::$actors[$dapr_type]   = $actor_type;
         self::$config['entities'][] = $dapr_type;
     }
@@ -224,7 +254,9 @@ class ActorRuntime
      */
     public static function set_scan_interval(\DateInterval $interval): void
     {
-        self::$config['actorScanInterval'] = Formats::normalize_interval($interval);
+        $interval = Formats::normalize_interval($interval);
+        Runtime::$logger?->debug('Setting scan interval {i}', ['i' => $interval]);
+        self::$config['actorScanInterval'] = $interval;
     }
 
     /**
@@ -235,7 +267,9 @@ class ActorRuntime
      */
     public static function set_idle_timeout(\DateInterval $timeout): void
     {
-        self::$config['actorIdleTimeout'] = Formats::normalize_interval($timeout);
+        $timeout = Formats::normalize_interval($timeout);
+        Runtime::$logger?->debug('Setting idle timeout {t}', ['t' => $timeout]);
+        self::$config['actorIdleTimeout'] = $timeout;
     }
 
     /**
@@ -246,7 +280,9 @@ class ActorRuntime
      */
     public static function set_drain_timeout(\DateInterval $timeout): void
     {
-        self::$config['drainOngoingCallTimeout'] = Formats::normalize_interval($timeout);
+        $timeout = Formats::normalize_interval($timeout);
+        Runtime::$logger?->debug('Setting drain timeout {t}', ['t' => $timeout]);
+        self::$config['drainOngoingCallTimeout'] = $timeout;
     }
 
     /**
@@ -257,6 +293,7 @@ class ActorRuntime
      */
     public static function do_drain_actors(bool $drain)
     {
+        Runtime::$logger?->debug('Setting drain mode {m}', ['m' => $drain]);
         self::$config['drainRebalancedActors'] = $drain;
     }
 

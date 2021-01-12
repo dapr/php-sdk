@@ -31,6 +31,10 @@ abstract class Binding
             'metadata'  => (object)Serializer::as_json($metadata),
             'operation' => $operation,
         ];
+        Runtime::$logger?->info(
+            'Invoking remote binding {name} with payload: {payload}',
+            ['name' => $name, 'payload' => $payload]
+        );
 
         return DaprClient::post(DaprClient::get_api("/bindings/$name"), $payload);
     }
@@ -43,6 +47,11 @@ abstract class Binding
     public static function handle_method(string $method, mixed $params): array
     {
         if ( ! isset(self::$bindings[$method])) {
+            Runtime::$logger?->critical(
+                'Attempted to handle binding method {name} but no callback set',
+                ['name' => $method]
+            );
+
             return [
                 'code' => 404,
                 'body' => json_encode(
