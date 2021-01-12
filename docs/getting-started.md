@@ -11,6 +11,8 @@ To use the SDK as-is, you'll need an `index.php` and some boilerplate code:
 // index.php
 
 use Dapr\Runtime;
+use Monolog\Handler\ErrorLogHandler;
+use Monolog\Logger;
 
 /*
  * This is optional, but good if you want to catch all errors and have them bubble up as exceptions.
@@ -37,6 +39,13 @@ set_error_handler(
  */
 
 require_once __DIR__.'/vendor/autoload.php';
+
+// logging (using monologger)
+$logger = new Logger('dapr');
+$handler = new ErrorLogHandler(level: Logger::INFO);
+$logger->pushHandler($handler);
+$logger->pushProcessor(new \Monolog\Processor\PsrLogMessageProcessor());
+Runtime::set_logger($logger);
 
 // configure your application
 \Dapr\Actors\ActorRuntime::do_drain_actors(true);
@@ -155,3 +164,7 @@ Returns a function for a given http method and uri.
 ### Runtime::handle_method()
 
 Given a http method, registered method name, and parameters, invokes the registered method. 
+
+### Runtime::set_logger()
+
+Set the logger to any PSR-3 compatible logger.
