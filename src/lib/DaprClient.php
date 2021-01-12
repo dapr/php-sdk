@@ -52,6 +52,7 @@ abstract class DaprClient
      */
     public static function get(string $url): DaprResponse
     {
+        Runtime::$logger?->debug('Calling GET {url}', ['url' => $url]);
         $curl = curl_init($url);
         curl_setopt_array(
             $curl,
@@ -67,7 +68,9 @@ abstract class DaprClient
         $return->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
 
-        if($return->data instanceof \Exception) {
+        Runtime::$logger?->debug('Got response: {response}', ['response' => $return]);
+
+        if ($return->data instanceof \Exception) {
             throw $return->data;
         }
 
@@ -132,6 +135,7 @@ abstract class DaprClient
      */
     public static function post(string $url, mixed $data): DaprResponse
     {
+        Runtime::$logger?->debug('Calling POST {url} with data: {data}', ['url' => $url, 'data' => $data]);
         $curl = curl_init($url);
         curl_setopt_array(
             $curl,
@@ -148,8 +152,9 @@ abstract class DaprClient
         $response->data = Deserializer::maybe_deserialize(json_decode($response->data, true));
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
+        Runtime::$logger?->debug('Got response: {r}', ['r' => $response]);
 
-        if($response->data instanceof \Exception) {
+        if ($response->data instanceof \Exception) {
             throw $response->data;
         }
 
@@ -171,6 +176,7 @@ abstract class DaprClient
      */
     public static function delete(string $url): DaprResponse
     {
+        Runtime::$logger?->debug('Calling DELETE {url}', ['url' => $url]);
         $curl = curl_init($url);
         curl_setopt_array(
             $curl,
@@ -186,7 +192,9 @@ abstract class DaprClient
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
 
-        if($response->data instanceof \Exception) {
+        Runtime::$logger?->debug('Got response: {r}', ['r' => $response]);
+
+        if ($response->data instanceof \Exception) {
             throw $response->data;
         }
 

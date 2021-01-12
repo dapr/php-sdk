@@ -3,6 +3,7 @@
 namespace Dapr\Mocks;
 
 use Dapr\exceptions\StateAlreadyCommitted;
+use Dapr\Runtime;
 use Dapr\State\Internal\Transaction;
 
 trait TestTransactionalState
@@ -12,6 +13,7 @@ trait TestTransactionalState
 
     public function __construct()
     {
+        Runtime::$logger?->debug('Overriding transactional state');
     }
 
     public function begin(int $parallelism = 10, ?array $metadata = null): void

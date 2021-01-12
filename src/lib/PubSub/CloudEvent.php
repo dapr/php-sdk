@@ -2,6 +2,8 @@
 
 namespace Dapr\PubSub;
 
+use Dapr\Runtime;
+
 class CloudEvent
 {
     /**
@@ -100,6 +102,7 @@ class CloudEvent
 
     public static function parse(string $json): CloudEvent
     {
+        Runtime::$logger?->debug('Parsing cloud event {json}', ['json' => $json]);
         $event = new CloudEvent();
         $raw   = json_decode($json, true);
 
@@ -127,6 +130,7 @@ class CloudEvent
      */
     public function to_json(): string|bool
     {
+        Runtime::$logger?->debug('Serializing cloud event');
         return json_encode($this->to_array());
     }
 
