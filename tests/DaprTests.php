@@ -10,6 +10,7 @@ abstract class DaprTests extends TestCase
 {
     public function setUp(): void
     {
+        \Dapr\Runtime::set_logger(new \Psr\Log\NullLogger());
         \Dapr\DaprClient::$responses = [];
         // reset other static objects
         $class = new ReflectionClass(\Dapr\PubSub\Subscribe::class);
