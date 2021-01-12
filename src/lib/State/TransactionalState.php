@@ -68,7 +68,13 @@ abstract class TransactionalState
         Runtime::$logger?->debug('Attempting to set {key} to {value}', ['key' => $key, 'value' => $value]);
         $this->throw_if_committed();
         if ( ! $this->_internal_reflection->hasProperty($key)) {
-            Runtime::$logger?->critical('{key} is not defined on transactional class and is not stored', ['key' => $key]);
+            Runtime::$logger?->critical(
+                '{key} is not defined on transactional class and is not stored',
+                ['key' => $key]
+            );
+            throw new \InvalidArgumentException(
+                "$key does not_exist on ".get_class($this)." is not defined and thus will not be stored."
+            );
         }
         $this->_internal_transaction->upsert($key, $value);
     }
@@ -76,12 +82,14 @@ abstract class TransactionalState
     public function __get(string $key): mixed
     {
         Runtime::$logger?->debug('Getting value from transaction with key: {key}', ['key' => $key]);
+
         return $this->_internal_transaction->state[$key];
     }
 
     public function __isset(string $key): bool
     {
         Runtime::$logger?->debug('Checking {key} is set', ['key' => $key]);
+
         return isset($this->_internal_transaction->state[$key]);
     }
 
@@ -113,7 +121,7 @@ abstract class TransactionalState
                         'request' => array_merge(
                             $t['request'],
                             [
-                                'etag'    => State::get_etag($this, $t['request']['key']),
+                                'etag' => State::get_etag($this, $t['request']['key']),
                                 'options' => [
                                     'consistency' => (new $state_store->consistency)->get_consistency(),
                                     'concurrency' => (new $state_store->consistency)->get_concurrency(),

@@ -18,7 +18,7 @@ abstract class Runtime
     #[ArrayShape(['string' => 'callable'])]
     private static array $methods = [];
 
-    public static LoggerInterface|null $logger;
+    public static LoggerInterface|null $logger = null;
 
     /**
      * Register a method for determining health checks

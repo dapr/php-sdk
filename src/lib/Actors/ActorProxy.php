@@ -3,6 +3,7 @@
 namespace Dapr\Actors;
 
 use Dapr\DaprClient;
+use Dapr\Runtime;
 use Dapr\Serializer;
 use LogicException;
 use ReflectionClass;
@@ -18,10 +19,12 @@ abstract class ActorProxy
 
     public static function generate_proxy_class($interface)
     {
+        Runtime::$logger?->info('Generating a proxy class for {i}', ['i' => $interface]);
         $reflected_interface = new ReflectionClass($interface);
         $type                = $reflected_interface->getAttributes(DaprType::class)[0]?->newInstance()->type;
 
         if (empty($type)) {
+            Runtime::$logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
             throw new LogicException("$interface must have a DaprType attribute");
         }
 
@@ -109,10 +112,12 @@ CLASS;
      */
     public static function get(string $interface, mixed $id): object
     {
+        Runtime::$logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
         $reflected_interface = new ReflectionClass($interface);
         $type                = ($reflected_interface->getAttributes(DaprType::class)[0] ?? null)?->newInstance()->type;
 
         if (empty($type)) {
+            Runtime::$logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
             throw new LogicException("$interface must have a DaprType attribute");
         }
 
@@ -123,11 +128,14 @@ CLASS;
             default:
                 if ( ! class_exists($full_type)) {
                     eval(self::_generate_proxy_class($reflected_interface, $interface, $type));
+                } else {
+                    Runtime::$logger?->debug('Using already defined proxy class {i}', ['i' => $full_type]);
                 }
                 $proxy     = new $full_type();
                 $proxy->id = $id;
                 break;
             case ProxyModes::DYNAMIC:
+                Runtime::$logger?->debug('Using InternalProxy to provide proxy');
                 $proxy            = new InternalProxy();
                 $proxy->DAPR_TYPE = $type;
                 foreach ($reflected_interface->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {

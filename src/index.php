@@ -23,6 +23,16 @@ use Dapr\Runtime;
 use Dapr\State\Attributes\StateStore;
 use Dapr\State\State;
 use Dapr\State\TransactionalState;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Handler\ErrorLogHandler;
+use Monolog\Logger;
+
+$logger = new Logger('dapr');
+$handler = new ErrorLogHandler(level: Logger::INFO);
+$logger->pushHandler($handler);
+$logger->pushProcessor(new \Monolog\Processor\PsrLogMessageProcessor());
+$logger->pushProcessor(new \Monolog\Processor\IntrospectionProcessor());
+Runtime::set_logger($logger);
 
 function testsub(): void
 {

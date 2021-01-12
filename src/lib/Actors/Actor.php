@@ -4,6 +4,7 @@ namespace Dapr\Actors;
 
 use Dapr\DaprClient;
 use Dapr\exceptions\DaprException;
+use Dapr\Runtime;
 
 /**
  * Trait Actor
@@ -26,7 +27,7 @@ trait Actor
         Reminder $reminder
     ): bool {
         // inline function: get name
-        if(isset($this->DAPR_TYPE)) {
+        if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
             $class      = new \ReflectionClass($this);
@@ -39,6 +40,7 @@ trait Actor
         }
         // end function
         $id = $this->get_id();
+        Runtime::$logger?->info('Creating reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         DaprClient::post(
             DaprClient::get_api("/actors/$type/$id/reminders/{$reminder->name}", null),
@@ -60,7 +62,7 @@ trait Actor
         string $name
     ): ?Reminder {
         // inline function: get name
-        if(isset($this->DAPR_TYPE)) {
+        if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
             $class      = new \ReflectionClass($this);
@@ -73,6 +75,7 @@ trait Actor
         }
         // end function
         $id = $this->get_id();
+        Runtime::$logger?->info('Getting reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $result = DaprClient::get(DaprClient::get_api("/actors/$type/$id/reminders/$name"));
 
@@ -90,7 +93,7 @@ trait Actor
     public function delete_reminder(string $name): bool
     {
         // inline function: get name
-        if(isset($this->DAPR_TYPE)) {
+        if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
             $class      = new \ReflectionClass($this);
@@ -103,6 +106,7 @@ trait Actor
         }
         // end function
         $id = $this->get_id();
+        Runtime::$logger?->info('Deleting reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         DaprClient::delete(DaprClient::get_api("/actors/$type/$id/reminders/$name"));
 
@@ -121,7 +125,7 @@ trait Actor
         Timer $timer,
     ): bool {
         // inline function: get name
-        if(isset($this->DAPR_TYPE)) {
+        if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
             $class      = new \ReflectionClass($this);
@@ -134,6 +138,7 @@ trait Actor
         }
         // end function
         $id = $this->get_id();
+        Runtime::$logger?->info('Creating timer for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         DaprClient::post(
             DaprClient::get_api("/actors/$type/$id/timers/{$timer->name}"),
@@ -154,7 +159,7 @@ trait Actor
     public function delete_timer(string $name): bool
     {
         // inline function: get name
-        if(isset($this->DAPR_TYPE)) {
+        if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
             $class      = new \ReflectionClass($this);
@@ -167,6 +172,7 @@ trait Actor
         }
         // end function
         $id = $this->get_id();
+        Runtime::$logger?->info('Deleting timer for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         DaprClient::delete(DaprClient::get_api("/actors/$type/$id/timers/$name"));
 
