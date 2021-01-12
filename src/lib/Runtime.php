@@ -8,6 +8,7 @@ use Dapr\exceptions\DaprException;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Subscribe;
 use JetBrains\PhpStorm\ArrayShape;
+use Psr\Log\LoggerInterface;
 
 abstract class Runtime
 {
@@ -17,6 +18,8 @@ abstract class Runtime
     #[ArrayShape(['string' => 'callable'])]
     private static array $methods = [];
 
+    public static LoggerInterface|null $logger;
+
     /**
      * Register a method for determining health checks
      *
@@ -24,6 +27,7 @@ abstract class Runtime
      */
     public static function add_health_check(callable $callback)
     {
+        self::$logger?->info('Setting custom health check');
         self::$health_checks[] = $callback;
     }
 
@@ -43,6 +47,7 @@ abstract class Runtime
             $callback = $method_name;
         }
         self::$methods[$http_method][$method_name] = $callback;
+        self::$logger?->info("Registered method: {method_name}", ['method_name' => $method_name]);
     }
 
     /**
@@ -63,6 +68,10 @@ abstract class Runtime
         $http_method = 'POST'
     ): DaprResponse {
         $url = "/invoke/$app_id/method/$method";
+        self::$logger?->info(
+            "Invoking {http_method} {app_id}.{method}",
+            ['http_method' => $http_method, 'app_id' => $app_id, 'method' => $method]
+        );
         switch ($http_method) {
             case 'GET':
                 return DaprClient::get(DaprClient::get_api($url, $param));
@@ -86,6 +95,10 @@ abstract class Runtime
      */
     public static function get_handler_for_route(string $http_method, string $uri): Closure
     {
+        self::$logger?->info(
+            "Determining handler for {http_method} {uri}",
+            ['http_method' => $http_method, 'uri' => $uri]
+        );
         $handler = self::find_handler($http_method, $uri);
 
         return function () use ($handler) {
@@ -113,6 +126,8 @@ abstract class Runtime
     private static function find_handler(string $http_method, string $uri): callable|null
     {
         if (str_starts_with(haystack: $uri, needle: '/actors')) {
+            self::$logger?->debug('Using actor handler');
+
             return function () use ($http_method, $uri) {
                 $parts = ActorRuntime::extract_parts_from_request($http_method, $uri);
 
@@ -120,7 +135,8 @@ abstract class Runtime
             };
         }
         if (str_starts_with(haystack: $uri, needle: '/dapr/runtime/sub/')) {
-            $id    = str_replace('/dapr/runtime/sub/', '', $uri);
+            $id = str_replace('/dapr/runtime/sub/', '', $uri);
+            self::$logger?->debug('Using pubsub handler');
             $event = CloudEvent::parse(ActorRuntime::get_input());
 
             return function () use ($id, $event) {
@@ -129,16 +145,23 @@ abstract class Runtime
         }
         switch ($uri) {
             case '/dapr/config':
+                self::$logger?->debug('Returning actor config');
+
                 return [ActorRuntime::class, 'handle_config'];
             case '/dapr/subscribe':
+                self::$logger?->debug('Returning subscriptions');
+
                 return [Subscribe::class, 'get_subscriptions'];
             case '/healthz':
                 return function () {
+                    self::$logger?->debug('Running health checks');
                     try {
                         foreach (self::$health_checks as $callback) {
                             $callback();
                         }
                     } catch (\Throwable $ex) {
+                        self::$logger?->critical('Health check failed: {exception}', ['exception' => $ex]);
+
                         return ['code' => 500, 'body' => json_encode(Serializer::as_json($ex))];
                     }
 
@@ -149,15 +172,21 @@ abstract class Runtime
                 $body         = Deserializer::maybe_deserialize(json_decode(ActorRuntime::get_input(), true));
                 if (count($method_parts) === 2) {
                     if ($http_method === 'OPTIONS' && Binding::has_binding($method_parts[1])) {
+                        self::$logger?->debug('Found binding');
+
                         return function () {
                             return ['code' => 200];
                         };
                     }
                     if (Binding::has_binding($method_parts[1])) {
+                        self::$logger?->debug('Using binding handler');
+
                         return function () use ($method_parts, $body) {
                             return Binding::handle_method($method_parts[1], $body);
                         };
                     }
+
+                    self::$logger?->debug('Using method handler');
 
                     return function () use ($method_parts, $body, $http_method) {
                         return self::handle_method($http_method, $method_parts[1], $body);
@@ -171,6 +200,11 @@ abstract class Runtime
     public static function handle_method(string $http_method, string $method, mixed $params): array
     {
         if ( ! isset(self::$methods[$http_method][$method])) {
+            self::$logger?->critical(
+                'Did not find a method for {http_method} {method}',
+                ['http_method' => $http_method, 'method' => $method]
+            );
+
             return [
                 'code' => 404,
                 'body' => json_encode(
@@ -190,9 +224,16 @@ abstract class Runtime
                 return $result;
             }
         } catch (\Exception $exception) {
+            self::$logger?->critical('Method failed: {exception}', ['exception' => $exception]);
+
             return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
         }
 
         return ['code' => 200, 'body' => $result];
+    }
+
+    public static function set_logger(LoggerInterface $logger)
+    {
+        self::$logger = $logger;
     }
 }

@@ -13,12 +13,14 @@
     "php": "8.0",
     "ext-json": "*",
     "ext-mbstring": "*",
-    "ext-curl": "*"
+    "ext-curl": "*",
+    "psr/log": "^1.1"
   },
   "require-dev": {
     "ext-xdebug": "*",
     "vimeo/psalm": "^4.3",
-    "phpunit/phpunit": "^9"
+    "phpunit/phpunit": "^9",
+    "monolog/monolog": "^2.2"
   },
   "autoload": {
     "psr-4": {
