@@ -33,27 +33,7 @@ final class SerializerTest extends TestCase
         $nested->foo = 'bar';
         $nested->a   = new DateInterval('PT10M');
 
-        $other_sdk                                  = new WeatherForecastWithPOPOs();
-        $other_sdk->Date                            = new DateTime('2019-08-01T00:00:00-07:00');
-        $other_sdk->DatesAvailable                  = [
-            new DateTime('2019-08-01T00:00:00-07:00'),
-            new DateTime('2019-08-02T00:00:00-07:00'),
-        ];
-        $other_sdk->Summary                         = 'Hot';
-        $other_sdk->TemperatureCelsius              = 25;
-        $other_sdk->TemperatureRanges               = [
-            'Cold' => new HighLowTemps(),
-            'Hot'  => new HighLowTemps(),
-        ];
-        $other_sdk->TemperatureRanges['Cold']->High = 20;
-        $other_sdk->TemperatureRanges['Cold']->Low  = -10;
-        $other_sdk->TemperatureRanges['Hot']->High  = 60;
-        $other_sdk->TemperatureRanges['Hot']->Low   = 20;
-        $other_sdk->SummaryWords                    = [
-            "Cool",
-            "Windy",
-            "Humid",
-        ];
+        $other_sdk = get_example_object();
 
         $empty = new class {
             public $emptyArray = [];
@@ -122,7 +102,7 @@ JSON
     public function testSerializer($value, $expected)
     {
         $serialized = \Dapr\Serialization\Serializer::as_json($value, JSON_PRETTY_PRINT);
-        \Dapr\Serialization\Serializer::register('serialize_ASpecialType', [ASpecialType::class]);
+        \Dapr\Serialization\Serializer::register('serialize_ASpecialType', ASpecialType::class);
         $this->assertSame($expected, $serialized);
     }
 
@@ -134,7 +114,7 @@ JSON
                 'message'   => 'testing',
                 'errorCode' => 'Exception',
                 'file'      => __FILE__,
-                'line'      => 131,
+                'line'      => 111,
                 'inner'     => null,
             ],
             $serialized

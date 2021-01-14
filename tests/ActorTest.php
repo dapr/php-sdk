@@ -1,6 +1,7 @@
 <?php
 
 use Dapr\Actors\ActorRuntime;
+use Dapr\Deserializer;
 use Fixtures\ActorClass;
 use Dapr\Serialization\Serializer;
 
@@ -25,7 +26,7 @@ class ActorTest extends DaprTests
             ActorRuntime::extract_parts_from_request('PUT', "/actors/TestActor/$id/method/a_function")
         );
         $this->assertSame(200, $result['code']);
-        $this->assertTrue(\Dapr\Deserializer::maybe_deserialize(json_decode($result['body'])));
+        $this->assertTrue(json_decode($result['body'], true));
     }
 
     private function inject_state($state_array, $id)
@@ -80,7 +81,7 @@ class ActorTest extends DaprTests
         $this->set_body(['new value']);
         $result = \Dapr\Runtime::get_handler_for_route('PUT', "/actors/TestActor/$id/method/a_function")();
         $this->assertSame(200, $result['code']);
-        $this->assertTrue(\Dapr\Deserializer::maybe_deserialize(json_decode($result['body'])));
+        $this->assertTrue(json_decode($result['body']));
     }
 
     public function testActorProxy()

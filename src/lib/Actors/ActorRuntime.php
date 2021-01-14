@@ -2,7 +2,8 @@
 
 namespace Dapr\Actors;
 
-use Dapr\Deserializer;
+use Dapr\Deserialization\Attributes\Union;
+use Dapr\Deserialization\Deserializer;
 use Dapr\Formats;
 use Dapr\Runtime;
 use Dapr\Serialization\Serializer;
@@ -49,7 +50,7 @@ class ActorRuntime
             'method_name'   => $parts[4] ?? null,
             'reminder_name' => $parts[5] ?? null,
             'body'          => match ($http_method) {
-                'POST', 'PUT' => Deserializer::maybe_deserialize(json_decode(self::get_input(), true)),
+                'POST', 'PUT' => json_decode(self::get_input(), true),
                 default => null,
             },
         ];
@@ -152,7 +153,7 @@ class ActorRuntime
                         $data = $description['body'];
                         $actor->remind(
                             $description['reminder_name'],
-                            Deserializer::maybe_deserialize(json_decode($data['data'], true))
+                            json_decode($data['data'], true)
                         );
                         break;
                     case 'timer':
@@ -162,7 +163,19 @@ class ActorRuntime
                         );
                         $data     = $description['body'];
                         $callback = $data['callback'];
-                        call_user_func_array([$actor, $callback], $data['data'] ?? []);
+                        $args     = $data['data'];
+                        if ( ! empty($args)) {
+                            $param = self::get_argument_types_from_method($reflection->getMethod($callback))[0];
+                            if (isset($param['discriminator'])) {
+                                $arg_type = $param['discriminator']($args);
+                            } else {
+                                $arg_type = $param[0];
+                            }
+                            $args = Deserializer::item($arg_type, $args);
+                            call_user_func_array([$actor, $callback], [$args]);
+                        } else {
+                            call_user_func([$actor, $callback]);
+                        }
                         break;
                     default:
                         Runtime::$logger?->info(
@@ -173,10 +186,24 @@ class ActorRuntime
                                 'm' => $description['method_name'],
                             ]
                         );
-                        $result         = call_user_func_array(
-                            [$actor, $description['method_name']],
-                            $description['body']
-                        );
+
+                        $method = $description['method_name'];
+                        $args = $description['body'];
+                        if(!empty($args)) {
+                            $params = self::get_argument_types_from_method($reflection->getMethod($method));
+                            if(!empty($params)) {
+                                $param = $params[0];
+                                if (isset($param['discriminator'])) {
+                                    $arg_type = $param['discriminator']($args);
+                                } else {
+                                    $arg_type = $param[0];
+                                }
+                                $args = Deserializer::item($arg_type, $args);
+                            }
+                            $result = call_user_func_array([$actor, $method], $args);
+                        } else {
+                            $result = call_user_func([$actor, $method]);
+                        }
                         $return['body'] = Serializer::as_json($result);
                         break;
                 }
@@ -196,6 +223,28 @@ class ActorRuntime
         }
 
         return $return;
+    }
+
+    private static function get_argument_types_from_method(\ReflectionMethod $method): array
+    {
+        $params   = $method->getParameters();
+        $type_map = [];
+        foreach ($params as $param) {
+            $type = $param->getType();
+            if ($type instanceof \ReflectionNamedType) {
+                $type_map[$param->getName()] = [$type->getName()];
+            }
+            if ($type instanceof \ReflectionUnionType) {
+                foreach ($type->getTypes() as $union_type) {
+                    $type_map[$param->getName()][] = $union_type->getName();
+                }
+                $type_map[$param->getName()]['discriminator'] = ($param->getAttributes(
+                        Union::class
+                    )[0] ?? null)?->newInstance()->discriminator;
+            }
+        }
+
+        return $type_map;
     }
 
     /**

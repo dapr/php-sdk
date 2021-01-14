@@ -37,7 +37,7 @@ abstract class DaprTests extends TestCase
 
     protected function deserialize(string $json)
     {
-        return \Dapr\Deserializer::maybe_deserialize(json_decode($json, true));
+        return json_decode($json, true);
     }
 
     protected function set_body($data)
