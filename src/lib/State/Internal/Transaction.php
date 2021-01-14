@@ -2,7 +2,7 @@
 
 namespace Dapr\State\Internal;
 
-use Dapr\Serializer;
+use Dapr\Serialization\Serializer;
 
 /**
  * Class Transaction
@@ -44,7 +44,7 @@ class Transaction
             function ($a) {
                 unset($a['order']);
                 if (isset($a['request']['value'])) {
-                    $a['request']['value'] = Serializer::as_json($a['request']['value']);
+                    $a['request']['value'] = Serializer::as_array($a['request']['value']);
                 }
 
                 return $a;

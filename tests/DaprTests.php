@@ -3,7 +3,7 @@
 require_once __DIR__.'/Mocks/DaprClient.php';
 
 use Dapr\Actors\ActorRuntime;
-use Dapr\Serializer;
+use Dapr\Serialization\Serializer;
 use PHPUnit\Framework\TestCase;
 
 abstract class DaprTests extends TestCase
@@ -43,6 +43,6 @@ abstract class DaprTests extends TestCase
     protected function set_body($data)
     {
         ActorRuntime::$input = tempnam(sys_get_temp_dir(), uniqid());
-        file_put_contents(ActorRuntime::$input, json_encode(Serializer::as_json($data)));
+        file_put_contents(ActorRuntime::$input, Serializer::as_json($data));
     }
 }

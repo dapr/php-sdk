@@ -4,7 +4,7 @@ namespace Dapr\State;
 
 use Dapr\DaprClient;
 use Dapr\Runtime;
-use Dapr\Serializer;
+use Dapr\Serialization\Serializer;
 use Dapr\State\Internal\StateHelpers;
 use ReflectionClass;
 use ReflectionProperty;
@@ -31,7 +31,7 @@ final class State
             $key = $property->name;
             $item = [
                 'key' => $key,
-                'value' => Serializer::as_json($obj->$key),
+                'value' => Serializer::as_array($obj->$key),
             ];
 
             if(isset($keys[$key]['etag'])) {

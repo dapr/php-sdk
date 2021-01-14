@@ -124,10 +124,7 @@ class TransactionalStateTest extends DaprTests
                         'request'   => [
                             'key'   => 'complex',
                             'value' => [
-                                '$type' => 'Fixtures\TestObj',
-                                '$obj'  => [
-                                    'foo' => 'baz',
-                                ],
+                                'foo' => 'baz',
                             ],
                         ],
                     ],

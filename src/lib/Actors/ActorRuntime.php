@@ -5,7 +5,7 @@ namespace Dapr\Actors;
 use Dapr\Deserializer;
 use Dapr\Formats;
 use Dapr\Runtime;
-use Dapr\Serializer;
+use Dapr\Serialization\Serializer;
 use JetBrains\PhpStorm\ArrayShape;
 use ReflectionClass;
 
@@ -77,11 +77,10 @@ class ActorRuntime
 
             return [
                 'code' => 404,
-                'body' => json_encode(
+                'body' =>
                     Serializer::as_json(
                         new \UnexpectedValueException("class ${description['type']} not found")
-                    )
-                ),
+                    ),
             ];
         }
 
@@ -178,7 +177,7 @@ class ActorRuntime
                             [$actor, $description['method_name']],
                             $description['body']
                         );
-                        $return['body'] = json_encode(Serializer::as_json($result));
+                        $return['body'] = Serializer::as_json($result);
                         break;
                 }
                 break;

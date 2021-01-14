@@ -4,7 +4,7 @@ namespace Dapr\Actors;
 
 use Dapr\DaprClient;
 use Dapr\Runtime;
-use Dapr\Serializer;
+use Dapr\Serialization\Serializer;
 use LogicException;
 use ReflectionClass;
 use ReflectionMethod;
@@ -163,7 +163,7 @@ CLASS;
                             $proxy->$method_name = function (...$params) use ($type, $id, $method_name) {
                                 $result = DaprClient::post(
                                     DaprClient::get_api("/actors/$type/$id/method/$method_name"),
-                                    Serializer::as_json($params)
+                                    Serializer::as_array($params)
                                 );
 
                                 return $result->data;
@@ -221,7 +221,7 @@ METHOD;
         \$id = \$this->get_id(); 
         \$result = \Dapr\DaprClient::post(
             \Dapr\DaprClient::get_api("/actors/\$type/\$id/method/{$method->getName()}"),
-            \Dapr\Serializer::as_json(\$data)
+            \Dapr\Serialization\Serializer::as_array(\$data)
         );
         $return
     }

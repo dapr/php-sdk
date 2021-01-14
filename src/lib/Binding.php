@@ -2,6 +2,8 @@
 
 namespace Dapr;
 
+use Dapr\Serialization\Serializer;
+
 abstract class Binding
 {
     private static array $bindings = [];
@@ -27,8 +29,8 @@ abstract class Binding
         array $data = []
     ): DaprResponse {
         $payload = [
-            'data'      => (object)Serializer::as_json($data),
-            'metadata'  => (object)Serializer::as_json($metadata),
+            'data'      => (object)Serializer::as_array($data),
+            'metadata'  => (object)Serializer::as_array($metadata),
             'operation' => $operation,
         ];
         Runtime::$logger?->info(

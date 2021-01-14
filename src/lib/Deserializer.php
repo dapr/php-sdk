@@ -53,7 +53,9 @@ abstract class Deserializer
                         foreach ($obj['$obj'] as $property => $item) {
                             $item = self::maybe_deserialize($item);
                             if ($type->hasProperty($property)) {
-                                $type->getProperty($property)->setValue($instance, $item);
+                                $prop = $type->getProperty($property);
+                                $prop->setAccessible(true);
+                                $prop->setValue($instance, $item);
                             } else {
                                 $instance->$property = $item;
                             }

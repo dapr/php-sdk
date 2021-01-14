@@ -7,6 +7,7 @@ use Dapr\Actors\ActorRuntime;
 use Dapr\exceptions\DaprException;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Subscribe;
+use Dapr\Serialization\Serializer;
 use JetBrains\PhpStorm\ArrayShape;
 use Psr\Log\LoggerInterface;
 
@@ -110,7 +111,7 @@ abstract class Runtime
 
                 return $result;
             } catch (\Exception $exception) {
-                return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
+                return ['code' => 500, 'body' => Serializer::as_json($exception)];
             }
         };
     }
@@ -162,7 +163,7 @@ abstract class Runtime
                     } catch (\Throwable $ex) {
                         self::$logger?->critical('Health check failed: {exception}', ['exception' => $ex]);
 
-                        return ['code' => 500, 'body' => json_encode(Serializer::as_json($ex))];
+                        return ['code' => 500, 'body' => Serializer::as_json($ex)];
                     }
 
                     return ['code' => 200];
@@ -207,9 +208,7 @@ abstract class Runtime
 
             return [
                 'code' => 404,
-                'body' => json_encode(
-                    Serializer::as_json(new \BadFunctionCallException('unable to locate handler for method'))
-                ),
+                'body' => Serializer::as_json(new \BadFunctionCallException('unable to locate handler for method')),
             ];
         }
 
@@ -226,7 +225,7 @@ abstract class Runtime
         } catch (\Exception $exception) {
             self::$logger?->critical('Method failed: {exception}', ['exception' => $exception]);
 
-            return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
+            return ['code' => 500, 'body' => Serializer::as_json($exception)];
         }
 
         return ['code' => 200, 'body' => $result];

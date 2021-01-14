@@ -2,6 +2,7 @@
 
 use Dapr\Actors\ActorRuntime;
 use Fixtures\ActorClass;
+use Dapr\Serialization\Serializer;
 
 require_once __DIR__.'/DaprTests.php';
 require_once __DIR__.'/Fixtures/Actor.php';
