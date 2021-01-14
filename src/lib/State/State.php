@@ -3,6 +3,8 @@
 namespace Dapr\State;
 
 use Dapr\DaprClient;
+use Dapr\Deserialization\Attributes\Union;
+use Dapr\Deserialization\Deserializer;
 use Dapr\Runtime;
 use Dapr\Serialization\Serializer;
 use Dapr\State\Internal\StateHelpers;
@@ -75,6 +77,9 @@ final class State
 
         foreach ($result->data as $value) {
             $key = $value['key'];
+            if(isset($value['data'])) {
+                $value['data'] = Deserializer::detect_from_parameter($property, $value['data']);
+            }
             if (isset($value['data']) && $value['data'] !== null) {
                 $obj->$key          = $value['data'];
                 $keys[$key]['etag'] = $value['etag'];

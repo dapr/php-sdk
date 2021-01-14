@@ -164,18 +164,7 @@ class ActorRuntime
                         $data     = $description['body'];
                         $callback = $data['callback'];
                         $args     = $data['data'];
-                        if ( ! empty($args)) {
-                            $param = self::get_argument_types_from_method($reflection->getMethod($callback))[0];
-                            if (isset($param['discriminator'])) {
-                                $arg_type = $param['discriminator']($args);
-                            } else {
-                                $arg_type = $param[0];
-                            }
-                            $args = Deserializer::item($arg_type, $args);
-                            call_user_func_array([$actor, $callback], [$args]);
-                        } else {
-                            call_user_func([$actor, $callback]);
-                        }
+                        self::call_method($reflection->getMethod($callback), $actor, $args);
                         break;
                     default:
                         Runtime::$logger?->info(
@@ -189,21 +178,8 @@ class ActorRuntime
 
                         $method = $description['method_name'];
                         $args = $description['body'];
-                        if(!empty($args)) {
-                            $params = self::get_argument_types_from_method($reflection->getMethod($method));
-                            if(!empty($params)) {
-                                $param = $params[0];
-                                if (isset($param['discriminator'])) {
-                                    $arg_type = $param['discriminator']($args);
-                                } else {
-                                    $arg_type = $param[0];
-                                }
-                                $args = Deserializer::item($arg_type, $args);
-                            }
-                            $result = call_user_func_array([$actor, $method], $args);
-                        } else {
-                            $result = call_user_func([$actor, $method]);
-                        }
+                        $result = self::call_method($reflection->getMethod($method), $actor, $args);
+
                         $return['body'] = Serializer::as_json($result);
                         break;
                 }
@@ -225,26 +201,22 @@ class ActorRuntime
         return $return;
     }
 
-    private static function get_argument_types_from_method(\ReflectionMethod $method): array
-    {
-        $params   = $method->getParameters();
-        $type_map = [];
-        foreach ($params as $param) {
-            $type = $param->getType();
-            if ($type instanceof \ReflectionNamedType) {
-                $type_map[$param->getName()] = [$type->getName()];
-            }
-            if ($type instanceof \ReflectionUnionType) {
-                foreach ($type->getTypes() as $union_type) {
-                    $type_map[$param->getName()][] = $union_type->getName();
-                }
-                $type_map[$param->getName()]['discriminator'] = ($param->getAttributes(
-                        Union::class
-                    )[0] ?? null)?->newInstance()->discriminator;
-            }
+    private static function call_method(\ReflectionMethod $method, $actor, $args): mixed {
+        if(empty($args)) {
+            return $method->invoke($actor);
         }
 
-        return $type_map;
+        $idx = 0;
+        foreach($method->getParameters() as $parameter) {
+            $p = $parameter->getName();
+            if(isset($args[$idx])) {
+                $p = $idx;
+            }
+            $args[$p] = Deserializer::detect_from_parameter($parameter, $args[$p]);
+            $idx += 1;
+        }
+
+        return $method->invokeArgs($actor, $args);
     }
 
     /**

@@ -38,14 +38,57 @@ final class Deserializer
         return $array;
     }
 
-    public static function is_exception(array $array): bool
+    public static function is_exception(mixed $array): bool
     {
-        return isset($array['errorCode'], $array['message']);
+        if (is_array($array)) {
+            return isset($array['errorCode'], $array['message']);
+        }
+
+        return false;
     }
 
     public static function get_exception(array $array): \Exception
     {
         return DaprException::deserialize_from_array($array);
+    }
+
+    public static function detect_from_parameter(\ReflectionParameter|\ReflectionProperty|\ReflectionMethod $parameter, mixed $data): mixed
+    {
+        // type is declared via attributes
+        $attr = $parameter->getAttributes(ArrayOf::class);
+        if ( ! empty($attr)) {
+            return self::array($attr[0]->newInstance()->type, $data);
+        }
+
+        $attr = $parameter->getAttributes(AsClass::class);
+        if ( ! empty($attr)) {
+            return self::item($attr[0]->newInstance()->type, $data);
+        }
+
+        $attr = $parameter->getAttributes(Union::class);
+        if ( ! empty($attr)) {
+            $discriminator = $attr[0]->newInstance()->discriminator;
+            $type          = $discriminator($data);
+
+            return self::item($type, $data);
+        }
+
+        // type is embedded in parameter
+        if($parameter instanceof \ReflectionMethod) {
+            $type = $parameter->getReturnType();
+        } else {
+            $type = $parameter->getType();
+        }
+        if ($type instanceof \ReflectionNamedType) {
+            $type_name = $type->getName();
+            return self::item($type_name, $data);
+        } elseif ($type instanceof \ReflectionUnionType) {
+            throw new \LogicException(
+                'Union types must have a \Dapr\Deserialization\Attributes\Union attribute on '.$parameter->getDeclaringClass(
+                ).'::'.$parameter->getDeclaringFunction()
+            );
+        }
+        return $data;
     }
 
     public static function item(string $as, array|string|int|float|null $array): mixed
@@ -55,16 +98,19 @@ final class Deserializer
             $deserializer($as, $array);
         }
 
-        if(isset(self::$deserializers[$as])) {
+        if (isset(self::$deserializers[$as])) {
             $deserializer = self::$deserializers[$as];
+
             return $deserializer($array);
         }
 
         if ( ! class_exists($as)) {
-            throw new \InvalidArgumentException("$as does not exist!");
+            return $array;
         }
 
-        if($array === null) return null;
+        if ($array === null) {
+            return null;
+        }
 
         $reflection = new \ReflectionClass($as);
         $obj        = $reflection->newInstanceWithoutConstructor();

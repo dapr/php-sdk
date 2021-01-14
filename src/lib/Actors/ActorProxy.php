@@ -3,6 +3,7 @@
 namespace Dapr\Actors;
 
 use Dapr\DaprClient;
+use Dapr\Deserialization\Deserializer;
 use Dapr\Runtime;
 use Dapr\Serialization\Serializer;
 use LogicException;
@@ -160,11 +161,13 @@ CLASS;
                         case 'create_reminder':
                             break;
                         default:
-                            $proxy->$method_name = function (...$params) use ($type, $id, $method_name) {
+                            $proxy->$method_name = function (...$params) use ($type, $id, $method_name, $reflected_interface) {
                                 $result = DaprClient::post(
                                     DaprClient::get_api("/actors/$type/$id/method/$method_name"),
                                     Serializer::as_array($params)
                                 );
+
+                                $result->data = Deserializer::detect_from_parameter($reflected_interface->getMethod($method_name), $result->data);
 
                                 return $result->data;
                             };
@@ -223,6 +226,8 @@ METHOD;
             \Dapr\DaprClient::get_api("/actors/\$type/\$id/method/{$method->getName()}"),
             \Dapr\Serialization\Serializer::as_array(\$data)
         );
+        \$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter(\$class->getMethod('{$method->getName()}'), \$result->data);
+        
         $return
     }
 METHOD;
