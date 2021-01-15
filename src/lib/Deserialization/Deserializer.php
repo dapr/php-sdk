@@ -116,27 +116,8 @@ final class Deserializer
         $obj        = $reflection->newInstanceWithoutConstructor();
         foreach ($array as $prop_name => $prop_value) {
             if ($reflection->hasProperty($prop_name)) {
-                $reflected_property = $reflection->getProperty($prop_name);
-                $attr               = $reflected_property->getAttributes(ArrayOf::class);
-                if (isset($attr[0]) && is_array($prop_value)) {
-                    $type            = $attr[0]->newInstance()->type;
-                    $obj->$prop_name = self::array($type, $prop_value);
-                    continue;
-                }
-
-                $attr = $reflected_property->getAttributes(AsClass::class);
-                if (isset($attr[0])) {
-                    $type            = $attr[0]->newInstance()->type;
-                    $obj->$prop_name = self::item($type, $prop_value);
-                    continue;
-                }
-
-                $attr = $reflected_property->getAttributes(Union::class);
-                if (isset($attr[0])) {
-                    $type            = $attr[0]->newInstance()->discriminator;
-                    $type            = $type($prop_value);
-                    $obj->$prop_name = self::item($type, $prop_value);
-                }
+                $obj->$prop_name = self::detect_from_parameter($reflection->getProperty($prop_name), $prop_value);
+                continue;
             }
             $obj->$prop_name = $prop_value;
         }
