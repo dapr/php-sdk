@@ -91,7 +91,7 @@ final class Deserializer
         return $data;
     }
 
-    public static function item(string $as, array|string|int|float|null $array): mixed
+    public static function item(string $as, mixed $array): mixed
     {
         if (self::$default_deserializer !== null) {
             $deserializer = self::$default_deserializer;
