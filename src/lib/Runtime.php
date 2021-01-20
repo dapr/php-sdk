@@ -26,7 +26,7 @@ abstract class Runtime
      *
      * @param callable $callback
      */
-    public static function add_health_check(callable $callback)
+    public static function add_health_check(callable $callback): void
     {
         self::$logger?->info('Setting custom health check');
         self::$health_checks[] = $callback;
@@ -231,7 +231,7 @@ abstract class Runtime
         return ['code' => 200, 'body' => $result];
     }
 
-    public static function set_logger(LoggerInterface $logger)
+    public static function set_logger(LoggerInterface $logger): void
     {
         self::$logger = $logger;
     }

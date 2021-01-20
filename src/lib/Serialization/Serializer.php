@@ -17,7 +17,7 @@ final class Serializer
 
     private static array $serializers = [];
 
-    public static function register(callable $serializer, ...$types)
+    public static function register(callable $serializer, string ...$types): void
     {
         if (empty($types)) {
             Runtime::$logger?->debug('Set default serializer');

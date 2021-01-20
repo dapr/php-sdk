@@ -47,7 +47,7 @@ abstract class Subscribe
      */
     #[ArrayShape(['code' => "int", 'body' => "false|string"])]
     public static function handle_subscription(
-        $id,
+        string $id,
         $event
     ): array {
         if (isset(self::$handlers[$id])) {

@@ -8,7 +8,7 @@ abstract class Binding
 {
     private static array $bindings = [];
 
-    public static function register_input_binding(string $name, callable $callback)
+    public static function register_input_binding(string $name, callable $callback): void
     {
         self::$bindings[$name] = $callback;
     }

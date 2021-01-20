@@ -18,7 +18,7 @@ final class Deserializer
 
     private static array $deserializers = [];
 
-    public static function register(callable $deserializer, ...$types)
+    public static function register(callable $deserializer, string ...$types):void
     {
         if (empty($types)) {
             self::$default_deserializer = $deserializer;

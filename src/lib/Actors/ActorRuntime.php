@@ -201,7 +201,7 @@ class ActorRuntime
         return $return;
     }
 
-    private static function call_method(\ReflectionMethod $method, $actor, $args): mixed {
+    private static function call_method(\ReflectionMethod $method, object $actor, $args): mixed {
         if(empty($args)) {
             return $method->invoke($actor);
         }
@@ -311,7 +311,7 @@ class ActorRuntime
      *
      * @param bool $drain Whether to drain active actors
      */
-    public static function do_drain_actors(bool $drain)
+    public static function do_drain_actors(bool $drain): void
     {
         Runtime::$logger?->debug('Setting drain mode {m}', ['m' => $drain]);
         self::$config['drainRebalancedActors'] = $drain;

@@ -36,7 +36,7 @@ abstract class Formats
         return $diff->format(self::FROM_INTERVAL);
     }
 
-    public static function coalesce(DateInterval $interval)
+    public static function coalesce(DateInterval $interval): bool|DateInterval
     {
         $from    = new DateTime();
         $to      = clone $from;
