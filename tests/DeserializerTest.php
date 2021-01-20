@@ -14,7 +14,6 @@ function deserialize_special_type($obj)
 
 /**
  * Class DeserializerTest
- * @covers \Dapr\Deserializer
  */
 final class DeserializerTest extends TestCase
 {

@@ -78,7 +78,7 @@ final class State
         foreach ($result->data as $value) {
             $key = $value['key'];
             if(isset($value['data'])) {
-                $value['data'] = Deserializer::detect_from_parameter($property, $value['data']);
+                $value['data'] = Deserializer::detect_from_parameter($reflection->getProperty($value['key']), $value['data']);
             }
             if (isset($value['data']) && $value['data'] !== null) {
                 $obj->$key          = $value['data'];
