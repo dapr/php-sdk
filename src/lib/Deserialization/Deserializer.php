@@ -29,10 +29,10 @@ final class Deserializer
         }
     }
 
-    public static function array(string $as, array $array): array
+    public static function from_array_of(string $as, array $array): array
     {
         foreach ($array as $key => &$value) {
-            $value = self::item($as, $value);
+            $value = self::from_array($as, $value);
         }
 
         return $array;
@@ -52,17 +52,19 @@ final class Deserializer
         return DaprException::deserialize_from_array($array);
     }
 
-    public static function detect_from_parameter(\ReflectionParameter|\ReflectionProperty|\ReflectionMethod $parameter, mixed $data): mixed
-    {
+    public static function detect_from_parameter(
+        \ReflectionParameter|\ReflectionProperty|\ReflectionMethod $parameter,
+        mixed $data
+    ): mixed {
         // type is declared via attributes
         $attr = $parameter->getAttributes(ArrayOf::class);
         if ( ! empty($attr)) {
-            return self::array($attr[0]->newInstance()->type, $data);
+            return self::from_array_of($attr[0]->newInstance()->type, $data);
         }
 
         $attr = $parameter->getAttributes(AsClass::class);
         if ( ! empty($attr)) {
-            return self::item($attr[0]->newInstance()->type, $data);
+            return self::from_array($attr[0]->newInstance()->type, $data);
         }
 
         $attr = $parameter->getAttributes(Union::class);
@@ -70,28 +72,35 @@ final class Deserializer
             $discriminator = $attr[0]->newInstance()->discriminator;
             $type          = $discriminator($data);
 
-            return self::item($type, $data);
+            return self::from_array($type, $data);
         }
 
         // type is embedded in parameter
-        if($parameter instanceof \ReflectionMethod) {
+        if ($parameter instanceof \ReflectionMethod) {
             $type = $parameter->getReturnType();
         } else {
             $type = $parameter->getType();
         }
         if ($type instanceof \ReflectionNamedType) {
             $type_name = $type->getName();
-            return self::item($type_name, $data);
+
+            return self::from_array($type_name, $data);
         } elseif ($type instanceof \ReflectionUnionType) {
             throw new \LogicException(
                 'Union types must have a \Dapr\Deserialization\Attributes\Union attribute on '.$parameter->getDeclaringClass(
                 ).'::'.$parameter->getDeclaringFunction()
             );
         }
+
         return $data;
     }
 
-    public static function item(string $as, mixed $array): mixed
+    public static function from_json(string $as, string $json): mixed
+    {
+        return self::from_array($as, json_decode($json, true));
+    }
+
+    public static function from_array(string $as, mixed $array): mixed
     {
         if (self::$default_deserializer !== null) {
             $deserializer = self::$default_deserializer;

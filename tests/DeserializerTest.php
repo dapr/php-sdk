@@ -49,7 +49,7 @@ final class DeserializerTest extends TestCase
      */
     public function testDeserializeValues($value, $expected)
     {
-        $result = Deserializer::item($value[0], $value[1]);
+        $result = Deserializer::from_array($value[0], $value[1]);
         $this->assertEquals($expected, $result);
     }
 
