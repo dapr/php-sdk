@@ -12,6 +12,7 @@
         <ignoreFiles>
             <directory name="vendor"/>
             <file name="src/lib/Actors/.phpstorm.meta.php"/>
+            <file name="src/lib/Deserialization/.phpstorm.meta.php"/>
         </ignoreFiles>
     </projectFiles>
     <issueHandlers>
