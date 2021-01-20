@@ -32,31 +32,16 @@ use Dapr\State\State;
 
 #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualLastWrite::class)]
 class MyState {
-    /**
-     * @var string
-     */
-    public $string_value;
-
-    /**
-     * @var array
-     */
-    public $complex_type;
-
-    /**
-     * @var Exception
-     */
-    public $object_type;
-
-    /**
-     * @var int
-     */
-    public $counter = 0;
+    public string $string_value;
+    #[\Dapr\Deserialization\Attributes\ArrayOf(ComplexType::class)] public array $complex_type;
+    public Exception $object_type;
+    public int $counter = 0;
 
     /**
      * Increment the counter
      * @param int $amount Amount to increment by
      */
-    public function increment($amount = 1): void {
+    public function increment(int $amount = 1): void {
         $this->counter += $amount;
     }
 }
@@ -91,7 +76,7 @@ use Dapr\State\TransactionalState;
 #[\Dapr\State\Attributes\StateStore('statestore', StrongFirstWrite::class)]
 class SomeState extends TransactionalState {
     public string $value;
-    public function ok() {
+    public function ok(): void {
         $this->value = 'ok';
     }
 }
@@ -137,7 +122,7 @@ interface ICounter extends IActor {
     /**
      * Increment a counter
      */
-    public function increment($amount);
+    public function increment(int $amount): void;
 }
 ```
 
@@ -160,14 +145,12 @@ class Counter implements ICounter {
      * Initialize the class
      */
     public function __construct(private int $id, private CountState $state) {
-        $this->id = $id;
-        $this->state = $state;
     }
 
     /**
      * Increment the count by 1
      */
-    public function increment($amount) {
+    public function increment(int $amount): void {
         $this->state->count += $amount;
     }
 
@@ -236,7 +219,7 @@ In order to call an actor, simply call the `ActorProxy` and get a proxy object:
 use Dapr\Actors\ActorProxy;
 
 /**
- * @var Counter $counter
+ * @var ICounter $counter
  */
 $counter = ActorProxy::get(ICounter::class, $id);
 $counter->increment();
@@ -315,8 +298,8 @@ function do_serialize(MyType $obj): array {
 }
 
 // ::register takes any callable
-\Dapr\Serializer::register('do_serialize', [MyType::class]);
-\Dapr\Deserializer::register([MyDeserializer::class, 'deserialize'], [MyType::class]);
+\Dapr\Serialization\Serializer::register('do_serialize', MyType::class);
+\Dapr\Deserialization\Deserializer::register([MyDeserializer::class, 'deserialize'], MyType::class);
 ```
 
 If you want to override serializing completely, just pass `null` as the types array.
@@ -353,22 +336,7 @@ $success = $result->code === 200;
 
 # Project setup
 
-You'll want to configure your server to route all traffic to a certain php file (maybe `index.php`) and then pass on the
-request to the runtime:
-
-```php
-header('Content-Type: application/json');
-\Dapr\Actors\ActorRuntime::register_actor('Counter', Counter::class);
-\Dapr\PubSub\Subscribe::to_topic('pubsub', 'my-topic', [TopicHandler::class, 'handle']);
-\Dapr\Binding::register_input_binding('my-input-binding', [BindingHandler::class, 'handle']);
-\Dapr\Runtime::register_method('my-method', 'handleMyMethod');
-$handler = \Dapr\Runtime::get_handler_for_route($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
-// you can potentially wrap the handler with any filters, for example: displaying pretty json when a browser is involved
-$result = $handler();
-http_response_code($result['code']);
-if(isset($result['body'])) {echo $result['body'];}
-die();
-```
+See [Getting Started](docs/getting-started.md)
 
 # Development
 
