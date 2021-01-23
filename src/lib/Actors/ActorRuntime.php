@@ -2,7 +2,6 @@
 
 namespace Dapr\Actors;
 
-use Dapr\Deserialization\Attributes\Union;
 use Dapr\Deserialization\Deserializer;
 use Dapr\Formats;
 use Dapr\Runtime;
@@ -39,7 +38,7 @@ class ActorRuntime
         }
         $parts = array_values(array_filter(explode('/', $uri)));
 
-        return [ // add try/catches
+        $parts = [ // add try/catches
             'type'          => self::$actors[$parts[1]] ?? null,
             'dapr_type'     => $parts[1],
             'id'            => $parts[2],
@@ -54,6 +53,10 @@ class ActorRuntime
                 default => null,
             },
         ];
+
+        Runtime::$logger?->debug('Extracted {parts}', ['parts' => $parts]);
+
+        return $parts;
     }
 
     public static function get_input(): string
@@ -177,7 +180,7 @@ class ActorRuntime
                         );
 
                         $method = $description['method_name'];
-                        $args = $description['body'];
+                        $args   = $description['body'];
                         $result = self::call_method($reflection->getMethod($method), $actor, $args);
 
                         $return['body'] = Serializer::as_json($result);
@@ -201,19 +204,20 @@ class ActorRuntime
         return $return;
     }
 
-    private static function call_method(\ReflectionMethod $method, object $actor, $args): mixed {
-        if(empty($args)) {
+    private static function call_method(\ReflectionMethod $method, object $actor, $args): mixed
+    {
+        if (empty($args)) {
             return $method->invoke($actor);
         }
 
         $idx = 0;
-        foreach($method->getParameters() as $parameter) {
+        foreach ($method->getParameters() as $parameter) {
             $p = $parameter->getName();
-            if(isset($args[$idx])) {
+            if (isset($args[$idx])) {
                 $p = $idx;
             }
             $args[$p] = Deserializer::detect_from_parameter($parameter, $args[$p]);
-            $idx += 1;
+            $idx      += 1;
         }
 
         return $method->invokeArgs($actor, $args);
