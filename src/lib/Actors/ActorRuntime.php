@@ -216,8 +216,12 @@ class ActorRuntime
             if (isset($args[$idx])) {
                 $p = $idx;
             }
-            $args[$p] = Deserializer::detect_from_parameter($parameter, $args[$p]);
-            $idx      += 1;
+            if (is_array($args)) {
+                $args[$p] = Deserializer::detect_from_parameter($parameter, $args[$p]);
+            } else {
+                $args = Deserializer::detect_from_parameter($parameter, $args);
+            }
+            $idx += 1;
         }
 
         return $method->invokeArgs($actor, $args);
