@@ -210,22 +210,23 @@ class ActorRuntime
             return $method->invoke($actor);
         }
 
-        Runtime::$logger?->debug('Preparing to call {method} with {args}', ['method' => $method, 'args' => $args]);
+        Runtime::$logger?->debug('Preparing to call {method} with {args}', ['method' => $method->name, 'args' => $args]);
 
         $idx = 0;
+        $params = [];
         foreach ($method->getParameters() as $parameter) {
             $p = $parameter->getName();
             if (isset($args[$p])) {
-                $args[$p] = Deserializer::detect_from_parameter($parameter, $args[$p]);
+                $params[$p] = Deserializer::detect_from_parameter($parameter, $args[$p]);
             } else {
-                $args[$p] = Deserializer::detect_from_parameter($parameter, $args);
+                $params[$p] = Deserializer::detect_from_parameter($parameter, $args);
             }
             $idx += 1;
         }
 
-        Runtime::$logger?->debug('Calling {method} with {args}', ['method' => $method, 'args' => $args]);
+        Runtime::$logger?->debug('Calling {method} with {args}', ['method' => $method->name, 'args' => $params]);
 
-        return $method->invokeArgs($actor, $args);
+        return $method->invokeArgs($actor, $params);
     }
 
     /**
