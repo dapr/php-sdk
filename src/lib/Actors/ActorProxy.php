@@ -107,15 +107,18 @@ CLASS;
      *
      * @param class-string<IActor> $interface
      * @param mixed $id The id to proxy for
+     * @param string|null $override_type Allow overriding the Dapr type for a given interface
      *
      * @return object
      * @throws \ReflectionException
      */
-    public static function get(string $interface, mixed $id): object
+    public static function get(string $interface, mixed $id, string|null $override_type): object
     {
         Runtime::$logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
         $reflected_interface = new ReflectionClass($interface);
-        $type                = ($reflected_interface->getAttributes(DaprType::class)[0] ?? null)?->newInstance()->type;
+        $type                = $override_type ?? ($reflected_interface->getAttributes(
+                    DaprType::class
+                )[0] ?? null)?->newInstance()->type;
 
         if (empty($type)) {
             Runtime::$logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
@@ -161,13 +164,21 @@ CLASS;
                         case 'create_reminder':
                             break;
                         default:
-                            $proxy->$method_name = function (...$params) use ($type, $id, $method_name, $reflected_interface) {
+                            $proxy->$method_name = function (...$params) use (
+                                $type,
+                                $id,
+                                $method_name,
+                                $reflected_interface
+                            ) {
                                 $result = DaprClient::post(
                                     DaprClient::get_api("/actors/$type/$id/method/$method_name"),
                                     Serializer::as_array($params)
                                 );
 
-                                $result->data = Deserializer::detect_from_parameter($reflected_interface->getMethod($method_name), $result->data);
+                                $result->data = Deserializer::detect_from_parameter(
+                                    $reflected_interface->getMethod($method_name),
+                                    $result->data
+                                );
 
                                 return $result->data;
                             };
@@ -189,7 +200,6 @@ CLASS;
         throw new \LogicException('Cannot call {$method->getName()} outside the actor.');
     }
 METHOD;
-
     }
 
     private static function generate_proxy_method(ReflectionMethod $method)
@@ -226,12 +236,12 @@ METHOD;
             \Dapr\DaprClient::get_api("/actors/\$type/\$id/method/{$method->getName()}"),
             \Dapr\Serialization\Serializer::as_array(\$data)
         );
-        \$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter(\$class->getMethod('{$method->getName()}'), \$result->data);
+        \$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter(\$class->getMethod('{$method->getName(
+        )}'), \$result->data);
         
         $return
     }
 METHOD;
-
     }
 
     private static function params_to_array(ReflectionMethod $method)
