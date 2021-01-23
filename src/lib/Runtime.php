@@ -216,7 +216,11 @@ abstract class Runtime
 
         try {
             $callback             = self::$methods[$http_method][$method];
-            $reflection           = new \ReflectionFunction($callback);
+            if($callback instanceof Closure || is_string($callback)) {
+                $reflection = new \ReflectionFunction($callback);
+            } else if(is_array($callback)) {
+                $reflection = new \ReflectionMethod($callback[0], $callback[1]);
+            }
             $parameter_reflection = $reflection->getParameters();
             $params               = [];
             $uri                  = explode('/', $uri);
