@@ -173,7 +173,7 @@ abstract class Runtime
             default:
                 $method_parts = explode('/', $uri, 3);
                 $body         = json_decode(ActorRuntime::get_input(), true);
-                if (count($method_parts) === 2) {
+                if (count($method_parts) >= 2) {
                     if ($http_method === 'OPTIONS' && Binding::has_binding($method_parts[1])) {
                         self::$logger?->debug('Found binding');
 
