@@ -213,10 +213,7 @@ class ActorRuntime
         $idx = 0;
         foreach ($method->getParameters() as $parameter) {
             $p = $parameter->getName();
-            if (isset($args[$idx])) {
-                $p = $idx;
-            }
-            if (is_array($args)) {
+            if (isset($args[$p])) {
                 $args[$p] = Deserializer::detect_from_parameter($parameter, $args[$p]);
             } else {
                 $args = Deserializer::detect_from_parameter($parameter, $args);
