@@ -192,7 +192,7 @@ abstract class Runtime
                     self::$logger?->debug('Using method handler');
 
                     return function () use ($method_parts, $body, $http_method, $uri) {
-                        return self::handle_method($http_method, $method_parts[1], $body, $uri);
+                        return self::handle_method($http_method, $method_parts[1], $body, $method_parts[2] ?? null);
                     };
                 }
 
@@ -219,7 +219,7 @@ abstract class Runtime
             $reflection           = new \ReflectionFunction($callback);
             $parameter_reflection = $reflection->getParameters();
             $params               = [];
-            $uri                  = explode('/', str_replace($method, '', $uri));
+            $uri                  = explode('/', $uri);
             foreach ($parameter_reflection as $parameter) {
                 if (count($parameter->getAttributes(FromRoute::class))) {
                     $params[$parameter->name] = Deserializer::detect_from_parameter($parameter, array_shift($uri));
