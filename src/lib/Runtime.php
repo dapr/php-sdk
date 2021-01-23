@@ -4,6 +4,8 @@ namespace Dapr;
 
 use Closure;
 use Dapr\Actors\ActorRuntime;
+use Dapr\Attributes\FromRoute;
+use Dapr\Deserialization\Deserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Subscribe;
@@ -189,8 +191,8 @@ abstract class Runtime
 
                     self::$logger?->debug('Using method handler');
 
-                    return function () use ($method_parts, $body, $http_method) {
-                        return self::handle_method($http_method, $method_parts[1], $body);
+                    return function () use ($method_parts, $body, $http_method, $uri) {
+                        return self::handle_method($http_method, $method_parts[1], $body, $uri);
                     };
                 }
 
@@ -198,7 +200,7 @@ abstract class Runtime
         }
     }
 
-    public static function handle_method(string $http_method, string $method, mixed $params): array
+    public static function handle_method(string $http_method, string $method, mixed $body, string $uri): array
     {
         if ( ! isset(self::$methods[$http_method][$method])) {
             self::$logger?->critical(
@@ -213,11 +215,20 @@ abstract class Runtime
         }
 
         try {
-            if (is_array($params)) {
-                $result = call_user_func_array(self::$methods[$http_method][$method], $params);
-            } else {
-                $result = call_user_func(self::$methods[$http_method][$method], $params);
+            $callback             = self::$methods[$http_method][$method];
+            $reflection           = new \ReflectionFunction($callback);
+            $parameter_reflection = $reflection->getParameters();
+            $params               = [];
+            $uri                  = explode('/', str_replace($method, '', $uri));
+            foreach ($parameter_reflection as $parameter) {
+                if (count($parameter->getAttributes(FromRoute::class))) {
+                    $params[$parameter->name] = Deserializer::detect_from_parameter($parameter, array_shift($uri));
+                } else {
+                    $params[$parameter->name] = Deserializer::detect_from_parameter($parameter, $body);
+                }
             }
+
+            $result = call_user_func_array($callback, $params);
 
             if (is_array($result) && isset($result['code'])) {
                 return $result;
@@ -228,7 +239,7 @@ abstract class Runtime
             return ['code' => 500, 'body' => Serializer::as_json($exception)];
         }
 
-        return ['code' => 200, 'body' => $result];
+        return ['code' => 200, 'body' => Serializer::as_json($result)];
     }
 
     public static function set_logger(LoggerInterface $logger): void
