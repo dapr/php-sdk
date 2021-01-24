@@ -168,7 +168,7 @@ class ActorRuntime
                         $data     = $description['body'];
                         $callback = $data['callback'];
                         $args     = $data['data'];
-                        self::call_method($reflection->getMethod($callback), $actor, $args);
+                        self::call_method($reflection->getMethod($callback), $actor, $args[0] ?? null);
                         break;
                     default:
                         Runtime::$logger?->info(

@@ -92,13 +92,13 @@ class RuntimeTest extends DaprTests
             callback: function () use (&$called_method) {
                 $called_method = true;
 
-                return ['hello world'];
+                return 'hello world';
             }
         );
         $this->set_body(null);
         $result = Runtime::get_handler_for_route('GET', '/test')();
         $this->assertSame(200, $result['code']);
-        $this->assertSame(['hello world'], $this->deserialize($result['body']));
+        $this->assertSame('hello world', $this->deserialize($result['body']));
         $this->assertTrue($called_method);
     }
 
@@ -110,9 +110,9 @@ class RuntimeTest extends DaprTests
 
     public function testInvoke()
     {
-        \Dapr\DaprClient::register_post('/invoke/appid/method/method', 200, [], ['hello']);
-        $result = Runtime::invoke_method('appid', 'method', ['hello']);
+        \Dapr\DaprClient::register_post('/invoke/appid/method/method', 200, null, 'hello');
+        $result = Runtime::invoke_method('appid', 'method', 'hello');
         $this->assertSame(200, $result->code);
-        $this->assertSame([], $result->data);
+        $this->assertSame(null, $result->data);
     }
 }
