@@ -41,6 +41,11 @@ final class SerializerTest extends TestCase
             public $emptyObj = [];
         };
 
+        $falsy_obj = new class {
+            public $emptyString = '';
+            public $false = false;
+        };
+
         $empty_class_as_array = new class {
         };
         $empty_class_as_obj   = new #[AlwaysObject] class {
@@ -93,6 +98,16 @@ JSON
             ],
             'Empty Class as Array'  => [$empty_class_as_array, '[]'],
             'Empty Class as Object' => [$empty_class_as_obj, '{}'],
+            'Falsy values'          => [
+                $falsy_obj,
+                <<<JSON
+{
+    "emptyString": "",
+    "false": false
+}
+JSON
+    ,
+            ],
         ];
     }
 
@@ -114,7 +129,7 @@ JSON
                 'message'   => 'testing',
                 'errorCode' => 'Exception',
                 'file'      => __FILE__,
-                'line'      => 111,
+                'line'      => 123,
                 'inner'     => null,
             ],
             $serialized

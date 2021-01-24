@@ -67,7 +67,10 @@ final class Serializer
                     $reflection_class = new \ReflectionClass($type_name);
                 }
                 foreach ($value as $prop => $prop_value) {
-                    if (empty($prop_value) && isset($reflection_class) && $reflection_class->hasProperty($prop)) {
+                    if (is_array($prop_value)
+                        && empty($prop_value)
+                        && isset($reflection_class)
+                        && $reflection_class->hasProperty($prop)) {
                         $attrs = $reflection_class->getProperty($prop)->getAttributes(AlwaysObject::class);
                         if (isset($attrs[0])) {
                             $obj[$prop] = new \stdClass();
