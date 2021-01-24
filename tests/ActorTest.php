@@ -1,5 +1,6 @@
 <?php
 
+use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorRuntime;
 use Fixtures\ActorClass;
 
@@ -96,12 +97,12 @@ class ActorTest extends DaprTests
     public function testActorProxy($mode)
     {
         $id = uniqid();
-        \Dapr\Actors\ActorProxy::$mode = $mode;
+        ActorProxy::$mode = $mode;
 
         /**
          * @var \Fixtures\ITestActor $proxy
          */
-        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ITestActor::class, $id);
+        $proxy = ActorProxy::get(\Fixtures\ITestActor::class, $id);
 
         $this->assertSame($id, $proxy->get_id());
         \Dapr\DaprClient::register_get(
@@ -172,54 +173,70 @@ class ActorTest extends DaprTests
         $proxy->a_function('ok');
     }
 
-    public function testCannotManuallyActivate()
+    /**
+     * @dataProvider getModes
+     */
+    public function testCannotManuallyActivate($mode)
     {
         $id = uniqid();
+        ActorProxy::$mode = $mode;
 
         /**
          * @var \Fixtures\ITestActor $proxy
          */
-        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ITestActor::class, $id);
+        $proxy = ActorProxy::get(\Fixtures\ITestActor::class, $id);
         $this->expectException(LogicException::class);
         $proxy->on_activation();
     }
 
-    public function testCannotManuallyDeactivate()
+    /**
+     * @dataProvider getModes
+     */
+    public function testCannotManuallyDeactivate($mode)
     {
         $id = uniqid();
+        ActorProxy::$mode = $mode;
 
         /**
          * @var \Fixtures\ITestActor $proxy
          */
-        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ITestActor::class, $id);
+        $proxy = ActorProxy::get(\Fixtures\ITestActor::class, $id);
         $this->expectException(LogicException::class);
         $proxy->on_deactivation();
     }
 
-    public function testCannotManuallyRemind()
+    /**
+     * @dataProvider getModes
+     */
+    public function testCannotManuallyRemind($mode)
     {
         $id = uniqid();
+        ActorProxy::$mode = $mode;
 
         /**
          * @var \Fixtures\ITestActor $proxy
          */
-        $proxy = \Dapr\Actors\ActorProxy::get(\Fixtures\ITestActor::class, $id);
+        $proxy = ActorProxy::get(\Fixtures\ITestActor::class, $id);
         $this->expectException(LogicException::class);
         $proxy->remind('', '');
     }
 
-    public function testNoDaprType() {
+    /**
+     * @dataProvider getModes
+     */
+    public function testNoDaprType($mode) {
         $id = uniqid();
+        ActorProxy::$mode = $mode;
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('IBrokenActor must have a DaprType attribute');
-        $proxy = \Dapr\Actors\ActorProxy::get(IBrokenActor::class, $id);
+        $proxy = ActorProxy::get(IBrokenActor::class, $id);
     }
 
     /**
      * This is essentially a snapshot function
      */
     public function testGeneratedClassIsCorrect() {
-        $generated_class = "<?php\n". \Dapr\Actors\ActorProxy::generate_proxy_class(\Fixtures\ITestActor::class);
+        $generated_class = "<?php\n". ActorProxy::generate_proxy_class(\Fixtures\ITestActor::class);
         $take_snapshot = false;
         if($take_snapshot) {
             file_put_contents(__DIR__.'/Fixtures/GeneratedProxy.php', $generated_class);
