@@ -22,3 +22,19 @@ Parameters:
 Returns:
 
 An array.
+
+## Secret::all()
+
+```
+public static function all(string $secret_store)
+```
+
+Returns all secrets defined in a secret store
+
+Parameters:
+
+- secret_store: The secret store to retrieve secrets from
+
+Returns:
+
+An array of secrets.

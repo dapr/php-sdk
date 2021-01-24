@@ -2,6 +2,8 @@
 
 namespace Dapr;
 
+use Dapr\exceptions\DaprException;
+
 /**
  * Enables reading Dapr secrets
  * @see https://v1-rc1.docs.dapr.io/reference/api/secrets_api/
@@ -17,6 +19,7 @@ abstract class Secret
      * @param array $parameters Optional parameters for the secret store
      *
      * @return array
+     * @throws DaprException
      */
     public static function retrieve(string $secret_store, string $name, array $parameters = [])
     {
@@ -25,6 +28,46 @@ abstract class Secret
             ['name' => $name, 'secret_store' => $secret_store]
         );
         $result = DaprClient::get(DaprClient::get_api("/secrets/$secret_store/$name", $parameters));
+        self::handle_response_code($result->code);
+
+        return $result->data;
+    }
+
+    /**
+     * Throw exceptions on errors
+     *
+     * @param int $code
+     *
+     * @throws DaprException
+     */
+    private static function handle_response_code(int $code)
+    {
+        switch ($code) {
+            case 200:
+            case 204:
+                return;
+            case 400:
+                throw new DaprException('Secret store missing or misconfigured');
+            case 403:
+                throw new DaprException('Access denied');
+            case 500:
+                throw new DaprException('Failed to get secret or no secret store defined');
+        }
+    }
+
+    /**
+     * Get all defined secrets in a secret store
+     *
+     * @param string $secret_store The secret store name
+     *
+     * @return array The secrets
+     * @throws DaprException
+     */
+    public static function all(string $secret_store)
+    {
+        Runtime::$logger?->debug('Retrieving all secrets from {secret_store}', ['secret_store' => $secret_store]);
+        $result = DaprClient::get(DaprClient::get_api("/secrets/$secret_store/bulk"));
+        self::handle_response_code($result->code);
 
         return $result->data;
     }
