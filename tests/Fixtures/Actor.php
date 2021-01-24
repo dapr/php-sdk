@@ -4,11 +4,11 @@ namespace Fixtures;
 
 use Dapr\Actors\Actor;
 use Dapr\Actors\ActorState;
-use Dapr\Actors\DaprType;
+use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\IActor;
 
 #[DaprType('TestActor')]
-interface ITestActor extends IActor
+interface ITestActor
 {
     public function a_function($value): bool;
 }
@@ -19,18 +19,17 @@ class TestActorState extends ActorState
 }
 
 #[DaprType('TestActor')]
-class ActorClass implements ITestActor
+class ActorClass extends Actor
 {
-    use Actor;
-
     /**
      * ActorClass constructor.
      *
      * @param string $id
      * @param ActorState $state
      */
-    public function __construct(private string $id, private TestActorState $state)
+    public function __construct(protected string $id, private TestActorState $state)
     {
+        parent::__construct($id);
     }
 
     public function a_function($value): bool

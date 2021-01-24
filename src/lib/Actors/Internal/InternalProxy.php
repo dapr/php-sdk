@@ -1,6 +1,8 @@
 <?php
 
-namespace Dapr\Actors;
+namespace Dapr\Actors\Internal;
+
+use Dapr\Actors\ActorTrait;
 
 /**
  * Class InternalProxy
@@ -8,7 +10,7 @@ namespace Dapr\Actors;
  */
 class InternalProxy
 {
-    use Actor;
+    use ActorTrait;
 
     /**
      * Proxies calls to the proxy

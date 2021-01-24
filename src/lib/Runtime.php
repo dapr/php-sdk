@@ -200,7 +200,7 @@ abstract class Runtime
         }
     }
 
-    public static function handle_method(string $http_method, string $method, mixed $body, string $uri): array
+    public static function handle_method(string $http_method, string $method, mixed $body, string|null $uri): array
     {
         if ( ! isset(self::$methods[$http_method][$method])) {
             self::$logger?->critical(

@@ -1,6 +1,6 @@
 <?php
 
-namespace Dapr\Actors;
+namespace Dapr\Actors\Attributes;
 
 use Attribute;
 

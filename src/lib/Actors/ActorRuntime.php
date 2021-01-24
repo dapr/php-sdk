@@ -2,6 +2,7 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Actors\Attributes\DaprType;
 use Dapr\Deserialization\Deserializer;
 use Dapr\Formats;
 use Dapr\Runtime;
@@ -212,16 +213,12 @@ class ActorRuntime
 
         Runtime::$logger?->debug('Preparing to call {method} with {args}', ['method' => $method->name, 'args' => $args]);
 
-        $idx = 0;
         $params = [];
-        foreach ($method->getParameters() as $parameter) {
-            $p = $parameter->getName();
-            if (isset($args[$p])) {
-                $params[$p] = Deserializer::detect_from_parameter($parameter, $args[$p]);
-            } else {
-                $params[$p] = Deserializer::detect_from_parameter($parameter, $args);
-            }
-            $idx += 1;
+        $reflected_param = $method->getParameters()[0] ?? null;
+
+        if(isset($reflected_param)) {
+            $p = $reflected_param->getName();
+            $params[$p] = Deserializer::detect_from_parameter($reflected_param, $args);
         }
 
         Runtime::$logger?->debug('Calling {method} with {args}', ['method' => $method->name, 'args' => $params]);

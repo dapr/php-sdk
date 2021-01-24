@@ -2,6 +2,7 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Actors\Internal\KeyResponse;
 use Dapr\DaprClient;
 use Dapr\Deserialization\Deserializer;
 use Dapr\exceptions\DaprException;

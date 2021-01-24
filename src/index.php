@@ -8,7 +8,7 @@ use Dapr\Actors\Actor;
 use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorRuntime;
 use Dapr\Actors\ActorState;
-use Dapr\Actors\DaprType;
+use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
@@ -23,7 +23,6 @@ use Dapr\Runtime;
 use Dapr\State\Attributes\StateStore;
 use Dapr\State\State;
 use Dapr\State\TransactionalState;
-use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;
 
@@ -46,7 +45,7 @@ function testsub(): void
 }
 
 #[DaprType('SimpleActor')]
-interface ISimpleActor extends IActor
+interface ISimpleActor
 {
     function increment($amount = 1);
 
@@ -76,18 +75,17 @@ class SimpleActorState extends ActorState
 }
 
 #[DaprType('SimpleActor')]
-class SimpleActor implements ISimpleActor
+class SimpleActor extends Actor
 {
-    use Actor;
-
     /**
      * SimpleActor constructor.
      *
      * @param string $id
      * @param SimpleActorState $state
      */
-    public function __construct(private string $id, private SimpleActorState $state)
+    public function __construct(protected string $id, private SimpleActorState $state)
     {
+        parent::__construct($id);
     }
 
     public function remind(string $name, $data): void
@@ -107,19 +105,6 @@ class SimpleActor implements ISimpleActor
     public function increment($amount = 1)
     {
         $this->state->count += $amount;
-    }
-
-    public function on_activation(): void
-    {
-    }
-
-    public function on_deactivation(): void
-    {
-    }
-
-    public function get_id(): mixed
-    {
-        return $this->id;
     }
 
     public function get_count(): int

@@ -1,13 +1,12 @@
 <?php
 
 use Dapr\Actors\ActorRuntime;
-use Dapr\Deserializer;
 use Fixtures\ActorClass;
-use Dapr\Serialization\Serializer;
 
 require_once __DIR__.'/DaprTests.php';
 require_once __DIR__.'/Fixtures/Actor.php';
 require_once __DIR__.'/Fixtures/BrokenActor.php';
+require_once __DIR__.'/Fixtures/GeneratedProxy.php';
 
 class ActorTest extends DaprTests
 {
@@ -21,7 +20,7 @@ class ActorTest extends DaprTests
             ],
             $id
         );
-        $this->set_body(['new value']);
+        $this->set_body('new value');
         $result = ActorRuntime::handle_invoke(
             ActorRuntime::extract_parts_from_request('PUT', "/actors/TestActor/$id/method/a_function")
         );
@@ -78,15 +77,26 @@ class ActorTest extends DaprTests
             ],
             $id
         );
-        $this->set_body(['new value']);
+        $this->set_body('new value');
         $result = \Dapr\Runtime::get_handler_for_route('PUT', "/actors/TestActor/$id/method/a_function")();
         $this->assertSame(200, $result['code']);
         $this->assertTrue(json_decode($result['body']));
     }
 
-    public function testActorProxy()
+    public function getModes() {
+        return [
+            'Dynamic Mode' => [\Dapr\Actors\ProxyModes::DYNAMIC],
+            'Generated Mode' => [\Dapr\Actors\ProxyModes::GENERATED]
+        ];
+    }
+
+    /**
+     * @dataProvider getModes
+     */
+    public function testActorProxy($mode)
     {
         $id = uniqid();
+        \Dapr\Actors\ActorProxy::$mode = $mode;
 
         /**
          * @var \Fixtures\ITestActor $proxy
@@ -149,11 +159,17 @@ class ActorTest extends DaprTests
             path: "/actors/TestActor/$id/method/a_function",
             code: 200,
             response_data: true,
-            expected_request: [
-                'value' => null,
-            ]
+            expected_request: null
         );
         $proxy->a_function(null);
+
+        \Dapr\DaprClient::register_post(
+            path: "/actors/TestActor/$id/method/a_function",
+            code: 200,
+            response_data: true,
+            expected_request: "ok"
+        );
+        $proxy->a_function('ok');
     }
 
     public function testCannotManuallyActivate()
@@ -197,5 +213,18 @@ class ActorTest extends DaprTests
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('IBrokenActor must have a DaprType attribute');
         $proxy = \Dapr\Actors\ActorProxy::get(IBrokenActor::class, $id);
+    }
+
+    /**
+     * This is essentially a snapshot function
+     */
+    public function testGeneratedClassIsCorrect() {
+        $generated_class = "<?php\n". \Dapr\Actors\ActorProxy::generate_proxy_class(\Fixtures\ITestActor::class);
+        $take_snapshot = false;
+        if($take_snapshot) {
+            file_put_contents(__DIR__.'/Fixtures/GeneratedProxy.php', $generated_class);
+        }
+        $expected_proxy = file_get_contents(__DIR__.'/Fixtures/GeneratedProxy.php');
+        $this->assertSame($expected_proxy, $generated_class);
     }
 }

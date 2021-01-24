@@ -2,180 +2,25 @@
 
 namespace Dapr\Actors;
 
-use Dapr\DaprClient;
-use Dapr\exceptions\DaprException;
-use Dapr\Runtime;
+abstract class Actor implements IActor {
+    use ActorTrait;
 
-/**
- * Trait Actor
- *
- * Implements most of IActor and provides access to timers and reminders.
- *
- * @package Dapr
- */
-trait Actor
-{
-    /**
-     * Creates a reminder. These are persisted.
-     *
-     * @param Reminder $reminder The reminder to create
-     *
-     * @return bool True if successful
-     * @throws DaprException
-     */
-    public function create_reminder(
-        Reminder $reminder
-    ): bool {
-        // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
-            $type = $this->DAPR_TYPE;
-        } else {
-            $class      = new \ReflectionClass($this);
-            $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
-                $type = $attributes[0]->newInstance()->type;
-            } else {
-                $type = $class->getShortName();
-            }
-        }
-        // end function
-        $id = $this->get_id();
-        Runtime::$logger?->info('Creating reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
+    public function __construct(protected string $id) {}
 
-        DaprClient::post(
-            DaprClient::get_api("/actors/$type/$id/reminders/{$reminder->name}", null),
-            $reminder->to_array()
-        );
-
-        return true;
-    }
-
-    /**
-     * Get a reminder by name
-     *
-     * @param string $name The name of the reminder
-     *
-     * @return Reminder|null The reminder
-     * @throws DaprException
-     */
-    public function get_reminder(
-        string $name
-    ): ?Reminder {
-        // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
-            $type = $this->DAPR_TYPE;
-        } else {
-            $class      = new \ReflectionClass($this);
-            $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
-                $type = $attributes[0]->newInstance()->type;
-            } else {
-                $type = $class->getShortName();
-            }
-        }
-        // end function
-        $id = $this->get_id();
-        Runtime::$logger?->info('Getting reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
-
-        $result = DaprClient::get(DaprClient::get_api("/actors/$type/$id/reminders/$name"));
-
-        return Reminder::from_api($name, $result->data);
-    }
-
-    /**
-     * Delete a reminder
-     *
-     * @param string $name The reminder to delete
-     *
-     * @return bool True if successful
-     * @throws DaprException
-     */
-    public function delete_reminder(string $name): bool
+    public function get_id(): mixed
     {
-        // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
-            $type = $this->DAPR_TYPE;
-        } else {
-            $class      = new \ReflectionClass($this);
-            $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
-                $type = $attributes[0]->newInstance()->type;
-            } else {
-                $type = $class->getShortName();
-            }
-        }
-        // end function
-        $id = $this->get_id();
-        Runtime::$logger?->info('Deleting reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
-
-        DaprClient::delete(DaprClient::get_api("/actors/$type/$id/reminders/$name"));
-
-        return true;
+        return $this->id;
     }
 
-    /**
-     * Create a timer. These are not persisted.
-     *
-     * @param Timer $timer The timer to create
-     *
-     * @return bool True if successful
-     * @throws DaprException
-     */
-    public function create_timer(
-        Timer $timer,
-    ): bool {
-        // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
-            $type = $this->DAPR_TYPE;
-        } else {
-            $class      = new \ReflectionClass($this);
-            $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
-                $type = $attributes[0]->newInstance()->type;
-            } else {
-                $type = $class->getShortName();
-            }
-        }
-        // end function
-        $id = $this->get_id();
-        Runtime::$logger?->info('Creating timer for {type}||{id}', ['type' => $type, 'id' => $id]);
-
-        DaprClient::post(
-            DaprClient::get_api("/actors/$type/$id/timers/{$timer->name}"),
-            $timer->to_array()
-        );
-
-        return true;
-    }
-
-    /**
-     * Delete a timer
-     *
-     * @param string $name The name of the timer
-     *
-     * @return bool True if successful
-     * @throws DaprException
-     */
-    public function delete_timer(string $name): bool
+    public function remind(string $name, $data): void
     {
-        // inline function: get name
-        if (isset($this->DAPR_TYPE)) {
-            $type = $this->DAPR_TYPE;
-        } else {
-            $class      = new \ReflectionClass($this);
-            $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
-                $type = $attributes[0]->newInstance()->type;
-            } else {
-                $type = $class->getShortName();
-            }
-        }
-        // end function
-        $id = $this->get_id();
-        Runtime::$logger?->info('Deleting timer for {type}||{id}', ['type' => $type, 'id' => $id]);
+    }
 
-        DaprClient::delete(DaprClient::get_api("/actors/$type/$id/timers/$name"));
+    public function on_activation(): void
+    {
+    }
 
-        return true;
+    public function on_deactivation(): void
+    {
     }
 }

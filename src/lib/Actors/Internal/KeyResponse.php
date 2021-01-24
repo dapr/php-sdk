@@ -1,6 +1,6 @@
 <?php
 
-namespace Dapr\Actors;
+namespace Dapr\Actors\Internal;
 
 abstract class KeyResponse {
     public const SUCCESS = 200;
