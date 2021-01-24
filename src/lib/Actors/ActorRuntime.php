@@ -2,10 +2,11 @@
 
 namespace Dapr\Actors;
 
-use Dapr\Deserializer;
+use Dapr\Actors\Attributes\DaprType;
+use Dapr\Deserialization\Deserializer;
 use Dapr\Formats;
 use Dapr\Runtime;
-use Dapr\Serializer;
+use Dapr\Serialization\Serializer;
 use JetBrains\PhpStorm\ArrayShape;
 use ReflectionClass;
 
@@ -38,7 +39,7 @@ class ActorRuntime
         }
         $parts = array_values(array_filter(explode('/', $uri)));
 
-        return [ // add try/catches
+        $parts = [ // add try/catches
             'type'          => self::$actors[$parts[1]] ?? null,
             'dapr_type'     => $parts[1],
             'id'            => $parts[2],
@@ -49,10 +50,14 @@ class ActorRuntime
             'method_name'   => $parts[4] ?? null,
             'reminder_name' => $parts[5] ?? null,
             'body'          => match ($http_method) {
-                'POST', 'PUT' => Deserializer::maybe_deserialize(json_decode(self::get_input(), true)),
+                'POST', 'PUT' => json_decode(self::get_input(), true),
                 default => null,
             },
         ];
+
+        Runtime::$logger?->debug('Extracted {parts}', ['parts' => $parts]);
+
+        return $parts;
     }
 
     public static function get_input(): string
@@ -77,11 +82,10 @@ class ActorRuntime
 
             return [
                 'code' => 404,
-                'body' => json_encode(
+                'body' =>
                     Serializer::as_json(
                         new \UnexpectedValueException("class ${description['type']} not found")
-                    )
-                ),
+                    ),
             ];
         }
 
@@ -153,7 +157,7 @@ class ActorRuntime
                         $data = $description['body'];
                         $actor->remind(
                             $description['reminder_name'],
-                            Deserializer::maybe_deserialize(json_decode($data['data'], true))
+                            json_decode($data['data'], true)
                         );
                         break;
                     case 'timer':
@@ -163,7 +167,8 @@ class ActorRuntime
                         );
                         $data     = $description['body'];
                         $callback = $data['callback'];
-                        call_user_func_array([$actor, $callback], $data['data'] ?? []);
+                        $args     = $data['data'];
+                        self::call_method($reflection->getMethod($callback), $actor, $args[0] ?? null);
                         break;
                     default:
                         Runtime::$logger?->info(
@@ -174,11 +179,12 @@ class ActorRuntime
                                 'm' => $description['method_name'],
                             ]
                         );
-                        $result         = call_user_func_array(
-                            [$actor, $description['method_name']],
-                            $description['body']
-                        );
-                        $return['body'] = json_encode(Serializer::as_json($result));
+
+                        $method = $description['method_name'];
+                        $args   = $description['body'];
+                        $result = self::call_method($reflection->getMethod($method), $actor, $args);
+
+                        $return['body'] = Serializer::as_json($result);
                         break;
                 }
                 break;
@@ -197,6 +203,27 @@ class ActorRuntime
         }
 
         return $return;
+    }
+
+    private static function call_method(\ReflectionMethod $method, object $actor, $args): mixed
+    {
+        if (empty($args)) {
+            return $method->invoke($actor);
+        }
+
+        Runtime::$logger?->debug('Preparing to call {method} with {args}', ['method' => $method->name, 'args' => $args]);
+
+        $params = [];
+        $reflected_param = $method->getParameters()[0] ?? null;
+
+        if(isset($reflected_param)) {
+            $p = $reflected_param->getName();
+            $params[$p] = Deserializer::detect_from_parameter($reflected_param, $args);
+        }
+
+        Runtime::$logger?->debug('Calling {method} with {args}', ['method' => $method->name, 'args' => $params]);
+
+        return $method->invokeArgs($actor, $params);
     }
 
     /**
@@ -291,7 +318,7 @@ class ActorRuntime
      *
      * @param bool $drain Whether to drain active actors
      */
-    public static function do_drain_actors(bool $drain)
+    public static function do_drain_actors(bool $drain): void
     {
         Runtime::$logger?->debug('Setting drain mode {m}', ['m' => $drain]);
         self::$config['drainRebalancedActors'] = $drain;

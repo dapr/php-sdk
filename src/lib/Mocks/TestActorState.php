@@ -42,6 +42,7 @@ trait TestActorState
     public function __set(string $key, mixed $value): void
     {
         $this->_internal_transaction[$this->_on_transaction]->upsert($key, $value);
+        $this->loaded[$key] = true;
     }
 
     public function __isset(string $key): bool

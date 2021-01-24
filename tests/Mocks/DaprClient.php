@@ -66,7 +66,7 @@ class DaprClient
         self::$responses['GET'][$path][] = $response;
     }
 
-    public static function post(string $url, array $data): DaprResponse
+    public static function post(string $url, mixed $data): DaprResponse
     {
         self::validate('POST', $url, json_encode($data, JSON_PRETTY_PRINT));
         $next = array_shift(self::$responses['POST'][$url]);

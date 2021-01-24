@@ -10,7 +10,7 @@ class DaprException extends \Exception
         return $this->dapr_error_code;
     }
 
-    public static function deserialize_from_array($array): DaprException
+    public static function deserialize_from_array(array $array): DaprException
     {
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
 
@@ -35,9 +35,9 @@ class DaprException extends \Exception
     /**
      * @param \Exception|null $exception
      *
-     * @return array
+     * @return array|null
      */
-    public static function serialize_to_array($exception)
+    public static function serialize_to_array($exception): ?array
     {
         if ($exception === null || ! ($exception instanceof \Exception)) {
             return null;

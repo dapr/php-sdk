@@ -3,8 +3,10 @@
 namespace Dapr\State;
 
 use Dapr\DaprClient;
+use Dapr\Deserialization\Attributes\Union;
+use Dapr\Deserialization\Deserializer;
 use Dapr\Runtime;
-use Dapr\Serializer;
+use Dapr\Serialization\Serializer;
 use Dapr\State\Internal\StateHelpers;
 use ReflectionClass;
 use ReflectionProperty;
@@ -31,7 +33,7 @@ final class State
             $key = $property->name;
             $item = [
                 'key' => $key,
-                'value' => Serializer::as_json($obj->$key),
+                'value' => Serializer::as_array($obj->$key),
             ];
 
             if(isset($keys[$key]['etag'])) {
@@ -75,6 +77,9 @@ final class State
 
         foreach ($result->data as $value) {
             $key = $value['key'];
+            if(isset($value['data'])) {
+                $value['data'] = Deserializer::detect_from_parameter($reflection->getProperty($value['key']), $value['data']);
+            }
             if (isset($value['data']) && $value['data'] !== null) {
                 $obj->$key          = $value['data'];
                 $keys[$key]['etag'] = $value['etag'];

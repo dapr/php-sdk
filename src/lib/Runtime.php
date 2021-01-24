@@ -4,9 +4,12 @@ namespace Dapr;
 
 use Closure;
 use Dapr\Actors\ActorRuntime;
+use Dapr\Attributes\FromRoute;
+use Dapr\Deserialization\Deserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Subscribe;
+use Dapr\Serialization\Serializer;
 use JetBrains\PhpStorm\ArrayShape;
 use Psr\Log\LoggerInterface;
 
@@ -25,7 +28,7 @@ abstract class Runtime
      *
      * @param callable $callback
      */
-    public static function add_health_check(callable $callback)
+    public static function add_health_check(callable $callback): void
     {
         self::$logger?->info('Setting custom health check');
         self::$health_checks[] = $callback;
@@ -110,7 +113,7 @@ abstract class Runtime
 
                 return $result;
             } catch (\Exception $exception) {
-                return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
+                return ['code' => 500, 'body' => Serializer::as_json($exception)];
             }
         };
     }
@@ -162,15 +165,15 @@ abstract class Runtime
                     } catch (\Throwable $ex) {
                         self::$logger?->critical('Health check failed: {exception}', ['exception' => $ex]);
 
-                        return ['code' => 500, 'body' => json_encode(Serializer::as_json($ex))];
+                        return ['code' => 500, 'body' => Serializer::as_json($ex)];
                     }
 
                     return ['code' => 200];
                 };
             default:
                 $method_parts = explode('/', $uri, 3);
-                $body         = Deserializer::maybe_deserialize(json_decode(ActorRuntime::get_input(), true));
-                if (count($method_parts) === 2) {
+                $body         = json_decode(ActorRuntime::get_input(), true);
+                if (count($method_parts) >= 2) {
                     if ($http_method === 'OPTIONS' && Binding::has_binding($method_parts[1])) {
                         self::$logger?->debug('Found binding');
 
@@ -188,8 +191,8 @@ abstract class Runtime
 
                     self::$logger?->debug('Using method handler');
 
-                    return function () use ($method_parts, $body, $http_method) {
-                        return self::handle_method($http_method, $method_parts[1], $body);
+                    return function () use ($method_parts, $body, $http_method, $uri) {
+                        return self::handle_method($http_method, $method_parts[1], $body, $method_parts[2] ?? null);
                     };
                 }
 
@@ -197,7 +200,7 @@ abstract class Runtime
         }
     }
 
-    public static function handle_method(string $http_method, string $method, mixed $params): array
+    public static function handle_method(string $http_method, string $method, mixed $body, string|null $uri): array
     {
         if ( ! isset(self::$methods[$http_method][$method])) {
             self::$logger?->critical(
@@ -207,18 +210,29 @@ abstract class Runtime
 
             return [
                 'code' => 404,
-                'body' => json_encode(
-                    Serializer::as_json(new \BadFunctionCallException('unable to locate handler for method'))
-                ),
+                'body' => Serializer::as_json(new \BadFunctionCallException('unable to locate handler for method')),
             ];
         }
 
         try {
-            if (is_array($params)) {
-                $result = call_user_func_array(self::$methods[$http_method][$method], $params);
-            } else {
-                $result = call_user_func(self::$methods[$http_method][$method], $params);
+            $callback             = self::$methods[$http_method][$method];
+            if($callback instanceof Closure || is_string($callback)) {
+                $reflection = new \ReflectionFunction($callback);
+            } else if(is_array($callback)) {
+                $reflection = new \ReflectionMethod($callback[0], $callback[1]);
             }
+            $parameter_reflection = $reflection->getParameters();
+            $params               = [];
+            $uri                  = explode('/', $uri);
+            foreach ($parameter_reflection as $parameter) {
+                if (count($parameter->getAttributes(FromRoute::class))) {
+                    $params[$parameter->name] = Deserializer::detect_from_parameter($parameter, array_shift($uri));
+                } else {
+                    $params[$parameter->name] = Deserializer::detect_from_parameter($parameter, $body);
+                }
+            }
+
+            $result = call_user_func_array($callback, $params);
 
             if (is_array($result) && isset($result['code'])) {
                 return $result;
@@ -226,13 +240,13 @@ abstract class Runtime
         } catch (\Exception $exception) {
             self::$logger?->critical('Method failed: {exception}', ['exception' => $exception]);
 
-            return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
+            return ['code' => 500, 'body' => Serializer::as_json($exception)];
         }
 
-        return ['code' => 200, 'body' => $result];
+        return ['code' => 200, 'body' => Serializer::as_json($result)];
     }
 
-    public static function set_logger(LoggerInterface $logger)
+    public static function set_logger(LoggerInterface $logger): void
     {
         self::$logger = $logger;
     }

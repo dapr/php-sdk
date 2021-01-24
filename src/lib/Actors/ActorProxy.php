@@ -2,9 +2,12 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Actors\Attributes\DaprType;
+use Dapr\Actors\Internal\InternalProxy;
 use Dapr\DaprClient;
+use Dapr\Deserialization\Deserializer;
 use Dapr\Runtime;
-use Dapr\Serializer;
+use Dapr\Serialization\Serializer;
 use LogicException;
 use ReflectionClass;
 use ReflectionMethod;
@@ -47,7 +50,14 @@ abstract class ActorProxy
             }
         }
 
-        $methods          = $reflected_interface->getMethods(ReflectionMethod::IS_PUBLIC);
+        $methods = $reflected_interface->getMethods(ReflectionMethod::IS_PUBLIC);
+        if ( ! $reflected_interface->isSubclassOf(IActor::class)) {
+            $methods   = array_merge(
+                $methods,
+                (new ReflectionClass(IActor::class))->getMethods(ReflectionMethod::IS_PUBLIC)
+            );
+            $interface = $interface.',\\'.IActor::class;
+        }
         $rendered_methods = [];
         foreach ($methods as $method) {
             $method_name = $method->getName();
@@ -78,10 +88,10 @@ METHOD;
         $rendered_methods = implode("\n", $rendered_methods);
         $class            = <<<CLASS
 namespace Dapr\Proxies;
-#[\Dapr\Actors\DaprType('$type')]
-class $proxy_type extends \Dapr\Actors\InternalProxy implements \\$interface {
+#[\Dapr\Actors\Attributes\DaprType('$type')]
+class $proxy_type extends \Dapr\Actors\Internal\InternalProxy implements \\$interface {
     public \$id;
-    use \Dapr\Actors\Actor;
+    use \Dapr\Actors\ActorTrait;
 
 $rendered_methods
 }
@@ -106,15 +116,18 @@ CLASS;
      *
      * @param class-string<IActor> $interface
      * @param mixed $id The id to proxy for
+     * @param string|null $override_type Allow overriding the Dapr type for a given interface
      *
      * @return object
      * @throws \ReflectionException
      */
-    public static function get(string $interface, mixed $id): object
+    public static function get(string $interface, mixed $id, string|null $override_type = null): object
     {
         Runtime::$logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
         $reflected_interface = new ReflectionClass($interface);
-        $type                = ($reflected_interface->getAttributes(DaprType::class)[0] ?? null)?->newInstance()->type;
+        $type                = $override_type ?? ($reflected_interface->getAttributes(
+                    DaprType::class
+                )[0] ?? null)?->newInstance()->type;
 
         if (empty($type)) {
             Runtime::$logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
@@ -138,7 +151,14 @@ CLASS;
                 Runtime::$logger?->debug('Using InternalProxy to provide proxy');
                 $proxy            = new InternalProxy();
                 $proxy->DAPR_TYPE = $type;
-                foreach ($reflected_interface->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+                $methods          = $reflected_interface->getMethods(ReflectionMethod::IS_PUBLIC);
+                if ( ! $reflected_interface->isSubclassOf(IActor::class)) {
+                    $methods = array_merge(
+                        $methods,
+                        (new ReflectionClass(IActor::class))->getMethods(ReflectionMethod::IS_PUBLIC)
+                    );
+                }
+                foreach ($methods as $method) {
                     $method_name = $method->getName();
                     switch ($method_name) {
                         case 'get_id':
@@ -160,10 +180,24 @@ CLASS;
                         case 'create_reminder':
                             break;
                         default:
-                            $proxy->$method_name = function (...$params) use ($type, $id, $method_name) {
+                            $proxy->$method_name = function (...$params) use (
+                                $type,
+                                $id,
+                                $method_name,
+                                $reflected_interface
+                            ) {
+                                if ( ! empty($params)) {
+                                    $params = Serializer::as_array($params[0]);
+                                }
+
                                 $result = DaprClient::post(
                                     DaprClient::get_api("/actors/$type/$id/method/$method_name"),
-                                    Serializer::as_json($params)
+                                    Serializer::as_array($params)
+                                );
+
+                                $result->data = Deserializer::detect_from_parameter(
+                                    $reflected_interface->getMethod($method_name),
+                                    $result->data
                                 );
 
                                 return $result->data;
@@ -186,7 +220,6 @@ CLASS;
         throw new \LogicException('Cannot call {$method->getName()} outside the actor.');
     }
 METHOD;
-
     }
 
     private static function generate_proxy_method(ReflectionMethod $method)
@@ -211,7 +244,7 @@ METHOD;
         \$data = $array;
         // inline function: get name
         \$class = new \ReflectionClass(\$this);
-        \$attributes = \$class->getAttributes(\Dapr\Actors\DaprType::class);
+        \$attributes = \$class->getAttributes(\Dapr\Actors\Attributes\DaprType::class);
         if (!empty(\$attributes)) {
             \$type = \$attributes[0]->newInstance()->type;
         } else {
@@ -221,12 +254,14 @@ METHOD;
         \$id = \$this->get_id(); 
         \$result = \Dapr\DaprClient::post(
             \Dapr\DaprClient::get_api("/actors/\$type/\$id/method/{$method->getName()}"),
-            \Dapr\Serializer::as_json(\$data)
+            \Dapr\Serialization\Serializer::as_array(\$data[0] ?? null)
         );
+        \$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter(\$class->getMethod('{$method->getName(
+        )}'), \$result->data);
+        
         $return
     }
 METHOD;
-
     }
 
     private static function params_to_array(ReflectionMethod $method)
@@ -234,7 +269,7 @@ METHOD;
         $params = $method->getParameters();
         $array  = [];
         foreach ($params as $param) {
-            $array[] = "'{$param->getName()}' => \${$param->getName()}";
+            $array[] = "\${$param->getName()}";
         }
 
         return '['.implode(',', $array).']';

@@ -2,7 +2,9 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Actors\Internal\KeyResponse;
 use Dapr\DaprClient;
+use Dapr\Deserialization\Deserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\Runtime;
 use Dapr\State\Internal\Transaction;
@@ -111,6 +113,10 @@ abstract class ActorState
         $state = DaprClient::get(
             DaprClient::get_api("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state/$key")
         );
+        if(isset($state->data)) {
+            $property = $this->_internal_reflection->getProperty($key);
+            $state->data = Deserializer::detect_from_parameter($property, $state->data);
+        }
         switch ($state?->code) {
             case KeyResponse::SUCCESS:
                 $this->_internal_data[$key]               = 'loaded';

@@ -3,7 +3,7 @@
 namespace Dapr\PubSub;
 
 use Dapr\Runtime;
-use Dapr\Serializer;
+use Dapr\Serialization\Serializer;
 use JetBrains\PhpStorm\ArrayShape;
 
 abstract class Subscribe
@@ -47,7 +47,7 @@ abstract class Subscribe
      */
     #[ArrayShape(['code' => "int", 'body' => "false|string"])]
     public static function handle_subscription(
-        $id,
+        string $id,
         $event
     ): array {
         if (isset(self::$handlers[$id])) {
@@ -59,15 +59,15 @@ abstract class Subscribe
                     ['id' => $id, 'exception' => $exception]
                 );
 
-                return ['code' => 500, 'body' => json_encode(Serializer::as_json($exception))];
+                return ['code' => 500, 'body' => Serializer::as_json($exception)];
             }
 
-            return ['code' => 200, 'body' => json_encode(Serializer::as_json($result))];
+            return ['code' => 200, 'body' => Serializer::as_json($result)];
         }
 
         return [
             'code' => 404,
-            'body' => json_encode(Serializer::as_json(new \BadFunctionCallException('Unable to handle subscription'))),
+            'body' => Serializer::as_json(new \BadFunctionCallException('Unable to handle subscription')),
         ];
     }
 }

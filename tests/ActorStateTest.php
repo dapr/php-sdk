@@ -1,6 +1,7 @@
 <?php
 
 use Dapr\Actors\ActorState;
+use Dapr\Actors\Internal\KeyResponse;
 
 require_once __DIR__.'/DaprTests.php';
 
@@ -64,7 +65,7 @@ class ActorStateTest extends DaprTests
 
         \Dapr\DaprClient::register_get(
             "/actors/type/$id/state/state",
-            \Dapr\Actors\KeyResponse::SUCCESS,
+            KeyResponse::SUCCESS,
             'hello world'
         );
 
@@ -76,7 +77,7 @@ class ActorStateTest extends DaprTests
         $id = uniqid();
         $state = $this->get_state('type', $id);
 
-        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", \Dapr\Actors\KeyResponse::KEY_NOT_FOUND, '');
+        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::KEY_NOT_FOUND, '');
 
         $this->assertSame('initial', $state->state);
         $this->assertSame('initial', $state->state);
@@ -86,7 +87,7 @@ class ActorStateTest extends DaprTests
         $id = uniqid();
         $state = $this->get_state('nope', $id);
 
-        \Dapr\DaprClient::register_get("/actors/nope/$id/state/state", \Dapr\Actors\KeyResponse::ACTOR_NOT_FOUND, '');
+        \Dapr\DaprClient::register_get("/actors/nope/$id/state/state", KeyResponse::ACTOR_NOT_FOUND, '');
 
         $this->expectException(\Dapr\exceptions\DaprException::class);
 
@@ -97,14 +98,14 @@ class ActorStateTest extends DaprTests
         $id = uniqid();
         $state = $this->get_state('type', $id);
 
-        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", \Dapr\Actors\KeyResponse::SUCCESS, 'test');
+        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, 'test');
 
         $this->assertTrue(isset($state->state));
         $this->assertTrue(isset($state->state));
 
         $state->roll_back();
 
-        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", \Dapr\Actors\KeyResponse::SUCCESS, null);
+        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, null);
 
         $this->assertFalse(isset($state->state));
     }

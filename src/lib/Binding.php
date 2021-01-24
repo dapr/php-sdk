@@ -2,11 +2,13 @@
 
 namespace Dapr;
 
+use Dapr\Serialization\Serializer;
+
 abstract class Binding
 {
     private static array $bindings = [];
 
-    public static function register_input_binding(string $name, callable $callback)
+    public static function register_input_binding(string $name, callable $callback): void
     {
         self::$bindings[$name] = $callback;
     }
@@ -27,8 +29,8 @@ abstract class Binding
         array $data = []
     ): DaprResponse {
         $payload = [
-            'data'      => (object)Serializer::as_json($data),
-            'metadata'  => (object)Serializer::as_json($metadata),
+            'data'      => (object)Serializer::as_array($data),
+            'metadata'  => (object)Serializer::as_array($metadata),
             'operation' => $operation,
         ];
         Runtime::$logger?->info(

@@ -26,7 +26,7 @@ On the other hand, if we want to be able to receive invocations from other servi
 \Dapr\Runtime::register_method(
     method_name: 'my_method',
     http_method: 'PUT',
-    callback: fn(...$params) => do_something($params)  
+    callback: fn(string $param) => do_something($param)  
 );
 ```
 
@@ -73,22 +73,14 @@ Arguments:
 
 Callback:
 
-The callback allows for destructing, so if you're expecting an object like:
+There are several attributes you can apply to method parameters: `Dapr\Attributes\FromBody`
+and `Dapr\Attributes\FromRoute`.
 
-```json
-{
-  "order_id": 123,
-  "amount_in_cents": "12344",
-  "invoice": "invoice_123"
-}
-```
+### Dapr\Attributes\FromBody
 
-You can write the callback in one of several ways:
+This is the default if no attribute is specified. It deserializes the body into the specified type.
 
-```php
-function callback_1($order_id, $amount_in_cents, $invoice) {}
-function callback_2($invoice, ...$rest) {}
-function callback_3(...$params) {}
-```
+### Dapr\Attributes\FromRoute
 
-An error will occur if one of the keys is missing, and you don't give it a default value in your function declaration.
+This takes from the route in order, illustrated here: `/my_method/id/something` and a function signature
+like `function (#[FromRoute] $id, #[FromRoute] $something)`.

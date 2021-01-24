@@ -25,7 +25,7 @@ set_error_handler(
         echo json_encode(
             [
                 'errorCode' => 'Exception',
-                'message' => E_WARNING & $err_no ? 'WARNING' : (E_NOTICE & $err_no ? 'NOTICE' : (E_ERROR & $err_no ? 'ERROR' : 'OTHER')) . ': ' . $err_str,
+                'message' => (E_WARNING & $err_no ? 'WARNING' : (E_NOTICE & $err_no ? 'NOTICE' : (E_ERROR & $err_no ? 'ERROR' : 'OTHER'))) . ': ' . $err_str,
                 'file'    => $err_file,
                 'line'    => $err_line,
             ]

@@ -2,6 +2,7 @@
 
 namespace Dapr;
 
+use Dapr\Deserialization\Deserializer;
 use Dapr\exceptions\DaprException;
 
 /**
@@ -64,14 +65,14 @@ abstract class DaprClient
         );
         $result       = curl_exec($curl);
         $return       = new DaprResponse();
-        $return->data = Deserializer::maybe_deserialize(json_decode($result, true));
+        $return->data = json_decode($result, true);
         $return->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
 
         Runtime::$logger?->debug('Got response: {response}', ['response' => $return]);
 
-        if ($return->data instanceof \Exception) {
-            throw $return->data;
+        if (Deserializer::is_exception($return->data)) {
+            throw Deserializer::get_exception($return->data);
         }
 
         return $return;
@@ -149,13 +150,13 @@ abstract class DaprClient
         );
         $response       = new DaprResponse();
         $response->data = curl_exec($curl);
-        $response->data = Deserializer::maybe_deserialize(json_decode($response->data, true));
+        $response->data = json_decode($response->data, true);
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
         Runtime::$logger?->debug('Got response: {r}', ['r' => $response]);
 
-        if ($response->data instanceof \Exception) {
-            throw $response->data;
+        if (Deserializer::is_exception($response->data)) {
+            throw Deserializer::get_exception($response->data);
         }
 
         return $response;
@@ -188,14 +189,14 @@ abstract class DaprClient
             ]
         );
         $response       = new DaprResponse();
-        $response->data = Deserializer::maybe_deserialize(json_decode(curl_exec($curl), true));
+        $response->data = json_decode(curl_exec($curl), true);
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
 
         Runtime::$logger?->debug('Got response: {r}', ['r' => $response]);
 
-        if ($response->data instanceof \Exception) {
-            throw $response->data;
+        if (Deserializer::is_exception($response->data)) {
+            throw Deserializer::get_exception($response->data);
         }
 
         return $response;
