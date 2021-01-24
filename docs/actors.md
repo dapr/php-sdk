@@ -23,8 +23,8 @@ For example, if we want to communicate with a counting actor that solely keeps t
 interface as follows:
 
 ```php
-#[\Dapr\Actors\DaprType('Counter')]
-interface ICount extends \Dapr\Actors\IActor {
+#[\Dapr\Actors\Attributes\DaprType('Counter')]
+interface ICount {
     function increment(int $amount = 1): void;
     function get_count(): int;
 }
@@ -92,10 +92,11 @@ see fit.
 Here's our counter actor:
 
 ```php
-#[\Dapr\Actors\DaprType('Count')]
-class Counter implements ICount {
-    use \Dapr\Actors\Actor;
-    function __construct(private $id, private CountState $state) {}
+#[\Dapr\Actors\Attributes\DaprType('Count')]
+class Counter extends \Dapr\Actors\Actor implements ICount {
+    function __construct(protected string $id, private CountState $state) {
+        parent::__construct($id);
+    }
     
     function increment(int $amount = 1): void {
         $this->state->count += $amount;

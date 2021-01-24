@@ -26,9 +26,21 @@ On the other hand, if we want to be able to receive invocations from other servi
 \Dapr\Runtime::register_method(
     method_name: 'my_method',
     http_method: 'PUT',
-    callback: fn(...$params) => do_something($params)  
+    callback: fn(string $param) => do_something($param)  
 );
 ```
+
+There are several attributes you can apply to method parameters: `Dapr\Attributes\FromBody`
+and `Dapr\Attributes\FromRoute`.
+
+### Dapr\Attributes\FromBody
+
+This is the default if no attribute is specified. It deserializes the body into the specified type.
+
+### Dapr\Attributes\FromRoute
+
+This takes from the route in order, illustrated here: `/my_method/id/something` and a function signature
+like `function (#[FromRoute] $id, #[FromRoute] $something)`.
 
 ## Runtime::invoke_method()
 
