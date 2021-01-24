@@ -9,7 +9,6 @@ use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorRuntime;
 use Dapr\Actors\ActorState;
 use Dapr\Actors\Attributes\DaprType;
-use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
 use Dapr\consistency\StrongFirstWrite;
@@ -26,7 +25,7 @@ use Dapr\State\TransactionalState;
 use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;
 
-$logger = new Logger('dapr');
+$logger  = new Logger('dapr');
 $handler = new ErrorLogHandler(level: Logger::INFO);
 $logger->pushHandler($handler);
 $logger->pushProcessor(new \Monolog\Processor\PsrLogMessageProcessor());
@@ -142,9 +141,12 @@ class SimpleState
 }
 
 #[StateStore(STORE, StrongFirstWrite::class)]
-class TState extends TransactionalState {
+class TState extends TransactionalState
+{
     public int $counter = 0;
-    public function increment(int $amount = 1): void {
+
+    public function increment(int $amount = 1): void
+    {
         $this->counter += $amount;
     }
 }
@@ -158,6 +160,24 @@ Runtime::register_method(
         assert_equals('My Message', $message);
     }
 );
+
+class MethodHandler
+{
+    public static function test_static($input)
+    {
+        assert_equals('{"ok": true}', $input);
+    }
+
+    public function test_instance($input)
+    {
+        assert_equals('{"ok": true}', $input);
+    }
+}
+
+Runtime::register_method('test_static', [MethodHandler::class, 'test_static'], 'POST');
+Runtime::register_method('test_instance', [new MethodHandler(), 'test_instance'], 'POST');
+Runtime::register_method('test_inline', fn($input) => assert_equals('{"ok": true}', $input), 'POST');
+
 $uri         = $_SERVER['REQUEST_URI'];
 $http_method = $_SERVER['REQUEST_METHOD'];
 header('Content-Type: application/json');
@@ -220,8 +240,10 @@ function state_test(): void
 
 function state_concurrency(): void
 {
-    $last = new #[StateStore(STORE, StrongLastWrite::class)] class extends SimpleState {};
-    $first = new #[StateStore(STORE, StrongFirstWrite::class)] class extends SimpleState {};
+    $last  = new #[StateStore(STORE, StrongLastWrite::class)] class extends SimpleState {
+    };
+    $first = new #[StateStore(STORE, StrongFirstWrite::class)] class extends SimpleState {
+    };
     assert_equals(0, $last->counter, 'initial value correct');
     State::save_state($last);
     State::load_state($last);
@@ -278,8 +300,10 @@ function multiple_transactions(): void
 {
     $store = new SimpleState();
     State::save_state($store);
-    ($one = new #[StateStore(STORE, StrongFirstWrite::class)] class extends TState {})->begin();
-    ($two = new #[StateStore(STORE, StrongLastWrite::class)] class extends TState {})->begin();
+    ($one = new #[StateStore(STORE, StrongFirstWrite::class)] class extends TState {
+    })->begin();
+    ($two = new #[StateStore(STORE, StrongLastWrite::class)] class extends TState {
+    })->begin();
 
     $one->counter = 1;
     $one->counter = 3;
@@ -425,6 +449,15 @@ function test_invoke_serialization()
 {
     $result = Runtime::invoke_method('dev', 'say_something', 'My Message');
     assert_equals(200, $result->code, 'Should receive a 200 response');
+
+    $json = '{"ok": true}';
+
+    $result = Runtime::invoke_method('dev', 'test_static', $json);
+    assert_equals(200, $result->code, 'Static function should receive json string');
+    $result = Runtime::invoke_method('dev', 'test_instance', $json);
+    assert_equals(200, $result->code, 'Instance function should receive json string');
+    $result = Runtime::invoke_method('dev', 'test_inline', $json);
+    assert_equals(200, $result->code, 'Closure should receive json string');
 }
 
 
