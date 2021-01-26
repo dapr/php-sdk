@@ -55,8 +55,9 @@ abstract class ActorProxy
             }
         }
 
+        $original_interface = $interface;
         $interface = ClassType::from($interface);
-        $interface->addExtend($interface);
+        $interface->addExtend($original_interface);
         $interface->setClass();
         $interface->setName($proxy_type);
 
