@@ -236,7 +236,7 @@ class ActorTest extends DaprTests
      * This is essentially a snapshot function
      */
     public function testGeneratedClassIsCorrect() {
-        $generated_class = "<?php\n". ActorProxy::generate_proxy_class(\Fixtures\ITestActor::class);
+        $generated_class = ActorProxy::generate_proxy_class(\Fixtures\ITestActor::class);
         $take_snapshot = false;
         if($take_snapshot) {
             file_put_contents(__DIR__.'/Fixtures/GeneratedProxy.php', $generated_class);

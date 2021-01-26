@@ -12,7 +12,6 @@ use LogicException;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\PhpFile;
-use Nette\PhpGenerator\PhpNamespace;
 use Nette\PhpGenerator\Type;
 use ReflectionClass;
 use ReflectionMethod;
@@ -56,13 +55,14 @@ abstract class ActorProxy
         }
 
         $original_interface = $interface;
-        $interface = ClassType::from($interface);
-        $interface->addExtend($original_interface);
+        $interface          = ClassType::from($interface);
+        $interface->addImplement($original_interface);
+        $interface->addProperty('id')->setPublic()->setType(Type::STRING);
         $interface->setClass();
         $interface->setName($proxy_type);
 
         if ( ! $reflected_interface->isSubclassOf(IActor::class)) {
-            $interface->addExtend(IActor::class);
+            $interface->addImplement(IActor::class);
         }
 
         $interface->addTrait(ActorTrait::class);
@@ -73,21 +73,51 @@ abstract class ActorProxy
         $get_id->addBody('return $this->id;');
         $interface->addMember($get_id);
 
-        $actor_interface = ClassType::from(IActor::class);
-        foreach($actor_interface->getMethods() as $method) {
-            $interface->addMember(self::generate_proxy_method($method, $type));
-        }
-        $failure_methods = array_filter(
-            $actor_interface->getMethods(),
-            fn($method) => in_array($method->getName(), ['remind', 'on_activation', 'on_deactivation'], true)
-        );
-        foreach($failure_methods as $failure_method) {
-            $interface->addMember(self::generate_failure_method($failure_method));
+        $failure_methods = ['remind', 'on_activation', 'on_deactivation'];
+        $from_trait      = ['create_reminder', 'get_reminder', 'delete_reminder', 'create_timer', 'delete_timer'];
+        $usings          = [];
+
+        $methods = array_merge($interface->getMethods(), ClassType::from(IActor::class)->getMethods());
+        foreach ($methods as $method) {
+            switch ($method->getName()) {
+                case 'remind':
+                case 'on_activation':
+                case 'on_deactivation':
+                    $interface->addMember(self::generate_failure_method($method));
+                    break;
+                case 'create_reminder':
+                case 'get_reminder':
+                case 'delete_reminder':
+                case 'create_timer':
+                case 'delete_timer':
+                    break;
+                case 'get_id':
+                    $get_id = new Method('get_id');
+                    $get_id->setReturnType(Type::STRING);
+                    $get_id->setPublic();
+                    $get_id->addBody('return $this->id;');
+                    $interface->addMember($get_id);
+                    break;
+                default:
+                    $interface->removeMethod($method->getName());
+                    $interface->addMember(self::generate_proxy_method($method, $type, $usings));
+                    break;
+            }
         }
 
         $php_file = new PhpFile();
-        $namespace = $php_file->addNamespace("\\Dapr\\Proxies\\");
+        $php_file->addComment('This file was automatically generated.');
+        $namespace = $php_file->addNamespace("Dapr\\Proxies");
         $namespace->add($interface);
+        $namespace->addUse('\Swytch\Actors\Devices\IDeviceActor');
+        $namespace->addUse('\Dapr\Actors\IActor');
+        $namespace->addUse('\Dapr\Actors\Attributes\DaprType');
+        $namespace->addUse('\Dapr\Actors\ActorTrait');
+        foreach ($usings as $using) {
+            if (class_exists($using)) {
+                $namespace->addUse($using);
+            }
+        }
 
         if (self::$mode === ProxyModes::GENERATED_CACHED) {
             file_put_contents($file, $php_file);
@@ -206,27 +236,60 @@ abstract class ActorProxy
 
     private static function generate_failure_method(Method $method): Method
     {
-        $method->addBody('throw new \LogicException("Cannot call ? outside the actor', [$method->getName()]);
+        $method->addBody('throw new \LogicException("Cannot call ? outside the actor");', [$method->getName()]);
         $method->setPublic();
+
         return $method;
     }
 
-    private static function generate_proxy_method(Method $method, string $dapr_type): Method
+    private static function get_types(string|null $type): array
     {
-        $method->addBody('$data = $?;', [$method->getParameters()[0]->getName()]);
+        if ($type === null) {
+            return [Type::VOID];
+        }
+
+        return explode('|', $type);
+    }
+
+    private static function generate_proxy_method(Method $method, string $dapr_type, array &$usings): Method
+    {
+        $params = array_values($method->getParameters());
+        $method->setPublic();
+        if ( ! empty($params)) {
+            if (isset($params[1])) {
+                throw new LogicException(
+                    "Cannot have more than one parameter on a method.\nMethod: {$method->getName()}"
+                );
+            }
+            if ($params[0]->isReference()) {
+                throw new LogicException(
+                    "Cannot pass references between actors/methods.\nMethod: {$method->getName()}"
+                );
+            }
+            $usings = array_merge($usings, self::get_types($params[0]->getType()));
+            $method->addBody('$data = $?;', [array_values($method->getParameters())[0]->getName()]);
+        }
         $method->addBody('$type = ?;', [$dapr_type]);
         $method->addBody('$id = $this->get_id();');
+        $method->addBody('$current_method = ?;', [$method->getName()]);
         $method->addBody('$result = \Dapr\DaprClient::post(');
-        $method->addBody('  \Dapr\DaprClient::get_api("/actors/$type/$id/method/?', [$method->getName()]);
-        $method->addBody('  \Dapr\Serialization\Serializer::as_array($data ?? null)');
-        $method->addBody(');');
-        if($method->getReturnType() !== null) {
+        $method->addBody('  \Dapr\DaprClient::get_api("/actors/$type/$id/method/$current_method"),');
+        if (empty($params)) {
+            $method->addBody('  null);');
+        } else {
+            $method->addBody('  \Dapr\Serialization\Serializer::as_array($data)');
+            $method->addBody(');');
+        }
+        $return_type = $method->getReturnType() ?? Type::VOID;
+        if ($return_type !== Type::VOID) {
+            $usings = array_merge($usings, self::get_types($return_type));
             $method->addBody(
-                '$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter((new ReflectionClass($this))->getMethod(?), $result->data);',
+                '$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter((new \ReflectionClass($this))->getMethod(?), $result->data);',
                 [$method->getName()]
             );
             $method->addBody('return $result->data;');
         }
+
         return $method;
     }
 }
