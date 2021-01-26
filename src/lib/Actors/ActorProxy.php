@@ -9,6 +9,11 @@ use Dapr\Deserialization\Deserializer;
 use Dapr\Runtime;
 use Dapr\Serialization\Serializer;
 use LogicException;
+use Nette\PhpGenerator\ClassType;
+use Nette\PhpGenerator\Method;
+use Nette\PhpGenerator\PhpFile;
+use Nette\PhpGenerator\PhpNamespace;
+use Nette\PhpGenerator\Type;
 use ReflectionClass;
 use ReflectionMethod;
 
@@ -50,57 +55,44 @@ abstract class ActorProxy
             }
         }
 
-        $methods = $reflected_interface->getMethods(ReflectionMethod::IS_PUBLIC);
+        $interface = ClassType::from($interface);
+        $interface->addExtend($interface);
+        $interface->setClass();
+        $interface->setName($proxy_type);
+
         if ( ! $reflected_interface->isSubclassOf(IActor::class)) {
-            $methods   = array_merge(
-                $methods,
-                (new ReflectionClass(IActor::class))->getMethods(ReflectionMethod::IS_PUBLIC)
-            );
-            $interface = $interface.',\\'.IActor::class;
+            $interface->addExtend(IActor::class);
         }
-        $rendered_methods = [];
-        foreach ($methods as $method) {
-            $method_name = $method->getName();
-            switch ($method_name) {
-                case 'get_id':
-                    $rendered_methods[] = <<<METHOD
-    public function get_id(): mixed {
-        return \$this->id;
-    }
-METHOD;
-                    break;
-                case 'remind':
-                case 'on_activation':
-                case 'on_deactivation':
-                    $rendered_methods[] = self::generate_failure_method($method);
-                    break;
-                case 'delete_timer':
-                case 'create_timer':
-                case 'delete_reminder':
-                case 'get_reminder':
-                case 'create_reminder':
-                    break;
-                default:
-                    $rendered_methods[] = self::generate_proxy_method($method);
-                    break;
-            }
-        }
-        $rendered_methods = implode("\n", $rendered_methods);
-        $class            = <<<CLASS
-namespace Dapr\Proxies;
-#[\Dapr\Actors\Attributes\DaprType('$type')]
-class $proxy_type extends \Dapr\Actors\Internal\InternalProxy implements \\$interface {
-    public \$id;
-    use \Dapr\Actors\ActorTrait;
 
-$rendered_methods
-}
-CLASS;
+        $interface->addTrait(ActorTrait::class);
+
+        $get_id = new Method('get_id');
+        $get_id->setReturnType(Type::STRING);
+        $get_id->setPublic();
+        $get_id->addBody('return $this->id;');
+        $interface->addMember($get_id);
+
+        $actor_interface = ClassType::from(IActor::class);
+        foreach($actor_interface->getMethods() as $method) {
+            $interface->addMember(self::generate_proxy_method($method, $type));
+        }
+        $failure_methods = array_filter(
+            $actor_interface->getMethods(),
+            fn($method) => in_array($method->getName(), ['remind', 'on_activation', 'on_deactivation'], true)
+        );
+        foreach($failure_methods as $failure_method) {
+            $interface->addMember(self::generate_failure_method($failure_method));
+        }
+
+        $php_file = new PhpFile();
+        $namespace = $php_file->addNamespace("\\Dapr\\Proxies\\");
+        $namespace->add($interface);
+
         if (self::$mode === ProxyModes::GENERATED_CACHED) {
-            file_put_contents($file, "<?php\n\n".$class);
+            file_put_contents($file, $php_file);
         }
 
-        return $class;
+        return $php_file;
     }
 
     private static function get_proxy_type(string $dapr_type)
@@ -211,115 +203,29 @@ CLASS;
         return $proxy;
     }
 
-    private static function generate_failure_method(ReflectionMethod $method)
+    private static function generate_failure_method(Method $method): Method
     {
-        $signature = self::create_signature($method);
-
-        return <<<METHOD
-    public function $signature {
-        throw new \LogicException('Cannot call {$method->getName()} outside the actor.');
-    }
-METHOD;
+        $method->addBody('throw new \LogicException("Cannot call ? outside the actor', [$method->getName()]);
+        $method->setPublic();
+        return $method;
     }
 
-    private static function generate_proxy_method(ReflectionMethod $method)
+    private static function generate_proxy_method(Method $method, string $dapr_type): Method
     {
-        $signature = self::create_signature($method);
-        $array     = self::params_to_array($method);
-        $return    = $method->getReturnType();
-        if ($return instanceof \ReflectionNamedType) {
-            $returns = $return->getName() !== 'void';
-        } else {
-            $returns = true;
+        $method->addBody('$data = $?;', [$method->getParameters()[0]->getName()]);
+        $method->addBody('$type = ?;', [$dapr_type]);
+        $method->addBody('$id = $this->get_id();');
+        $method->addBody('$result = \Dapr\DaprClient::post(');
+        $method->addBody('  \Dapr\DaprClient::get_api("/actors/$type/$id/method/?', [$method->getName()]);
+        $method->addBody('  \Dapr\Serialization\Serializer::as_array($data ?? null)');
+        $method->addBody(');');
+        if($method->getReturnType() !== null) {
+            $method->addBody(
+                '$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter((new ReflectionClass($this))->getMethod(?), $result->data);',
+                [$method->getName()]
+            );
+            $method->addBody('return $result->data;');
         }
-
-        if ($returns) {
-            $return = "return \$result->data;";
-        } else {
-            $return = '';
-        }
-
-        return <<<METHOD
-    public function $signature {
-        \$data = $array;
-        // inline function: get name
-        \$class = new \ReflectionClass(\$this);
-        \$attributes = \$class->getAttributes(\Dapr\Actors\Attributes\DaprType::class);
-        if (!empty(\$attributes)) {
-            \$type = \$attributes[0]->newInstance()->type;
-        } else {
-            \$type = \$class->getShortName();
-        }
-        // end function
-        \$id = \$this->get_id(); 
-        \$result = \Dapr\DaprClient::post(
-            \Dapr\DaprClient::get_api("/actors/\$type/\$id/method/{$method->getName()}"),
-            \Dapr\Serialization\Serializer::as_array(\$data[0] ?? null)
-        );
-        \$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter(\$class->getMethod('{$method->getName(
-        )}'), \$result->data);
-        
-        $return
-    }
-METHOD;
-    }
-
-    private static function params_to_array(ReflectionMethod $method)
-    {
-        $params = $method->getParameters();
-        $array  = [];
-        foreach ($params as $param) {
-            $array[] = "\${$param->getName()}";
-        }
-
-        return '['.implode(',', $array).']';
-    }
-
-    private static function render_param(\ReflectionParameter $param)
-    {
-        $name      = $param->getName();
-        $type_name = self::render_type($param->getType());
-        $default   = '';
-        if ($param->isDefaultValueAvailable()) {
-            $default = $param->getDefaultValue();
-            if (is_string($default)) {
-                $default = "'$default'";
-            }
-            $default = " = $default";
-        }
-
-        return "$type_name \$$name$default";
-    }
-
-    private static function render_type(\ReflectionType|null $type)
-    {
-        $type_name = '';
-        if ($type instanceof \ReflectionNamedType) {
-            $type_name = $type->isBuiltin() ? $type->getName() : '\\'.$type->getName();
-            $type_name = ($type->allowsNull() ? '?' : '').$type_name;
-        } elseif ($type instanceof \ReflectionUnionType) {
-            $type_name = [];
-            foreach ($type->getTypes() as $type) {
-                $type_name[] = self::render_type($type);
-            }
-            $type_name = implode('|', $type_name);
-        }
-
-        return $type_name;
-    }
-
-    private static function create_signature(ReflectionMethod $method)
-    {
-        $params          = $method->getParameters();
-        $return          = self::render_type($method->getReturnType());
-        $method_name     = $method->getName();
-        $rendered_params = [];
-        foreach ($params as $param) {
-            $rendered_params[] = self::render_param($param);
-        }
-        $rendered_params = implode(', ', $rendered_params);
-        $return          = empty($return) ? '' : ": $return";
-
-        return "$method_name($rendered_params)$return";
+        return $method;
     }
 }
