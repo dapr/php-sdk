@@ -78,12 +78,11 @@ jobs:
       - uses: shivammathur/setup-php@2.9.0
         with:
           php-version: 8.0
-          extensions: xdebug
       - name: Validate composer.json and composer.lock
         run: composer validate
 
       - name: Cache Composer packages
-        id: composer-cache
+        id: composer-cache-dist
         uses: actions/cache@v2
         with:
           path: vendor
@@ -91,9 +90,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-php-
 
-      - name: Install dependencies
-        if: steps.composer-cache.outputs.cache-hit != 'true'
+      - name: Install composer dependencies
+        if: steps.composer-cache-dist.outputs.cache-hit != 'true'
         run: composer install --prefer-dist --no-progress --no-suggest --no-dev
+      - name: Install Dapr
+        run: wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.0.0-rc.4
 
       - name: Clean
         run: composer run-script clean
