@@ -11,6 +11,7 @@ use Dapr\Actors\ActorState;
 use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
+use Dapr\Binding;
 use Dapr\consistency\StrongFirstWrite;
 use Dapr\consistency\StrongLastWrite;
 use Dapr\exceptions\SaveStateFailure;
@@ -177,6 +178,12 @@ class MethodHandler
 Runtime::register_method('test_static', [MethodHandler::class, 'test_static'], 'POST');
 Runtime::register_method('test_instance', [new MethodHandler(), 'test_instance'], 'POST');
 Runtime::register_method('test_inline', fn($input) => assert_equals('{"ok": true}', $input), 'POST');
+Binding::register_input_binding(
+    'cron',
+    function () {
+        file_put_contents(sys_get_temp_dir().'/cron', 'true');
+    }
+);
 
 $uri         = $_SERVER['REQUEST_URI'];
 $http_method = $_SERVER['REQUEST_METHOD'];
@@ -460,6 +467,19 @@ function test_invoke_serialization()
     assert_equals(200, $result->code, 'Closure should receive json string');
 }
 
+function test_bindings()
+{
+    $cron_file = sys_get_temp_dir().'/cron';
+    //Binding::invoke_output('cron', 'delete');
+    assert_equals(true, file_exists($cron_file), 'we should have received at least one cron');
+    // see https://github.com/dapr/components-contrib/issues/639
+    //sleep(1);
+    //unlink($cron_file);
+    //sleep(1);
+
+    //assert_equals(false, file_exists($cron_file), 'cron should be stopped');
+}
+
 
 function do_tests()
 {
@@ -486,6 +506,9 @@ function do_tests()
         'test_invoke_serialization' => [
             'description' =>
                 'See <a href="https://v1-rc2.docs.dapr.io/developing-applications/sdks/serialization/">the docs</a>',
+        ],
+        'test_bindings'             => [
+            'description' => 'test bindings',
         ],
     ];
 
