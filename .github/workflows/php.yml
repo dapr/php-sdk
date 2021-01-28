@@ -97,7 +97,8 @@ jobs:
         run: wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.0.0-rc.4
 
       - name: Start Integration Environment
-        run: composer run-script start &
+        run: |
+          composer run-script start &
       - name: Wait for environment
         run: sleep 10
       - name: Execute Tests
