@@ -7,6 +7,7 @@ use PHPUnit\Framework\Assert;
 class DaprClient
 {
     public static array $responses = [];
+    public static array $extra_headers = [];
 
     public static function get_api(string $path, ?array $params = null): string
     {
