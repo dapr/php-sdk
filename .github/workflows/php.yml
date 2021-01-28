@@ -96,5 +96,8 @@ jobs:
       - name: Install Dapr
         run: wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.0.0-rc.4
 
-      - name: Clean
-        run: composer run-script clean
+      - name: Start Integration Environment
+        run: |
+          composer run-script start &
+      - name: Execute Tests
+        run: curl localhost:9502/do_tests
