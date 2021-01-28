@@ -33,7 +33,7 @@
     "start": [
       "PHP_CLI_SERVER_WORKERS=100 dapr run --components-path components -a dev -p 9502 -- php -S 0.0.0.0:9502 -t src"
       ],
-    "init": [
+    "dapr-init": [
       "dapr init --runtime-version 1.0.0-rc.3"
     ],
     "clean": [

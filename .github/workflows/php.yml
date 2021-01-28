@@ -98,7 +98,7 @@ jobs:
 
       - name: Start Integration Environment
         run: |
-          composer run-script init
+          composer run-script dapr-init
           composer run-script start &
       - name: Ensure running
         run: ps aux
