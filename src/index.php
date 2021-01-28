@@ -411,12 +411,17 @@ function test_pubsub(): void
     echo "Received this data:\n";
     echo json_encode(json_decode($raw_event = file_get_contents('/tmp/sub-received')), JSON_PRETTY_PRINT)."\n";
     unlink('/tmp/sub-received');
-    unset($event->time);
+    //unset($event->time);
+    $event->topic = "test";
+    $event->pubsubname = "pubsub";
+    echo "Expecting this data:\n";
+    echo json_encode(json_decode($event->to_json()), JSON_PRETTY_PRINT)."\n";
     $received = CloudEvent::parse($raw_event);
+    echo json_encode(json_decode($received->to_json()), JSON_PRETTY_PRINT)."\n";
     assert_equals(
         $event->to_json(),
         $received->to_json(),
-        'Event should be the same event we sent, but without time, apparently'
+        'Event should be the same event we sent.'
     );
 
     echo "\n\nPublishing raw event";
