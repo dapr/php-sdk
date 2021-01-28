@@ -1,0 +1,10 @@
+apiVersion: dapr.io/v1alpha
+kind: Component
+metadata:
+  name: cron
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+    - name: schedule
+      value: "@every 1s"
