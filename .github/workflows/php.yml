@@ -100,8 +100,6 @@ jobs:
         run: |
           composer run-script dapr-init
           composer run-script start &
-      - name: Ensure running
-        run: ps aux
       - name: Wait for environment
         run: sleep 10
       - name: Execute Tests

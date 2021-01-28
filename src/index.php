@@ -450,7 +450,6 @@ RAW
             true
         )
     );
-    assert_equals(true, false, 'intentional failure');
     sleep(2);
     assert_equals(true, file_exists('/tmp/sub-received'), 'sub received message');
     echo "Received this data:\n";
