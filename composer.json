@@ -30,7 +30,19 @@
   },
   "scripts": {
     "test": "./vendor/bin/phpunit --testdox tests --coverage-clover coverage.xml tests --whitelist src",
-    "start": "PHP_CLI_SERVER_WORKERS=100 dapr run -i dev -p 9502 -- php -S 0.0.0.0:9502 -t src",
+    "start": [
+      "dapr init --runtime-version 1.0.0-rc.3",
+      "PHP_CLI_SERVER_WORKERS=100 dapr run --components-path components -a dev -p 9502 -- php -S 0.0.0.0:9502 -t src"
+      ],
+    "clean": [
+      "dapr uninstall",
+      "docker rm -f dapr_zipkin",
+      "docker rm -f dapr_redis"
+    ],
+    "integration-tests": [
+      "sleep 10",
+      "curl localhost:4902/do_tests; @composer clean"
+    ],
     "lint": "./vendor/bin/psalm"
   }
 }

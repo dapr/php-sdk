@@ -27,7 +27,7 @@ use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;
 
 $logger  = new Logger('dapr');
-$handler = new ErrorLogHandler(level: Logger::INFO);
+$handler = new ErrorLogHandler(level: Logger::WARNING);
 $logger->pushHandler($handler);
 $logger->pushProcessor(new \Monolog\Processor\PsrLogMessageProcessor());
 $logger->pushProcessor(new \Monolog\Processor\IntrospectionProcessor());
@@ -533,6 +533,7 @@ function do_tests()
         echo "<pre>";
         $test();
         echo "</pre>";
+        flush();
     }
     ?>
     <h1>All Tests PASSED</h1>
