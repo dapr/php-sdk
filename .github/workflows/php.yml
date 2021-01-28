@@ -97,10 +97,10 @@ jobs:
         run: composer require monolog/monolog
       - name: Install Dapr
         run: wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.0.0-rc.4
-
-      - name: Start Integration Environment
+      - name: Initialize Integration Environment
+        run: composer run-script dapr-init
+      - name: Integration Environment Logs
         run: |
-          composer run-script dapr-init
           composer run-script start &
       - name: Wait for environment
         run: sleep 10
