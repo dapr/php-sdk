@@ -44,3 +44,6 @@ jobs:
 
     - name: upload coverage
       run: bash <(curl -s https://codecov.io/bash)
+
+    - name: check docker
+      run: docker ps
