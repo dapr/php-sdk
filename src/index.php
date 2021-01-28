@@ -27,7 +27,7 @@ use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;
 
 $logger  = new Logger('dapr');
-$handler = new ErrorLogHandler(level: Logger::INFO);
+$handler = new ErrorLogHandler(level: Logger::WARNING);
 $logger->pushHandler($handler);
 $logger->pushProcessor(new \Monolog\Processor\PsrLogMessageProcessor());
 $logger->pushProcessor(new \Monolog\Processor\IntrospectionProcessor());
@@ -419,7 +419,7 @@ function test_pubsub(): void
     echo json_encode(json_decode($raw_event = file_get_contents('/tmp/sub-received')), JSON_PRETTY_PRINT)."\n";
     unlink('/tmp/sub-received');
     //unset($event->time);
-    $event->topic = "test";
+    $event->topic      = "test";
     $event->pubsubname = "pubsub";
     echo "Expecting this data:\n";
     echo json_encode(json_decode($event->to_json()), JSON_PRETTY_PRINT)."\n";
@@ -485,8 +485,16 @@ function test_bindings()
     //assert_equals(false, file_exists($cron_file), 'cron should be stopped');
 }
 
-
 function do_tests()
+{
+    ob_start();
+    $result         = exec_tests();
+    $output         = ob_get_clean();
+    $result['body'] = $output . ($result['body'] ?? '');
+    return $result;
+}
+
+function exec_tests()
 {
     header('Content-Type: text/html; charset=UTF-8');
     $tests = [
@@ -531,7 +539,14 @@ function do_tests()
         echo "<h2>".ucwords(str_replace('_', ' ', $test))."</h2>";
         echo "<p>".($meta['description'] ?? '').'</p>';
         echo "<pre>";
-        $test();
+        try {
+            $test();
+        } catch (Exception $exception) {
+            return [
+                'code' => 500,
+                'body' => $exception->getMessage(),
+            ];
+        }
         echo "</pre>";
     }
     ?>
@@ -539,4 +554,7 @@ function do_tests()
     </body>
     </html>
     <?php
+    return [
+        'code' => 200,
+    ];
 }

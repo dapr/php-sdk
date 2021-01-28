@@ -7,8 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-
+  unit-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -39,8 +38,73 @@ jobs:
     - name: Run test suite
       run: composer run-script test
 
-    - name: Run lint
-      run: composer run-script lint
-
     - name: upload coverage
       run: bash <(curl -s https://codecov.io/bash)
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: shivammathur/setup-php@2.9.0
+        with:
+          php-version: 8.0
+          extensions: xdebug
+      - name: Validate composer.json and composer.lock
+        run: composer validate
+
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v2
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install dependencies
+        if: steps.composer-cache.outputs.cache-hit != 'true'
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
+      # Docs: https://getcomposer.org/doc/articles/scripts.md
+
+      - name: Run test suite
+        run: composer run-script lint
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: shivammathur/setup-php@2.9.0
+        with:
+          php-version: 8.0
+      - name: Validate composer.json and composer.lock
+        run: composer validate
+
+      - name: Cache Composer packages
+        id: composer-cache-dist
+        uses: actions/cache@v2
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install composer dependencies
+        if: steps.composer-cache-dist.outputs.cache-hit != 'true'
+        run: composer install --prefer-dist --no-progress --no-suggest --no-dev
+      - name: Install Dapr
+        run: wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.0.0-rc.4
+
+      - name: Start Integration Environment
+        run: |
+          composer run-script dapr-init
+          composer run-script start &
+      - name: Wait for environment
+        run: sleep 10
+      - name: Execute Tests
+        run: |
+          STATUSCODE=$(curl --silent --output /dev/stderr --write-out "%{http_code}" http://localhost:9502/do_tests)
+          if test $STATUSCODE -ne 200; then
+            exit 1
+          fi
