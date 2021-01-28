@@ -93,6 +93,8 @@ jobs:
       - name: Install composer dependencies
         if: steps.composer-cache-dist.outputs.cache-hit != 'true'
         run: composer install --prefer-dist --no-progress --no-suggest --no-dev
+      - name: Install logger
+        run: composer require monolog/monolog
       - name: Install Dapr
         run: wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.0.0-rc.4
 
