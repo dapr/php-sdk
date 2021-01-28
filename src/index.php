@@ -201,6 +201,7 @@ function assert_equals($expected, $actual, $message = null): void
     if ($actual === $expected) {
         echo "✔\n";
     } else {
+        http_response_code(500);
         echo "❌\n";
         throw new Exception("Expected $expected, but got $actual.\n");
     }
