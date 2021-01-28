@@ -12,8 +12,11 @@ use Dapr\exceptions\DaprException;
 abstract class DaprClient
 {
 
-    private static $trace;
-    private static $added_trace = false;
+    private static array $trace;
+    private static bool $added_trace = false;
+
+    // temp hack to allow custom headers
+    public static array $extra_headers = [];
 
     /**
      * Composes an URI for accessing the API.
@@ -80,7 +83,7 @@ abstract class DaprClient
 
     private static function get_headers(): array
     {
-        return array_merge(["Accept: application/json"], self::detect_trace());
+        return array_merge(["Accept: application/json"], self::detect_trace(), self::$extra_headers);
     }
 
     private static function detect_trace()
@@ -164,7 +167,7 @@ abstract class DaprClient
 
     private static function as_json(array $headers): array
     {
-        return array_merge($headers, ["Content-type: application/json"]);
+        return array_merge($headers, ["Content-type: application/json"], self::$extra_headers);
     }
 
     /**

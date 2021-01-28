@@ -183,9 +183,12 @@ class CloudEvent
         if (isset($this->data_content_type) && empty($this->data_content_type)) {
             return false;
         }
+
+        // for non-custom events, the subject is an empty string
+        /*
         if (isset($this->subject) && empty($this->subject)) {
             return false;
-        }
+        }*/
 
         return true;
     }
