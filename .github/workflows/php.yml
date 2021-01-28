@@ -99,7 +99,9 @@ jobs:
       - name: Start Integration Environment
         run: |
           composer run-script start &
+      - name: Ensure running
+        run: ps aux
       - name: Wait for environment
         run: sleep 10
       - name: Execute Tests
-        run: curl localhost:9502/do_tests
+        run: curl http://localhost:9502/do_tests
