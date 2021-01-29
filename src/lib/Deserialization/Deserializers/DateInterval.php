@@ -2,7 +2,8 @@
 
 namespace Dapr\Deserialization\Deserializers;
 
-class DateInterval implements IDeserialize {
+class DateInterval implements IDeserialize
+{
 
     public static function deserialize(mixed $value): mixed
     {

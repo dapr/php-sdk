@@ -2,7 +2,8 @@
 
 namespace Dapr\Deserialization\Deserializers;
 
-class DateTime implements IDeserialize {
+class DateTime implements IDeserialize
+{
 
     public static function deserialize(mixed $value): mixed
     {
