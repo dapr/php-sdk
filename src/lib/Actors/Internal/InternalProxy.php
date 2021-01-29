@@ -3,6 +3,7 @@
 namespace Dapr\Actors\Internal;
 
 use Dapr\Actors\ActorTrait;
+use Dapr\Actors\IActor;
 
 /**
  * Class InternalProxy

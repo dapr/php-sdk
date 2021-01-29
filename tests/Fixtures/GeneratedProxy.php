@@ -19,12 +19,6 @@ class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 	public string $id;
 
 
-	public function get_id(): string
-	{
-		return $this->id;
-	}
-
-
 	public function a_function($value): bool
 	{
 		$data = $value;
@@ -37,6 +31,12 @@ class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 		);
 		$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter((new \ReflectionClass($this))->getMethod('a_function'), $result->data);
 		return $result->data;
+	}
+
+
+	public function get_id(): string
+	{
+		return $this->id;
 	}
 
 
