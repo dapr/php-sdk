@@ -420,15 +420,16 @@ function test_pubsub(): void
     unlink('/tmp/sub-received');
     //unset($event->time);
     $event->topic      = "test";
-    $event->pubsubname = "pubsub";
+    $event->pubsub_name = "pubsub";
     echo "Expecting this data:\n";
     echo json_encode(json_decode($event->to_json()), JSON_PRETTY_PRINT)."\n";
     $received = CloudEvent::parse($raw_event);
+    unset($received->trace_id);
     echo json_encode(json_decode($received->to_json()), JSON_PRETTY_PRINT)."\n";
     assert_equals(
         $event->to_json(),
         $received->to_json(),
-        'Event should be the same event we sent.'
+        'Event should be the same event we sent, minus the trace id.'
     );
 
     echo "\n\nPublishing raw event";

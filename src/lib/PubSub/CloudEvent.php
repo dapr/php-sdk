@@ -96,6 +96,21 @@ class CloudEvent
      */
     public $data;
 
+    /**
+     * @var string|null The trace id
+     */
+    public ?string $trace_id;
+
+    /**
+     * @var string|null The topic
+     */
+    public ?string $topic;
+
+    /**
+     * @var string|null The name of the pubsub
+     */
+    public ?string $pubsub_name;
+
     public function __construct()
     {
     }
@@ -116,6 +131,9 @@ class CloudEvent
         $event->type              = (string)$raw['type'];
         $event->data_content_type = $raw['datacontenttype'] ?? null;
         $event->subject           = $raw['subject'] ?? null;
+        $event->pubsub_name       = $raw['pubsubname'] ?? null;
+        $event->topic             = $raw['topic'] ?? null;
+        $event->trace_id          = $raw['traceid'] ?? null;
         $time                     = $raw['time'] ?? null;
         if ( ! empty($time)) {
             $event->time = new \DateTime($time);
@@ -131,6 +149,7 @@ class CloudEvent
     public function to_json(): string|bool
     {
         Runtime::$logger?->debug('Serializing cloud event');
+
         return json_encode($this->to_array());
     }
 
@@ -158,6 +177,9 @@ class CloudEvent
         if (isset($this->data)) {
             $json['data'] = $this->data;
         }
+        if (isset($this->trace_id)) {
+            $json['traceid'] = $this->trace_id;
+        }
 
         return $json;
     }
@@ -184,11 +206,9 @@ class CloudEvent
             return false;
         }
 
-        // for non-custom events, the subject is an empty string
-        /*
         if (isset($this->subject) && empty($this->subject)) {
             return false;
-        }*/
+        }
 
         return true;
     }
