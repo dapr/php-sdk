@@ -12,6 +12,7 @@ use LogicException;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\PhpFile;
+use Nette\PhpGenerator\PhpNamespace;
 use Nette\PhpGenerator\Type;
 use ReflectionClass;
 use ReflectionMethod;
@@ -24,7 +25,7 @@ abstract class ActorProxy
 {
     public static int $mode = ProxyModes::GENERATED;
 
-    public static function generate_proxy_class($interface)
+    public static function generate_proxy_class($interface): string
     {
         Runtime::$logger?->info('Generating a proxy class for {i}', ['i' => $interface]);
         $reflected_interface = new ReflectionClass($interface);
@@ -35,14 +36,18 @@ abstract class ActorProxy
             throw new LogicException("$interface must have a DaprType attribute");
         }
 
-        return self::_generate_proxy_class($reflected_interface, $interface, $type);
+        $file = new PhpFile();
+        $file->addComment("This file was automatically generated.");
+        $file->addNamespace(self::_generate_proxy_class($reflected_interface, $interface, $type));
+
+        return $file;
     }
 
     private static function _generate_proxy_class(
         ReflectionClass $reflected_interface,
         string $interface,
         string $type
-    ): string {
+    ): PhpNamespace|string {
         ['full' => $full_proxy_type, 'simple' => $proxy_type] = self::get_proxy_type($type);
         if (self::$mode === ProxyModes::GENERATED_CACHED) {
             $file = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$proxy_type.'.php';
@@ -72,10 +77,7 @@ abstract class ActorProxy
         $get_id->setPublic();
         $get_id->addBody('return $this->id;');
         $interface->addMember($get_id);
-
-        $failure_methods = ['remind', 'on_activation', 'on_deactivation'];
-        $from_trait      = ['create_reminder', 'get_reminder', 'delete_reminder', 'create_timer', 'delete_timer'];
-        $usings          = [];
+        $usings = [];
 
         $methods = array_merge($interface->getMethods(), ClassType::from(IActor::class)->getMethods());
         foreach ($methods as $method) {
@@ -123,7 +125,7 @@ abstract class ActorProxy
             file_put_contents($file, $php_file);
         }
 
-        return $php_file;
+        return $namespace;
     }
 
     private static function get_proxy_type(string $dapr_type)
