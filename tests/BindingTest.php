@@ -22,7 +22,7 @@ class BindingTest extends DaprTests
 
     public function testOutputBinding()
     {
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             '/bindings/name',
             200,
             [],

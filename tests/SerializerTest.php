@@ -147,7 +147,7 @@ JSON
                 'message'   => 'testing',
                 'errorCode' => 'Exception',
                 'file'      => __FILE__,
-                'line'      => 143,
+                'line'      => 144,
                 'inner'     => null,
             ],
             $serialized

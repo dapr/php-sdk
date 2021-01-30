@@ -10,7 +10,7 @@ class SecretTest extends DaprTests
 {
     public function testRetrieveSecret()
     {
-        \Dapr\DaprClient::register_get(
+        $this->get_client()->register_get(
             '/secrets/store/test',
             200,
             [
@@ -23,7 +23,7 @@ class SecretTest extends DaprTests
 
     public function testSecretNoExist()
     {
-        \Dapr\DaprClient::register_get('/secrets/store/test', 204, null);
+        $this->get_client()->register_get('/secrets/store/test', 204, null);
         $secret = \Dapr\Secret::retrieve('store', 'test');
         $this->assertSame(null, $secret);
     }

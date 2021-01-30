@@ -2,6 +2,7 @@
 
 namespace Dapr;
 
+use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializer;
 
 abstract class Binding
@@ -28,9 +29,12 @@ abstract class Binding
         array $metadata = [],
         array $data = []
     ): DaprResponse {
-        $payload = [
-            'data'      => (object)Serializer::as_array($data),
-            'metadata'  => (object)Serializer::as_array($metadata),
+        global $dapr_container;
+        $serializer = $dapr_container->get(ISerializer::class);
+        $client     = $dapr_container->get(DaprClient::class);
+        $payload    = [
+            'data'      => (object)$serializer->as_array($data),
+            'metadata'  => (object)$serializer->as_array($metadata),
             'operation' => $operation,
         ];
         Runtime::$logger?->info(
@@ -38,7 +42,7 @@ abstract class Binding
             ['name' => $name, 'payload' => $payload]
         );
 
-        return DaprClient::post(DaprClient::get_api("/bindings/$name"), $payload);
+        return $client->post($client->get_api_path("/bindings/$name"), $payload);
     }
 
     public static function has_binding(string $name): bool

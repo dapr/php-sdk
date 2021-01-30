@@ -6,9 +6,11 @@ use Closure;
 use Dapr\Actors\ActorRuntime;
 use Dapr\Attributes\FromRoute;
 use Dapr\Deserialization\Deserializer;
+use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Subscribe;
+use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializer;
 use JetBrains\PhpStorm\ArrayShape;
 use Psr\Log\LoggerInterface;
@@ -68,6 +70,8 @@ abstract class Runtime
         mixed $param = [],
         $http_method = 'POST'
     ): DaprResponse {
+        global $dapr_container;
+        $client = $dapr_container->get(DaprClient::class);
         $url = "/invoke/$app_id/method/$method";
         self::$logger?->info(
             "Invoking {http_method} {app_id}.{method}",
@@ -75,12 +79,12 @@ abstract class Runtime
         );
         switch ($http_method) {
             case 'GET':
-                return DaprClient::get(DaprClient::get_api($url, $param));
+                return $client->get($client->get_api_path($url, $param));
             case 'POST':
             case 'PUT':
-                return DaprClient::post(DaprClient::get_api($url), $param);
+                return $client->post($client->get_api_path($url), $param);
             case 'DELETE':
-                return DaprClient::delete(DaprClient::get_api($url));
+                return $client->delete($client->get_api_path($url));
             default:
                 throw new DaprException('Unknown http method: '.$http_method);
         }
@@ -155,6 +159,7 @@ abstract class Runtime
                 return [Subscribe::class, 'get_subscriptions'];
             case '/healthz':
                 return function () {
+                    global $dapr_container;
                     self::$logger?->debug('Running health checks');
                     try {
                         foreach (self::$health_checks as $callback) {
@@ -163,7 +168,7 @@ abstract class Runtime
                     } catch (\Throwable $ex) {
                         self::$logger?->critical('Health check failed: {exception}', ['exception' => $ex]);
 
-                        return ['code' => 500, 'body' => Serializer::as_json($ex)];
+                        return ['code' => 500, 'body' => $dapr_container->get(ISerializer::class)->as_json($ex)];
                     }
 
                     return ['code' => 200];
@@ -200,6 +205,9 @@ abstract class Runtime
 
     public static function handle_method(string $http_method, string $method, mixed $body, string|null $uri): array
     {
+        global $dapr_container;
+        $deserializer = $dapr_container->get(IDeserializer::class);
+        $serializer = $dapr_container->get(ISerializer::class);
         if ( ! isset(self::$methods[$http_method][$method])) {
             self::$logger?->critical(
                 'Did not find a method for {http_method} {method}',
@@ -208,7 +216,7 @@ abstract class Runtime
 
             return [
                 'code' => 404,
-                'body' => Serializer::as_json(new \BadFunctionCallException('unable to locate handler for method')),
+                'body' => $serializer->as_json(new \BadFunctionCallException('unable to locate handler for method')),
             ];
         }
 
@@ -224,9 +232,9 @@ abstract class Runtime
             $uri                  = explode('/', $uri);
             foreach ($parameter_reflection as $parameter) {
                 if (count($parameter->getAttributes(FromRoute::class))) {
-                    $params[$parameter->getName()] = Deserializer::detect_from_parameter($parameter, array_shift($uri));
+                    $params[$parameter->getName()] = $deserializer->detect_from_parameter($parameter, array_shift($uri));
                 } else {
-                    $params[$parameter->getName()] = Deserializer::detect_from_parameter($parameter, $body);
+                    $params[$parameter->getName()] = $deserializer->detect_from_parameter($parameter, $body);
                 }
             }
 
@@ -238,10 +246,10 @@ abstract class Runtime
         } catch (\Exception $exception) {
             self::$logger?->critical('Method failed: {exception}', ['exception' => $exception]);
 
-            return ['code' => 500, 'body' => Serializer::as_json($exception)];
+            return ['code' => 500, 'body' => $serializer->as_json($exception)];
         }
 
-        return ['code' => 200, 'body' => Serializer::as_json($result)];
+        return ['code' => 200, 'body' => $serializer->as_json($result)];
     }
 
     public static function set_logger(LoggerInterface $logger): void

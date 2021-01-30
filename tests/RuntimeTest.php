@@ -110,7 +110,7 @@ class RuntimeTest extends DaprTests
 
     public function testInvoke()
     {
-        \Dapr\DaprClient::register_post('/invoke/appid/method/method', 200, null, 'hello');
+        $this->get_client()->register_post('/invoke/appid/method/method', 200, null, 'hello');
         $result = Runtime::invoke_method('appid', 'method', 'hello');
         $this->assertSame(200, $result->code);
         $this->assertSame(null, $result->data);
