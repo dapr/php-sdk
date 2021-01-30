@@ -107,6 +107,7 @@ abstract class Runtime
         $handler = self::find_handler($http_method, $uri);
 
         return function () use ($handler) {
+            global $dapr_container;
             try {
                 $result = $handler();
                 if (isset($result['body']) && ! is_string($result['body'])) {
@@ -115,7 +116,8 @@ abstract class Runtime
 
                 return $result;
             } catch (\Exception $exception) {
-                return ['code' => 500, 'body' => Serializer::as_json($exception)];
+                $body = $dapr_container->get(ISerializer::class)->as_json($exception);
+                return ['code' => 500, 'body' => $body];
             }
         };
     }

@@ -1,5 +1,6 @@
 <?php
 
+use Dapr\Actors\ProxyModes;
 use Dapr\DaprLogger;
 use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
@@ -17,19 +18,25 @@ use function DI\create;
 use function DI\get;
 
 return [
-    'dapr.log.level'       => LogLevel::WARNING,
-    'dapr.log.handler'     => [
+    // logging
+    'dapr.log.level'          => fn() => LogLevel::WARNING,
+    'dapr.log.handler'        => fn() => [
         create(ErrorLogHandler::class)->constructor(
             level: get('dapr.log.level')
         ),
     ],
-    'dapr.log.processor'   => [create(PsrLogMessageProcessor::class)],
-    LoggerInterface::class => create(DaprLogger::class)->constructor(
+    'dapr.log.processor'      => fn() => [create(PsrLogMessageProcessor::class)],
+
+    // interface to implementation
+    LoggerInterface::class    => create(DaprLogger::class)->constructor(
         'DAPRPHP',
         get('dapr.log.handler'),
         get('dapr.log.processor')
     ),
-    IDeserializer::class   => autowire(Deserializer::class),
-    ISerializer::class     => autowire(Serializer::class),
-    IManageState::class    => autowire(StateManager::class),
+    IDeserializer::class      => autowire(Deserializer::class),
+    ISerializer::class        => autowire(Serializer::class),
+    IManageState::class       => autowire(StateManager::class),
+
+    // application settings
+    'dapr.actorproxy.setting' => fn() => ProxyModes::GENERATED,
 ];
