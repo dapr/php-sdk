@@ -27,6 +27,16 @@ trait TestActorState
         }
     }
 
+    public function __isset(string $key): bool
+    {
+        if (isset($this->loaded[$key])) {
+            return isset($this->_internal_transaction[$this->_on_transaction]->state[$key]);
+        }
+        $value = $this->__get($key);
+
+        return isset($value);
+    }
+
     public function __get(string $key): mixed
     {
         if (empty($this->loaded[$key])) {
@@ -45,16 +55,6 @@ trait TestActorState
         $this->loaded[$key] = true;
     }
 
-    public function __isset(string $key): bool
-    {
-        if (isset($this->loaded[$key])) {
-            return isset($this->_internal_transaction[$this->_on_transaction]->state[$key]);
-        }
-        $value = $this->__get($key);
-
-        return isset($value);
-    }
-
     public function __unset(string $key): void
     {
         $this->_internal_transaction[$this->_on_transaction]->delete($key);
@@ -62,9 +62,9 @@ trait TestActorState
 
     public function save_state(): void
     {
-        $this->_on_transaction += 1;
+        $this->_on_transaction                               += 1;
         $this->_internal_transaction[$this->_on_transaction] = new Transaction();
-        $this->loaded = [];
+        $this->loaded                                        = [];
     }
 
     public function roll_back(): void

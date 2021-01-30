@@ -10,7 +10,7 @@ class StateTest extends DaprTests
 {
     public function testLoadObject()
     {
-        $state = $this->container->get(\Fixtures\TestState::class);
+        $state  = $this->container->get(\Fixtures\TestState::class);
         $client = $this->get_client();
         $client->register_post(
             '/state/store/bulk?test=meta',
@@ -65,7 +65,7 @@ class StateTest extends DaprTests
 
     public function testSaveObject()
     {
-        $state = $this->container->get(\Fixtures\TestState::class);
+        $state         = $this->container->get(\Fixtures\TestState::class);
         $client        = $this->get_client();
         $state_manager = $this->container->get(IManageState::class);
         $client->register_post(
@@ -142,7 +142,7 @@ class StateTest extends DaprTests
 
     public function testNotAbleToLoadState()
     {
-        $state = new class {
+        $state         = new class {
             public $never;
         };
         $state_manager = $this->container->get(IManageState::class);
@@ -155,10 +155,10 @@ class StateTest extends DaprTests
 
     public function testSetToNull()
     {
-        $state = new #[\Dapr\State\Attributes\StateStore('store', \Dapr\consistency\StrongFirstWrite::class)] class {
+        $state         = new #[\Dapr\State\Attributes\StateStore('store', \Dapr\consistency\StrongFirstWrite::class)] class {
             public $null = 1;
         };
-        $client = $this->get_client();
+        $client        = $this->get_client();
         $state_manager = $this->container->get(IManageState::class);
 
         $client->register_post(

@@ -2,7 +2,6 @@
 
 namespace Dapr\Deserialization;
 
-use Dapr\DaprLogger;
 use Dapr\Deserialization\Attributes\ArrayOf;
 use Dapr\Deserialization\Attributes\AsClass;
 use Dapr\Deserialization\Attributes\Union;
@@ -122,6 +121,7 @@ class Deserializer implements IDeserializer
     {
         return (new class($this->config, $type) extends DeserializationConfig {
             public IDeserialize|null $deserializer;
+
             #[Pure] public function __construct(DeserializationConfig $config, $type)
             {
                 $this->deserializer = $config->deserializers[$type] ?? null;

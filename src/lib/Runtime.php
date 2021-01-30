@@ -15,13 +15,11 @@ use Psr\Log\LoggerInterface;
 
 abstract class Runtime
 {
+    public static LoggerInterface|null $logger = null;
     #[ArrayShape(['callable'])]
     private static array $health_checks = [];
-
     #[ArrayShape(['string' => 'callable'])]
     private static array $methods = [];
-
-    public static LoggerInterface|null $logger = null;
 
     /**
      * Register a method for determining health checks
@@ -215,10 +213,10 @@ abstract class Runtime
         }
 
         try {
-            $callback             = self::$methods[$http_method][$method];
-            if($callback instanceof Closure || is_string($callback)) {
+            $callback = self::$methods[$http_method][$method];
+            if ($callback instanceof Closure || is_string($callback)) {
                 $reflection = new \ReflectionFunction($callback);
-            } else if(is_array($callback)) {
+            } elseif (is_array($callback)) {
                 $reflection = new \ReflectionMethod($callback[0], $callback[1]);
             }
             $parameter_reflection = $reflection->getParameters();

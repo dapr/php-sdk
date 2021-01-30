@@ -30,27 +30,6 @@ class ActorTest extends DaprTests
         $this->assertTrue(json_decode($result['body'], true));
     }
 
-    private function inject_state($state_array, $id)
-    {
-        $state = [];
-        foreach ($state_array as $key => $value) {
-            if (is_numeric($key)) {
-                $state[] = ['key' => $value];
-            } else {
-                $state[] = ['key' => $value, 'data' => $value, 'etag' => 1];
-            }
-        }
-        \Dapr\DaprClient::register_post(
-            '/state/store/bulk',
-            code: 200,
-            response_data: $state,
-            expected_request: [
-                'keys'        => ["TestActor||$id||value"],
-                'parallelism' => 10,
-            ]
-        );
-    }
-
     private function assertState($transactions, $id)
     {
         $return = [];
@@ -249,5 +228,26 @@ class ActorTest extends DaprTests
         }
         $expected_proxy = file_get_contents(__DIR__.'/Fixtures/GeneratedProxy.php');
         $this->assertSame($expected_proxy, $generated_class);
+    }
+
+    private function inject_state($state_array, $id)
+    {
+        $state = [];
+        foreach ($state_array as $key => $value) {
+            if (is_numeric($key)) {
+                $state[] = ['key' => $value];
+            } else {
+                $state[] = ['key' => $value, 'data' => $value, 'etag' => 1];
+            }
+        }
+        \Dapr\DaprClient::register_post(
+            '/state/store/bulk',
+            code: 200,
+            response_data: $state,
+            expected_request: [
+                'keys'        => ["TestActor||$id||value"],
+                'parallelism' => 10,
+            ]
+        );
     }
 }

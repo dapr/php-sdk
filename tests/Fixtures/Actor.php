@@ -5,7 +5,6 @@ namespace Fixtures;
 use Dapr\Actors\Actor;
 use Dapr\Actors\ActorState;
 use Dapr\Actors\Attributes\DaprType;
-use Dapr\Actors\IActor;
 
 #[DaprType('TestActor')]
 interface ITestActor

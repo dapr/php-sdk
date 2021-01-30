@@ -38,9 +38,9 @@ class ConstructedState {
 }
 ```
 
-If you have any default values defined in your class, they'll survive loading a non-existent value. Take care
-when specifying a type on your state. If a non-nullable type is specified, then an error will be thrown by PHP when you
-try to access it with a `null` value.
+If you have any default values defined in your class, they'll survive loading a non-existent value. Take care when
+specifying a type on your state. If a non-nullable type is specified, then an error will be thrown by PHP when you try
+to access it with a `null` value.
 
 It is perfectly safe to add behavior to your state classes as well, the state changes will be captured, even in a
 transaction.
@@ -76,7 +76,8 @@ Parameters:
 
 ## Transactions
 
-You can also interact with state using a transaction instead of transactionless. To use state in a transaction, you must extend 
+You can also interact with state using a transaction instead of transactionless. To use state in a transaction, you must
+extend
 `\Dapr\State\TransactionalState` with your state class. You can still use it as normal state too.
 
 ```php

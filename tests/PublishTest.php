@@ -8,8 +8,8 @@ class PublishTest extends DaprTests
 {
     public function testSimplePublish()
     {
-        $publisher = new \Dapr\PubSub\Publish('pubsub');
-        \Dapr\DaprClient::register_post(
+        $publisher = $this->container->make(\Dapr\PubSub\Publish::class, ['pubsub' => 'pubsub']);
+        $this->get_client()->register_post(
             '/publish/pubsub/topic',
             200,
             null,
@@ -22,7 +22,7 @@ class PublishTest extends DaprTests
 
     public function testCloudEventPublish()
     {
-        $publisher                = new \Dapr\PubSub\Publish('pubsub');
+        $publisher                = $this->container->make(\Dapr\PubSub\Publish::class, ['pubsub' => 'pubsub']);
         $event                    = new \Dapr\PubSub\CloudEvent();
         $event->data              = ['my' => 'event'];
         $event->type              = 'type';
@@ -31,7 +31,7 @@ class PublishTest extends DaprTests
         $event->data_content_type = 'application/json';
         $event->source            = 'source';
         $event->time              = new DateTime('2020-12-12T20:47:00+00:00Z');
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             '/publish/pubsub/topic',
             200,
             null,

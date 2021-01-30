@@ -3,7 +3,6 @@
 namespace Dapr\State\Internal;
 
 use Dapr\Serialization\ISerializer;
-use Dapr\Serialization\Serializer;
 
 /**
  * Class Transaction
@@ -12,26 +11,25 @@ use Dapr\Serialization\Serializer;
 class Transaction
 {
     /**
-     * @var array[] The current transactions
-     */
-    private array $transaction = [];
-
-    /**
      * @var mixed[] The current state
      */
     public array $state = [];
-
+    /**
+     * @var bool Whether the transaction is closed
+     */
+    public bool $is_closed = false;
+    /**
+     * @var array[] The current transactions
+     */
+    private array $transaction = [];
     /**
      * @var int Consistent counter for determining order of the transaction
      */
     private int $counter = 0;
 
-    /**
-     * @var bool Whether the transaction is closed
-     */
-    public bool $is_closed = false;
-
-    public function __construct(private ISerializer $serializer) {}
+    public function __construct(private ISerializer $serializer)
+    {
+    }
 
     /**
      * Get the ordered transaction to commit

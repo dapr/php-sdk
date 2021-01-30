@@ -6,10 +6,6 @@ class DaprException extends \Exception
 {
     public $dapr_error_code;
 
-    public function get_dapr_error_code(): string {
-        return $this->dapr_error_code;
-    }
-
     public static function deserialize_from_array(array $array): DaprException
     {
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
@@ -17,7 +13,7 @@ class DaprException extends \Exception
         // todo: whitelist some exception types
         switch ($array['errorCode']) {
             default:
-                $original_exception = new DaprException(
+                $original_exception                  = new DaprException(
                     $array['message'],
                     E_ERROR,
                     isset($array['inner']) ? self::deserialize_from_array($array['inner']) : null
@@ -50,5 +46,10 @@ class DaprException extends \Exception
             'line'      => $exception->getLine(),
             'inner'     => self::serialize_to_array($exception->getPrevious()),
         ];
+    }
+
+    public function get_dapr_error_code(): string
+    {
+        return $this->dapr_error_code;
     }
 }

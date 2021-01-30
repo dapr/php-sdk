@@ -5,7 +5,6 @@ namespace Dapr\State;
 use Dapr\Actors\Internal\KeyResponse;
 use Dapr\consistency\Consistency;
 use Dapr\consistency\EventualLastWrite;
-use Dapr\consistency\StrongLastWrite;
 use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
@@ -37,7 +36,7 @@ class StateManager implements IManageState
         StateItem $item
     ): void {
         $request = [
-            $this->serializer->as_array($item)
+            $this->serializer->as_array($item),
         ];
         $this->client->post($this->client->get_api_path("/state/$store_name"), $request);
     }
@@ -76,7 +75,7 @@ class StateManager implements IManageState
         $keys       = self::$obj_meta[$item] ?? [];
         $request    = [];
         foreach ($reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
-            $key  = $prefix.$property->getName();
+            $key   = $prefix.$property->getName();
             $value = [
                 'key'   => $key,
                 'value' => $this->serializer->as_array($item->{$property->getName()}),
@@ -89,7 +88,7 @@ class StateManager implements IManageState
                     'concurrency' => ($consistency ?? new EventualLastWrite())->get_concurrency(),
                 ];
             }
-            if(isset($metadata)) {
+            if (isset($metadata)) {
                 $value['metadata'] = $metadata;
             }
             $request[] = $value;

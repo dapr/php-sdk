@@ -5,18 +5,11 @@ require_once __DIR__.'/../vendor/autoload.php';
 
 use Dapr\Actors\ActorRuntime;
 use Dapr\DaprClient;
-use Dapr\Deserialization\Deserializer;
-use Dapr\Deserialization\IDeserializer;
 use Dapr\Mocks\TestClient;
 use Dapr\Serialization\ISerializer;
-use Dapr\Serialization\Serializer;
-use Dapr\State\IManageState;
-use Dapr\State\StateManager;
 use PHPUnit\Framework\TestCase;
 
 use function DI\autowire;
-use function DI\create;
-use function DI\get;
 
 abstract class DaprTests extends TestCase
 {
@@ -29,8 +22,8 @@ abstract class DaprTests extends TestCase
         $builder->addDefinitions(__DIR__.'/../src/config.php');
         $builder->addDefinitions(
             [
-                'dapr.log.level'                => \Psr\Log\LogLevel::CRITICAL,
-                DaprClient::class         => autowire(TestClient::class),
+                'dapr.log.level'  => \Psr\Log\LogLevel::CRITICAL,
+                DaprClient::class => autowire(TestClient::class),
             ]
         );
         $this->container = $builder->build();
@@ -50,19 +43,29 @@ abstract class DaprTests extends TestCase
         $class->setStaticPropertyValue('bindings', []);
     }
 
+    public function tearDown(): void
+    {
+        foreach ($this->get_client()->responses as $url => $response) {
+            $this->assertEmpty($response, "never called $url");
+        }
+        $this->get_client()->responses = [];
+        parent::tearDown();
+    }
+
+    protected function get_client(): TestClient
+    {
+        return $this->container->get(DaprClient::class);
+    }
+
     protected function deserialize(string $json)
     {
         return json_decode($json, true);
     }
 
-    protected function get_client(): TestClient {
-        return $this->container->get(DaprClient::class);
-    }
-
     protected function set_body($data)
     {
         ActorRuntime::$input = tempnam(sys_get_temp_dir(), uniqid());
-        $serializer = $this->container->get(ISerializer::class);
+        $serializer          = $this->container->get(ISerializer::class);
         file_put_contents(ActorRuntime::$input, $serializer->as_json($data));
     }
 }

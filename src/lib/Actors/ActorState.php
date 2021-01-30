@@ -4,10 +4,8 @@ namespace Dapr\Actors;
 
 use Dapr\Actors\Internal\KeyResponse;
 use Dapr\DaprClient;
-use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
-use Dapr\Runtime;
 use Dapr\State\Internal\Transaction;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -49,8 +47,8 @@ abstract class ActorState
         global $dapr_container;
         $this->_internal_reflection  = new ReflectionClass($this);
         $this->_internal_transaction = $dapr_container->make(Transaction::class);
-        $this->_internal_logger = $dapr_container->get(LoggerInterface::class);
-        $this->_internal_client = $dapr_container->get(DaprClient::class);
+        $this->_internal_logger      = $dapr_container->get(LoggerInterface::class);
+        $this->_internal_client      = $dapr_container->get(DaprClient::class);
 
         foreach ($this->_internal_reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
             unset($this->{$property->name});
@@ -78,7 +76,9 @@ abstract class ActorState
         }
 
         $this->_internal_client->post(
-            $this->_internal_client->get_api_path("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state"),
+            $this->_internal_client->get_api_path(
+                "/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state"
+            ),
             $operations
         );
 
@@ -94,6 +94,28 @@ abstract class ActorState
         $this->_internal_logger->debug('Rolled back transaction');
         $this->_internal_transaction = $dapr_container->make(Transaction::class);
         $this->_internal_data        = [];
+    }
+
+    /**
+     * Get a key from the store
+     *
+     * @param string $key
+     *
+     * @return mixed
+     * @throws DaprException
+     * @throws \ReflectionException
+     */
+    public function __get(string $key): mixed
+    {
+        if ($this->_internal_reflection->hasProperty($key)) {
+            if ( ! isset($this->_internal_data[$key])) {
+                $this->_load_key($key);
+            }
+
+            return $this->_internal_transaction->state[$key];
+        }
+
+        return null;
     }
 
     /**
@@ -127,11 +149,13 @@ abstract class ActorState
     {
         global $dapr_container;
         $deserializer = $dapr_container->get(IDeserializer::class);
-        $state = $this->_internal_client->get(
-            $this->_internal_client->get_api_path("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state/$key")
+        $state        = $this->_internal_client->get(
+            $this->_internal_client->get_api_path(
+                "/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state/$key"
+            )
         );
-        if(isset($state->data)) {
-            $property = $this->_internal_reflection->getProperty($key);
+        if (isset($state->data)) {
+            $property    = $this->_internal_reflection->getProperty($key);
             $state->data = $deserializer->detect_from_property($property, $state->data);
         }
         switch ($state?->code) {
@@ -149,28 +173,6 @@ abstract class ActorState
             default:
                 throw new DaprException('Actor not found!');
         }
-    }
-
-    /**
-     * Get a key from the store
-     *
-     * @param string $key
-     *
-     * @return mixed
-     * @throws DaprException
-     * @throws \ReflectionException
-     */
-    public function __get(string $key): mixed
-    {
-        if ($this->_internal_reflection->hasProperty($key)) {
-            if ( ! isset($this->_internal_data[$key])) {
-                $this->_load_key($key);
-            }
-
-            return $this->_internal_transaction->state[$key];
-        }
-
-        return null;
     }
 
     /**

@@ -55,7 +55,12 @@ abstract class TransactionalState
         global $dapr_container;
         $this->_internal_logger->info('Beginning transaction');
         $this->_internal_transaction = $dapr_container->make(Transaction::class);
-        $this->_inernal_state->load_object($this, parallelism: $parallelism, metadata: $metadata ?? [], prefix: $prefix);
+        $this->_inernal_state->load_object(
+            $this,
+            parallelism: $parallelism,
+            metadata: $metadata ?? [],
+            prefix: $prefix
+        );
 
         foreach ($this->_internal_reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             $value = $this->{$property->name};
@@ -160,7 +165,10 @@ abstract class TransactionalState
         }
 
         if ( ! empty($transaction['operations'])) {
-            $this->_internal_client->post($this->_internal_client->get_api_path("/state/{$state_store->name}/transaction"), $transaction);
+            $this->_internal_client->post(
+                $this->_internal_client->get_api_path("/state/{$state_store->name}/transaction"),
+                $transaction
+            );
         }
         $this->_internal_transaction->is_closed = true;
     }
@@ -172,7 +180,7 @@ abstract class TransactionalState
 
             public function __construct(IManageState $other, string $key, $obj)
             {
-                $etag = self::$obj_meta[$obj][$key] ?? [];
+                $etag       = self::$obj_meta[$obj][$key] ?? [];
                 $this->etag = $etag['etag'] ?? null;
             }
         })->etag;

@@ -90,10 +90,10 @@ class RuntimeTest extends DaprTests
             method_name: 'test',
             http_method: 'GET',
             callback: function () use (&$called_method) {
-                $called_method = true;
+            $called_method = true;
 
-                return 'hello world';
-            }
+            return 'hello world';
+        }
         );
         $this->set_body(null);
         $result = Runtime::get_handler_for_route('GET', '/test')();

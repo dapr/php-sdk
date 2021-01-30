@@ -163,7 +163,7 @@ Returns a function for a given http method and uri.
 
 ### Runtime::handle_method()
 
-Given a http method, registered method name, and parameters, invokes the registered method. 
+Given a http method, registered method name, and parameters, invokes the registered method.
 
 ### Runtime::set_logger()
 

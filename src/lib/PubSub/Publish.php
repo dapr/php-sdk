@@ -2,6 +2,8 @@
 
 namespace Dapr\PubSub;
 
+use DI\Container;
+
 class Publish
 {
     /**
@@ -9,12 +11,12 @@ class Publish
      *
      * @param string $pubsub
      */
-    public function __construct(private string $pubsub)
+    public function __construct(private string $pubsub, private Container $container)
     {
     }
 
     public function topic(string $topic): Topic
     {
-        return new Topic($this->pubsub, $topic);
+        return $this->container->make(Topic::class, ['pubsub' => $this->pubsub, 'topic' => $topic]);
     }
 }

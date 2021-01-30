@@ -5,7 +5,8 @@ namespace Dapr\State\Internal;
 use Dapr\State\Attributes\StateStore;
 use ReflectionClass;
 
-trait StateHelpers {
+trait StateHelpers
+{
     /**
      * Get the StateStore attribute for the current class.
      *

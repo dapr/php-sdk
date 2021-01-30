@@ -3,11 +3,8 @@
 namespace Fixtures;
 
 use Dapr\consistency\EventualLastWrite;
-use Dapr\DaprClient;
 use Dapr\State\Attributes\StateStore;
-use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
-use Psr\Log\LoggerInterface;
 
 #[StateStore('store', EventualLastWrite::class)]
 class TestState extends TransactionalState

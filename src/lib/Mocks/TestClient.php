@@ -8,7 +8,7 @@ use PHPUnit\Framework\Assert;
 
 class TestClient extends DaprClient
 {
-    private array $responses = [];
+    public array $responses = [];
 
     public function get(string $url): DaprResponse
     {
@@ -89,7 +89,7 @@ class TestClient extends DaprClient
 
     public function get_api_path(string $path, ?array $params = null): string
     {
-        $params = empty($params) ? '' : '?' . http_build_query($params);
+        $params = empty($params) ? '' : '?'.http_build_query($params);
 
         return $path.$params;
     }

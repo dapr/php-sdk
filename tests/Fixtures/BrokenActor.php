@@ -2,8 +2,11 @@
 
 use Dapr\Actors\IActor;
 
-interface IBrokenActor extends IActor {}
+interface IBrokenActor extends IActor
+{
+}
 
-class BrokenActor {
+class BrokenActor
+{
 
 }

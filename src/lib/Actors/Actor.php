@@ -2,10 +2,13 @@
 
 namespace Dapr\Actors;
 
-abstract class Actor implements IActor {
+abstract class Actor implements IActor
+{
     use ActorTrait;
 
-    public function __construct(protected string $id) {}
+    public function __construct(protected string $id)
+    {
+    }
 
     public function get_id(): mixed
     {

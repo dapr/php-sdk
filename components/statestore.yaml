@@ -5,9 +5,9 @@ metadata:
 spec:
   type: state.redis
   metadata:
-  - name: redisHost
-    value: localhost:6379
-  - name: redisPassword
-    value: ""
-  - name: actorStateStore
-    value: "true"
+    - name: redisHost
+      value: localhost:6379
+    - name: redisPassword
+      value: ""
+    - name: actorStateStore
+      value: "true"

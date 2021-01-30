@@ -1,14 +1,13 @@
 ---
-name: Feature Request
-about: Create a Feature Request for Dapr
-title: ''
-labels: kind/enhancement
-assignees: ''
+name: Feature Request about: Create a Feature Request for Dapr title: ''
+labels: kind/enhancement assignees: ''
 
 ---
+
 ## Describe the feature
 
 ## Release Note
+
 <!-- How should this new feature be announced in our release notes? It can be populated later. -->
 <!-- Keep it as a single line. Examples: -->
 

@@ -28,7 +28,13 @@ interface IManageState
      *
      * @return mixed The stored value
      */
-    public function load_state(string $store_name, string $key, mixed $default_value = null, array $metadata = [], ?Consistency $consistency = null): mixed;
+    public function load_state(
+        string $store_name,
+        string $key,
+        mixed $default_value = null,
+        array $metadata = [],
+        ?Consistency $consistency = null
+    ): mixed;
 
     /**
      * Delete state keys

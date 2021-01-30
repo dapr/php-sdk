@@ -28,6 +28,11 @@ trait TestTransactionalState
         $this->_internal_transaction->state = $initial_state;
     }
 
+    public function __get(string $key): mixed
+    {
+        return $this->_internal_transaction->state[$key];
+    }
+
     public function __set(string $key, mixed $value): void
     {
         $this->throw_if_committed();
@@ -37,9 +42,16 @@ trait TestTransactionalState
         $this->_internal_transaction->upsert($key, $value);
     }
 
-    public function __get(string $key): mixed
+    /**
+     * Throws an exception if this object has been committed.
+     *
+     * @return void
+     */
+    protected function throw_if_committed(): void
     {
-        return $this->_internal_transaction->state[$key];
+        if ($this->_internal_transaction->is_closed) {
+            throw new StateAlreadyCommitted();
+        }
     }
 
     public function __isset(string $key): bool
@@ -63,17 +75,5 @@ trait TestTransactionalState
     public function helper_get_transactions(): array
     {
         return $this->_internal_previous_commits;
-    }
-
-    /**
-     * Throws an exception if this object has been committed.
-     *
-     * @return void
-     */
-    protected function throw_if_committed(): void
-    {
-        if ($this->_internal_transaction->is_closed) {
-            throw new StateAlreadyCommitted();
-        }
     }
 }

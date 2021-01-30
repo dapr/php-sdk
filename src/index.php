@@ -419,7 +419,7 @@ function test_pubsub(): void
     echo json_encode(json_decode($raw_event = file_get_contents('/tmp/sub-received')), JSON_PRETTY_PRINT)."\n";
     unlink('/tmp/sub-received');
     //unset($event->time);
-    $event->topic      = "test";
+    $event->topic       = "test";
     $event->pubsub_name = "pubsub";
     echo "Expecting this data:\n";
     echo json_encode(json_decode($event->to_json()), JSON_PRETTY_PRINT)."\n";
@@ -491,7 +491,8 @@ function do_tests()
     ob_start();
     $result         = exec_tests();
     $output         = ob_get_clean();
-    $result['body'] = $output . ($result['body'] ?? '');
+    $result['body'] = $output.($result['body'] ?? '');
+
     return $result;
 }
 

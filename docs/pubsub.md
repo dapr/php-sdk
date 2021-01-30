@@ -39,7 +39,6 @@ Returns:
 
 A `Publish` object
 
-
 ### Publish::topic()
 
 ```

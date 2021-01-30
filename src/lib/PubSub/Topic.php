@@ -8,7 +8,7 @@ use Dapr\Runtime;
 
 class Topic
 {
-    public function __construct(private string $pubsub, private string $topic)
+    public function __construct(private string $pubsub, private string $topic, private DaprClient $client)
     {
     }
 
@@ -24,7 +24,7 @@ class Topic
     {
         Runtime::$logger?->debug('Sending {event} to {topic}', ['event' => $event, 'topic' => $this->topic]);
         if ($event instanceof CloudEvent) {
-            DaprClient::$extra_headers = [
+            $this->client->extra_headers = [
                 'Content-Type: application/cloudevents+json',
             ];
 
@@ -32,12 +32,12 @@ class Topic
         }
 
         try {
-            $result = DaprClient::post(
-                DaprClient::get_api("/publish/{$this->pubsub}/{$this->topic}", $metadata),
+            $result = $this->client->post(
+                $this->client->get_api_path("/publish/{$this->pubsub}/{$this->topic}", $metadata),
                 $event
             );
 
-            DaprClient::$extra_headers = [];
+            $this->client->extra_headers = [];
 
             return true;
         } catch (DaprException $exception) {
