@@ -2,14 +2,15 @@
 
 namespace Dapr\Deserialization;
 
+use Dapr\DaprLogger;
 use Dapr\Deserialization\Attributes\ArrayOf;
 use Dapr\Deserialization\Attributes\AsClass;
 use Dapr\Deserialization\Attributes\Union;
+use Dapr\Deserialization\Deserializers\IDeserialize;
 use Dapr\exceptions\DaprException;
 use Exception;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
-use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
@@ -18,9 +19,9 @@ use ReflectionParameter;
 use ReflectionProperty;
 use ReflectionType;
 
-class NewDeserializer implements IDeserializer
+class Deserializer implements IDeserializer
 {
-    public function __construct(protected DeserializationConfig $config, protected LoggerInterface $logger)
+    public function __construct(protected DeserializationConfig $config, protected DaprLogger $logger)
     {
     }
 
@@ -74,7 +75,7 @@ class NewDeserializer implements IDeserializer
      */
     public function from_array_of(string $as, array $array): array
     {
-        return array_map(fn(&$item) => $this->from_value($as, $item), $array);
+        return array_map(fn($item) => $this->from_value($as, $item), $array);
     }
 
     /**
@@ -83,7 +84,7 @@ class NewDeserializer implements IDeserializer
     public function from_value(string $as, mixed $value): mixed
     {
         if ($deserializer = $this->get_deserializer($as)) {
-            $deserializer($value);
+            return $deserializer->deserialize($value);
         }
 
         if ( ! class_exists($as)) {
@@ -116,19 +117,15 @@ class NewDeserializer implements IDeserializer
         return $obj;
     }
 
-    private function get_deserializer(string $type)
+    private function get_deserializer(string $type): IDeserialize|null
     {
-        return (new class($this->config) extends DeserializationConfig {
-            #[Pure] public function __construct(DeserializationConfig $config)
+        return (new class($this->config, $type) extends DeserializationConfig {
+            public IDeserialize|null $deserializer;
+            #[Pure] public function __construct(DeserializationConfig $config, $type)
             {
-                parent::__construct($config->deserializers);
+                $this->deserializer = $config->deserializers[$type] ?? null;
             }
-
-            public function get(string $type)
-            {
-                return $this->deserializers[$type] ?? null;
-            }
-        })->get($type);
+        })->deserializer;
     }
 
     /**

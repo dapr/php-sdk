@@ -6,10 +6,34 @@ use Dapr\Actors\ActorRuntime;
 use Dapr\Serialization\Serializer;
 use PHPUnit\Framework\TestCase;
 
+use function DI\create;
+use function DI\get;
+
 abstract class DaprTests extends TestCase
 {
+    protected \DI\Container $container;
+
     public function setUp(): void
     {
+        $builder = new \DI\ContainerBuilder();
+        $builder->addDefinitions(
+            [
+                'dapr.log.level'        => \Psr\Log\LogLevel::CRITICAL,
+                'dapr.log.handler'      => [
+                    create(\Monolog\Handler\ErrorLogHandler::class)->constructor(
+                        level: get('dapr.log.level')
+                    ),
+                ],
+                'dapr.log.processor'    => [create(\Monolog\Processor\PsrLogMessageProcessor::class)],
+                \Dapr\DaprLogger::class => create(\Dapr\DaprLogger::class)->constructor(
+                    'DAPRPHP',
+                    get('dapr.log.handler'),
+                    get('dapr.log.processor')
+                ),
+            ]
+        );
+        $this->container = $builder->build();
+
         \Dapr\Runtime::set_logger(new \Psr\Log\NullLogger());
         \Dapr\DaprClient::$responses = [];
         // reset other static objects
@@ -28,9 +52,9 @@ abstract class DaprTests extends TestCase
     public function tearDown(): void
     {
         parent::tearDown();
-        foreach(\Dapr\DaprClient::$responses as $method => $response) {
-            if(!empty($response)) {
-                throw new LogicException('Never handled: ' . $method . ' ' . json_encode($response));
+        foreach (\Dapr\DaprClient::$responses as $method => $response) {
+            if ( ! empty($response)) {
+                throw new LogicException('Never handled: '.$method.' '.json_encode($response));
             }
         }
     }

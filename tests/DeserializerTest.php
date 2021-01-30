@@ -5,7 +5,6 @@ require_once __DIR__.'/Fixtures/Serialization.php';
 use Dapr\Deserialization\Attributes\AsClass;
 use Dapr\Deserialization\Deserializer;
 use Dapr\exceptions\DaprException;
-use PHPUnit\Framework\TestCase;
 
 function deserialize_special_type($obj)
 {
@@ -15,7 +14,7 @@ function deserialize_special_type($obj)
 /**
  * Class DeserializerTest
  */
-final class DeserializerTest extends TestCase
+final class DeserializerTest extends DaprTests
 {
     public function generate_deserializers()
     {
@@ -32,7 +31,7 @@ final class DeserializerTest extends TestCase
 
         $deserialized = json_decode(get_example_json(), true);
         $other_sdk    = get_example_object();
-        $nullable = new class {
+        $nullable     = new class {
             public string $test;
         };
 
@@ -40,7 +39,7 @@ final class DeserializerTest extends TestCase
             'Type'    => [[$obj::class, ['foo' => 'bar', 'bar' => 'baz']], $obj],
             'Nested'  => [[$nested::class, ['a' => 'PT22M']], $nested],
             'Complex' => [[WeatherForecastWithPOPOs::class, $deserialized], $other_sdk],
-            'Null' => [[$nullable::class, null], null],
+            'Null'    => [[$nullable::class, null], null],
         ];
     }
 
@@ -49,32 +48,35 @@ final class DeserializerTest extends TestCase
      */
     public function testDeserializeValues($value, $expected)
     {
-        $result = Deserializer::from_array($value[0], $value[1]);
+        $deserializer = $this->container->get(Deserializer::class);
+        $result       = $deserializer->from_value($value[0], $value[1]);
         $this->assertEquals($expected, $result);
     }
 
     public function testDaprException()
     {
-        $obj = [
+        $deserializer = $this->container->get(Deserializer::class);
+        $obj          = [
             'errorCode' => 'ERR_ACTOR_INSTANCE_MISSING',
             'message'   => 'Error getting an actor instance. This means that actor is now hosted in some other service replica.',
         ];
-        $this->assertTrue(Deserializer::is_exception($obj));
-        $exception = Deserializer::get_exception($obj);
+        $this->assertTrue($deserializer->is_exception($obj));
+        $exception = $deserializer->get_exception($obj);
         $this->assertSame($obj['errorCode'], $exception->get_dapr_error_code());
         $this->assertSame($obj['message'], $exception->getMessage());
     }
 
     public function testPHPException()
     {
-        $obj = [
+        $deserializer = $this->container->get(Deserializer::class);
+        $obj          = [
             'errorCode' => LogicException::class,
             'message'   => 'should not happen',
             'file'      => __FILE__,
             'line'      => 123,
         ];
-        $this->assertTrue(Deserializer::is_exception($obj));
-        $exception = Deserializer::get_exception($obj);
+        $this->assertTrue($deserializer->is_exception($obj));
+        $exception = $deserializer->get_exception($obj);
         $this->assertSame($obj['errorCode'], $exception->get_dapr_error_code());
         $this->assertSame($obj['message'], $exception->getMessage());
         $this->assertSame($obj['file'], $exception->getFile());
@@ -84,7 +86,8 @@ final class DeserializerTest extends TestCase
 
     public function testExceptionChain()
     {
-        $obj = [
+        $deserializer = $this->container->get(Deserializer::class);
+        $obj          = [
             'errorCode' => LogicException::class,
             'message'   => 'test message',
             'file'      => __FILE__,
@@ -96,8 +99,8 @@ final class DeserializerTest extends TestCase
                 'line'      => 123,
             ],
         ];
-        $this->assertTrue(Deserializer::is_exception($obj));
-        $exception = Deserializer::get_exception($obj);
+        $this->assertTrue($deserializer->is_exception($obj));
+        $exception = $deserializer->get_exception($obj);
         $this->assertInstanceOf(DaprException::class, $exception->getPrevious());
     }
 }

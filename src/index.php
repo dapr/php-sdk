@@ -26,7 +26,7 @@ use Dapr\State\TransactionalState;
 use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;
 
-$logger  = new Logger('dapr');
+$logger  = new Logger('dapr', '', '', '');
 $handler = new ErrorLogHandler(level: Logger::WARNING);
 $logger->pushHandler($handler);
 $logger->pushProcessor(new \Monolog\Processor\PsrLogMessageProcessor());

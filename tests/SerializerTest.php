@@ -4,8 +4,10 @@ require_once __DIR__.'/Fixtures/TestObj.php';
 require_once __DIR__.'/Fixtures/Serialization.php';
 
 use Dapr\Serialization\Attributes\AlwaysObject;
+use Dapr\Serialization\SerializationConfig;
+use Dapr\Serialization\Serializer;
+use Dapr\Serialization\Serializers\ISerialize;
 use Fixtures\TestObj;
-use PHPUnit\Framework\TestCase;
 
 class ASpecialType
 {
@@ -21,7 +23,7 @@ function serialize_ASpecialType(ASpecialType $item)
  * Class SerializerTest
  * @covers Dapr\Serialization\Serializer
  */
-final class SerializerTest extends TestCase
+final class SerializerTest extends DaprTests
 {
     public function generate_serializer()
     {
@@ -106,7 +108,7 @@ JSON
     "false": false
 }
 JSON
-    ,
+                ,
             ],
         ];
     }
@@ -116,20 +118,35 @@ JSON
      */
     public function testSerializer($value, $expected)
     {
-        $serialized = \Dapr\Serialization\Serializer::as_json($value, JSON_PRETTY_PRINT);
-        \Dapr\Serialization\Serializer::register('serialize_ASpecialType', ASpecialType::class);
+        $this->container->set(
+            SerializationConfig::class,
+            new SerializationConfig(
+                [
+                    ASpecialType::class => new class implements ISerialize {
+
+                        public static function serialize(mixed $value): mixed
+                        {
+                            return serialize_ASpecialType($value);
+                        }
+                    },
+                ]
+            )
+        );
+        $serializer = $this->container->get(Serializer::class);
+        $serialized = $serializer->as_json($value, JSON_PRETTY_PRINT);
         $this->assertSame($expected, $serialized);
     }
 
     public function testException()
     {
-        $serialized = \Dapr\Serialization\Serializer::as_array(new Exception('testing'));
+        $serializer = $this->container->get(Serializer::class);
+        $serialized = $serializer->as_array(new Exception('testing'));
         $this->assertSame(
             [
                 'message'   => 'testing',
                 'errorCode' => 'Exception',
                 'file'      => __FILE__,
-                'line'      => 126,
+                'line'      => 143,
                 'inner'     => null,
             ],
             $serialized

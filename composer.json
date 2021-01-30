@@ -17,12 +17,12 @@
     "psr/log": "^1.1",
     "nette/php-generator": "^3.5",
     "php-di/php-di": "^6.3"
+    "monolog/monolog": "^2.2"
   },
   "require-dev": {
     "ext-xdebug": "*",
     "vimeo/psalm": "^4.3",
-    "phpunit/phpunit": "^9",
-    "monolog/monolog": "^2.2"
+    "phpunit/phpunit": "^9"
   },
   "autoload": {
     "psr-4": {

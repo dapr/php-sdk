@@ -2,86 +2,62 @@
 
 namespace Dapr\Serialization;
 
-require_once __DIR__.'/default_serializers.php';
-
+use Dapr\DaprLogger;
 use Dapr\exceptions\DaprException;
-use Dapr\Runtime;
 use Dapr\Serialization\Attributes\AlwaysObject;
+use Dapr\Serialization\Serializers\ISerialize;
 
-final class Serializer
+class Serializer implements ISerializer
 {
+    public function __construct(protected SerializationConfig $config, protected DaprLogger $logger)
+    {
+    }
+
     /**
-     * @var null|callable
+     * @inheritDoc
      */
-    private static $default_serializer = null;
-
-    private static array $serializers = [];
-
-    public static function register(callable $serializer, string ...$types): void
+    public function as_json(mixed $value, int $flags = 0): string
     {
-        if (empty($types)) {
-            Runtime::$logger?->debug('Set default serializer');
-            self::$default_serializer = $serializer;
-        } else {
-            foreach ($types as $type) {
-                Runtime::$logger?->debug('Registered serializer for {type}', ['type' => $type]);
-                self::$serializers[$type] = $serializer;
-            }
-        }
+        return json_encode($this->as_array($value), $flags);
     }
 
-    public static function as_json(mixed $value, int $flags = 0): string
+    /**
+     * @inheritDoc
+     */
+    public function as_array(mixed $value): mixed
     {
-        return json_encode(self::as_array($value), $flags);
-    }
-
-    public static function as_array(mixed $value): mixed
-    {
-        if (self::$default_serializer !== null) {
-            $serializer = self::$default_serializer;
-
-            return $serializer($value);
-        }
-
         switch (true) {
             case is_array($value):
-                foreach ($value as $key => &$item) {
-                    $item = self::as_array($item);
-                }
-
-                return $value;
+                return array_map([$this, 'as_array'], $value);
             case is_object($value):
                 if ($value instanceof \Exception) {
                     return DaprException::serialize_to_array($value);
                 }
 
                 $type_name = get_class($value);
-                if (isset(self::$serializers[$type_name])) {
-                    $callback = self::$serializers[$type_name];
-
-                    return $callback($value);
+                if ($serializer = $this->get_serializer($type_name)) {
+                    return $serializer->serialize($value);
                 }
 
                 $obj = [];
                 if (class_exists($type_name)) {
                     $reflection_class = new \ReflectionClass($type_name);
                 }
-                foreach ($value as $prop => $prop_value) {
+                foreach ($value as $prop_name => $prop_value) {
                     if (is_array($prop_value)
                         && empty($prop_value)
                         && isset($reflection_class)
-                        && $reflection_class->hasProperty($prop)) {
-                        $attrs = $reflection_class->getProperty($prop)->getAttributes(AlwaysObject::class);
+                        && $reflection_class->hasProperty($prop_name)) {
+                        $attrs = $reflection_class->getProperty($prop_name)->getAttributes(AlwaysObject::class);
                         if (isset($attrs[0])) {
-                            $obj[$prop] = new \stdClass();
+                            $obj[$prop_name] = new \stdClass();
                         } else {
-                            $obj[$prop] = [];
+                            $obj[$prop_name] = [];
                         }
                     } else {
-                        $obj[$prop] = self::as_array($prop_value);
+                        $obj[$prop_name] = $this->as_array($prop_value);
                     }
                 }
-
                 if (empty($obj) && isset($reflection_class)) {
                     $attrs = $reflection_class->getAttributes(AlwaysObject::class);
                     if (isset($attrs[0])) {
@@ -91,7 +67,23 @@ final class Serializer
 
                 return $obj;
             default:
+                if ($serializer = $this->get_serializer(gettype($value))) {
+                    return $serializer->serialize($value);
+                }
+
                 return $value;
         }
+    }
+
+    private function get_serializer(string $type): ISerialize|null
+    {
+        return (new class($this->config, $type) extends SerializationConfig {
+            public ISerialize|null $serializer;
+
+            public function __construct(SerializationConfig $config, string $type)
+            {
+                $this->serializer = $config->serializers[$type] ?? null;
+            }
+        })->serializer;
     }
 }
