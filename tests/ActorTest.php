@@ -2,6 +2,7 @@
 
 use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorRuntime;
+use Dapr\Actors\Generators\ProxyModes;
 use Fixtures\ActorClass;
 
 require_once __DIR__.'/DaprTests.php';
@@ -14,7 +15,7 @@ class ActorTest extends DaprTests
     public function testActorInvoke()
     {
         $id = uniqid();
-        ActorRuntime::register_actor( ActorClass::class);
+        ActorRuntime::register_actor(ActorClass::class);
         $this->assertState(
             [
                 ['upsert' => ['value', 'new value']],
@@ -71,7 +72,7 @@ class ActorTest extends DaprTests
     public function testActorRuntime()
     {
         $id = uniqid();
-        ActorRuntime::register_actor( ActorClass::class);
+        ActorRuntime::register_actor(ActorClass::class);
         $this->assertState(
             [
                 ['upsert' => ['value', 'new value']],
@@ -84,10 +85,13 @@ class ActorTest extends DaprTests
         $this->assertTrue(json_decode($result['body']));
     }
 
-    public function getModes() {
+    public function getModes()
+    {
         return [
-            'Dynamic Mode' => [\Dapr\Actors\ProxyModes::DYNAMIC],
-            'Generated Mode' => [\Dapr\Actors\ProxyModes::GENERATED]
+            'Dynamic Mode'   => [ProxyModes::DYNAMIC],
+            'Generated Mode' => [ProxyModes::GENERATED],
+            'Cached Mode'    => [ProxyModes::GENERATED_CACHED],
+            'Only Existing'  => [ProxyModes::ONLY_EXISTING],
         ];
     }
 
@@ -96,7 +100,7 @@ class ActorTest extends DaprTests
      */
     public function testActorProxy($mode)
     {
-        $id = uniqid();
+        $id               = uniqid();
         ActorProxy::$mode = $mode;
 
         /**
@@ -178,7 +182,7 @@ class ActorTest extends DaprTests
      */
     public function testCannotManuallyActivate($mode)
     {
-        $id = uniqid();
+        $id               = uniqid();
         ActorProxy::$mode = $mode;
 
         /**
@@ -194,7 +198,7 @@ class ActorTest extends DaprTests
      */
     public function testCannotManuallyDeactivate($mode)
     {
-        $id = uniqid();
+        $id               = uniqid();
         ActorProxy::$mode = $mode;
 
         /**
@@ -210,7 +214,7 @@ class ActorTest extends DaprTests
      */
     public function testCannotManuallyRemind($mode)
     {
-        $id = uniqid();
+        $id               = uniqid();
         ActorProxy::$mode = $mode;
 
         /**
@@ -224,8 +228,9 @@ class ActorTest extends DaprTests
     /**
      * @dataProvider getModes
      */
-    public function testNoDaprType($mode) {
-        $id = uniqid();
+    public function testNoDaprType($mode)
+    {
+        $id               = uniqid();
         ActorProxy::$mode = $mode;
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('IBrokenActor must have a DaprType attribute');
@@ -235,10 +240,11 @@ class ActorTest extends DaprTests
     /**
      * This is essentially a snapshot function
      */
-    public function testGeneratedClassIsCorrect() {
-        $generated_class = "<?php\n". ActorProxy::generate_proxy_class(\Fixtures\ITestActor::class);
-        $take_snapshot = false;
-        if($take_snapshot) {
+    public function testGeneratedClassIsCorrect()
+    {
+        $generated_class = (string) \Dapr\Actors\Generators\FileGenerator::generate(\Fixtures\ITestActor::class);
+        $take_snapshot   = true;
+        if ($take_snapshot) {
             file_put_contents(__DIR__.'/Fixtures/GeneratedProxy.php', $generated_class);
         }
         $expected_proxy = file_get_contents(__DIR__.'/Fixtures/GeneratedProxy.php');

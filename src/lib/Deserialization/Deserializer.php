@@ -8,6 +8,7 @@ use Dapr\Deserialization\Attributes\ArrayOf;
 use Dapr\Deserialization\Attributes\AsClass;
 use Dapr\Deserialization\Attributes\Union;
 use Dapr\exceptions\DaprException;
+use Nette\PhpGenerator\Method;
 
 final class Deserializer
 {
@@ -18,7 +19,7 @@ final class Deserializer
 
     private static array $deserializers = [];
 
-    public static function register(callable $deserializer, string ...$types):void
+    public static function register(callable $deserializer, string ...$types): void
     {
         if (empty($types)) {
             self::$default_deserializer = $deserializer;
@@ -53,7 +54,7 @@ final class Deserializer
     }
 
     public static function detect_from_parameter(
-        \ReflectionParameter|\ReflectionProperty|\ReflectionMethod $parameter,
+        \ReflectionParameter|\ReflectionProperty|\ReflectionMethod|Method $parameter,
         mixed $data
     ): mixed {
         // type is declared via attributes
@@ -78,10 +79,17 @@ final class Deserializer
         // type is embedded in parameter
         if ($parameter instanceof \ReflectionMethod) {
             $type = $parameter->getReturnType();
+        } elseif ($parameter instanceof Method) {
+            $type = $parameter->getReturnType() ?? 'void';
+            $type = explode('|', $type);
         } else {
             $type = $parameter->getType();
         }
-        if ($type instanceof \ReflectionNamedType) {
+        if (is_array($type) && ! empty($type)) {
+            return isset($type[1]) ? throw new \LogicException(
+                'Union types must have a \Dapr\Deserialization\Attributes\Union attribute on '.$parameter->getName()
+            ) : self::from_array($type[0], $data);
+        } elseif ($type instanceof \ReflectionNamedType) {
             $type_name = $type->getName();
 
             return self::from_array($type_name, $data);

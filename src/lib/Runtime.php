@@ -226,9 +226,9 @@ abstract class Runtime
             $uri                  = explode('/', $uri);
             foreach ($parameter_reflection as $parameter) {
                 if (count($parameter->getAttributes(FromRoute::class))) {
-                    $params[$parameter->name] = Deserializer::detect_from_parameter($parameter, array_shift($uri));
+                    $params[$parameter->getName()] = Deserializer::detect_from_parameter($parameter, array_shift($uri));
                 } else {
-                    $params[$parameter->name] = Deserializer::detect_from_parameter($parameter, $body);
+                    $params[$parameter->getName()] = Deserializer::detect_from_parameter($parameter, $body);
                 }
             }
 
