@@ -3,6 +3,7 @@
 namespace Dapr\Deserialization;
 
 use Exception;
+use Nette\PhpGenerator\Method;
 use ReflectionMethod;
 use ReflectionParameter;
 use ReflectionProperty;
@@ -66,6 +67,16 @@ interface IDeserializer
      * @return mixed The deserialized
      */
     public function detect_from_method(ReflectionMethod $method, mixed $data): mixed;
+
+    /**
+     * Detect the deserialization method from introspecting the method
+     *
+     * @param Method $method The method
+     * @param mixed $data The data to deserialize
+     *
+     * @return mixed The deserialized data
+     */
+    public function detect_from_generator_method(Method $method, mixed $data): mixed;
 
     /**
      * Deserializes a json string into a type

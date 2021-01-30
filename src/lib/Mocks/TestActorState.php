@@ -16,10 +16,10 @@ trait TestActorState
     private int $_on_transaction = 0;
     private array $loaded = [];
 
-    public function __construct()
+    public function __construct(Transaction $transaction)
     {
         Runtime::$logger?->debug('Overriding Actor State');
-        $this->_internal_transaction[] = new Transaction();
+        $this->_internal_transaction[] = $transaction;
         $this->_internal_reflection    = new ReflectionClass($this);
 
         foreach ($this->_internal_reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {

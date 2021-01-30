@@ -10,6 +10,7 @@ use Dapr\exceptions\DaprException;
 use Exception;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
+use Nette\PhpGenerator\Method;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionException;
@@ -63,9 +64,12 @@ class Deserializer implements IDeserializer
         return $this->from_value($type, $data);
     }
 
-    private function is_array_of(ReflectionParameter|ReflectionMethod|ReflectionProperty $reflection): string|false
+    private function is_array_of(ReflectionParameter|ReflectionMethod|ReflectionProperty|Method $reflection): string|false
     {
         $attr = $reflection->getAttributes(ArrayOf::class);
+        if($reflection instanceof Method) {
+            return isset($attr[0]) ? $attr[0]->getArguments()[0] : false;
+        }
 
         return isset($attr[0]) ? $attr[0]->newInstance()->type : false;
     }
@@ -151,19 +155,25 @@ class Deserializer implements IDeserializer
         return $this->from_value($type, $data);
     }
 
-    private function is_class(ReflectionProperty|ReflectionMethod|ReflectionParameter $reflection): string|false
+    private function is_class(ReflectionProperty|ReflectionMethod|ReflectionParameter|Method $reflection): string|false
     {
         $attr = $reflection->getAttributes(AsClass::class);
+
+        if($reflection instanceof Method) {
+            return isset($attr[0]) ? $attr[0]->getArguments()[0] : false;
+        }
 
         return isset($attr[0]) ? $attr[0]->newInstance()->type : false;
     }
 
     private function get_union_type(
-        ReflectionParameter|ReflectionMethod|ReflectionProperty $reflection,
+        ReflectionParameter|ReflectionMethod|ReflectionProperty|Method $reflection,
         mixed $data
     ): string|false {
         $attr = $reflection->getAttributes(Union::class);
+
         if (isset($attr[0])) {
+
             $discriminator = $attr[0]->newInstance()->discriminator;
 
             return $discriminator($data);
@@ -209,5 +219,24 @@ class Deserializer implements IDeserializer
     public function from_json(string $as, string $json): mixed
     {
         return $this->from_value($as, json_decode($json, true));
+    }
+
+    public function detect_from_generator_method(Method $method, mixed $data): mixed
+    {
+        if ($array_of = $this->is_array_of($method)) {
+            return $this->from_array_of($array_of, $data);
+        }
+
+        if ($class_name = $this->is_class($method)) {
+            return $this->from_value($class_name, $data);
+        }
+
+        if ($union_type = $this->get_union_type($method, $data)) {
+            return $this->from_value($union_type, $data);
+        }
+
+        $type = $this->get_type_from_type($method->getReturnType());
+
+        return $this->from_value($type, $data);
     }
 }

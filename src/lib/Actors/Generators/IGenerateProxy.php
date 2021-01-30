@@ -3,10 +3,11 @@
 namespace Dapr\Actors\Generators;
 
 use Dapr\Actors\IActor;
+use DI\Container;
 
 interface IGenerateProxy
 {
-    public function __construct(string $interface, string $dapr_type);
+    public function __construct(string $interface, string $dapr_type, Container $container);
 
     /**
      * Get a proxied type

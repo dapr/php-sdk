@@ -5,7 +5,10 @@ namespace Dapr\Actors\Generators;
 use Dapr\Actors\Internal\InternalProxy;
 use Dapr\DaprClient;
 use Dapr\Deserialization\Deserializer;
+use Dapr\Deserialization\IDeserializer;
+use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializer;
+use DI\Container;
 use LogicException;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
@@ -14,9 +17,9 @@ class DynamicGenerator extends GenerateProxy
 {
     private InternalProxy $current_proxy;
 
-    public function __construct(protected string $interface, protected string $dapr_type)
+    public function __construct(string $interface, string $dapr_type, Container $container)
     {
-        parent::__construct($this->interface, $this->dapr_type);
+        parent::__construct($interface, $dapr_type, $container);
     }
 
     protected function generate_failure_method(Method $method): callable
@@ -29,16 +32,20 @@ class DynamicGenerator extends GenerateProxy
     protected function generate_proxy_method(Method $method, string $id): callable
     {
         return function (...$params) use ($method, $id) {
+            global $dapr_container;
+            $serializer = $dapr_container->get(ISerializer::class);
+            $client = $dapr_container->get(DaprClient::class);
+            $deserializer = $dapr_container->get(IDeserializer::class);
             if ( ! empty($params)) {
-                $params = Serializer::as_array($params[0]);
+                $params = $serializer->as_array($params[0]);
             }
 
-            $result = DaprClient::post(
-                DaprClient::get_api("/actors/{$this->dapr_type}/$id/method/{$method->getName()}"),
-                Serializer::as_array($params)
+            $result = $client->post(
+                $client->get_api_path("/actors/{$this->dapr_type}/$id/method/{$method->getName()}"),
+                $serializer->as_array($params)
             );
 
-            $result->data = Deserializer::detect_from_parameter(
+            $result->data = $deserializer->detect_from_generator_method(
                 $method,
                 $result->data
             );

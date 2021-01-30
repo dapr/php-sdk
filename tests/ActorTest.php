@@ -142,7 +142,7 @@ class ActorTest extends DaprTests
         $this->get_client()->register_post(
             path: "/actors/TestActor/$id/method/a_function",
             code: 200,
-            response_data: true,
+            response_data: ['true'],
             expected_request: null
         );
         $proxy->a_function(null);
@@ -150,7 +150,7 @@ class ActorTest extends DaprTests
         $this->get_client()->register_post(
             path: "/actors/TestActor/$id/method/a_function",
             code: 200,
-            response_data: true,
+            response_data: ['true'],
             expected_request: "ok"
         );
         $proxy->a_function('ok');

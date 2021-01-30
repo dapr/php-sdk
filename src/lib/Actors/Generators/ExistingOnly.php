@@ -3,12 +3,13 @@
 namespace Dapr\Actors\Generators;
 
 use Dapr\Actors\IActor;
+use DI\Container;
 use Nette\PhpGenerator\Method;
 
 class ExistingOnly extends GenerateProxy {
-    public function __construct(protected string $interface, protected string $dapr_type)
+    public function __construct(string $interface, string $dapr_type, Container $container)
     {
-        parent::__construct($interface, $dapr_type);
+        parent::__construct($interface, $dapr_type, $container);
     }
 
     protected function generate_failure_method(Method $method)
@@ -28,7 +29,7 @@ class ExistingOnly extends GenerateProxy {
 
     public function get_proxy(string $id)
     {
-        $proxy = new ($this->get_full_class_name());
+        $proxy = $this->container->make($this->get_full_class_name());
         $proxy->id = $id;
         return $proxy;
     }

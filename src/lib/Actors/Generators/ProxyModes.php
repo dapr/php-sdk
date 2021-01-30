@@ -9,15 +9,17 @@ abstract class ProxyModes {
     public const ONLY_EXISTING = 4;
 
     public static function get_generator(int $mode, $interface, $dapr_type): IGenerateProxy {
+        global $dapr_container;
+        $params = ['interface' => $interface, 'dapr_type' => $dapr_type];
         switch($mode) {
             case ProxyModes::DYNAMIC:
-                return new DynamicGenerator($interface, $dapr_type);
+                return $dapr_container->make(DynamicGenerator::class, $params);
             case ProxyModes::GENERATED_CACHED:
-                return new CachedGenerator($interface, $dapr_type);
+                return $dapr_container->make(CachedGenerator::class, $params);
             case ProxyModes::GENERATED:
-                return new FileGenerator($interface, $dapr_type);
+                return $dapr_container->make(FileGenerator::class, $params);
             case ProxyModes::ONLY_EXISTING:
-                return new ExistingOnly($interface, $dapr_type);
+                return $dapr_container->make(ExistingOnly::class, $params);
             default:
                 throw new \InvalidArgumentException('mode must be a supported mode');
         }

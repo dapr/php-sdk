@@ -19,13 +19,13 @@ use function DI\get;
 
 return [
     // logging
-    'dapr.log.level'          => fn() => LogLevel::WARNING,
-    'dapr.log.handler'        => fn() => [
+    'dapr.log.level'          => LogLevel::WARNING,
+    'dapr.log.handler'        => [
         create(ErrorLogHandler::class)->constructor(
             level: get('dapr.log.level')
         ),
     ],
-    'dapr.log.processor'      => fn() => [create(PsrLogMessageProcessor::class)],
+    'dapr.log.processor'      => [create(PsrLogMessageProcessor::class)],
 
     // interface to implementation
     LoggerInterface::class    => create(DaprLogger::class)->constructor(
@@ -38,5 +38,4 @@ return [
     IManageState::class       => autowire(StateManager::class),
 
     // application settings
-    'dapr.actorproxy.setting' => fn() => ProxyModes::GENERATED,
 ];

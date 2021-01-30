@@ -5,11 +5,14 @@ namespace Fixtures;
 use Dapr\Actors\Actor;
 use Dapr\Actors\ActorState;
 use Dapr\Actors\Attributes\DaprType;
+use Dapr\Deserialization\Attributes\ArrayOf;
+use Dapr\Deserialization\Attributes\AsClass;
 
 #[DaprType('TestActor')]
 interface ITestActor
 {
-    public function a_function($value): bool;
+    #[ArrayOf('string')]
+    public function a_function(#[AsClass(\SimpleObject::class)] $value): array;
 }
 
 class TestActorState extends ActorState

@@ -2,11 +2,13 @@
 
 namespace Dapr\Actors\Generators;
 
+use DI\Container;
+
 class CachedGenerator extends ExistingOnly
 {
-    public function __construct(protected string $interface, protected string $dapr_type)
+    public function __construct(string $interface, string $dapr_type, Container $container)
     {
-        parent::__construct($interface, $dapr_type);
+        parent::__construct($interface, $dapr_type, $container);
     }
 
     public function get_proxy(string $id): object
