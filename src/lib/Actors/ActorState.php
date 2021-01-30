@@ -5,9 +5,11 @@ namespace Dapr\Actors;
 use Dapr\Actors\Internal\KeyResponse;
 use Dapr\DaprClient;
 use Dapr\Deserialization\Deserializer;
+use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\Runtime;
 use Dapr\State\Internal\Transaction;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 
 abstract class ActorState
@@ -26,6 +28,15 @@ abstract class ActorState
      * @var string[] Where values came from, to determine whether to load the value from the store.
      */
     private array $_internal_data = [];
+    /**
+     * @var LoggerInterface
+     */
+    private LoggerInterface $_internal_logger;
+    /**
+     * @var DaprClient
+     */
+    private DaprClient $_internal_client;
+
 
     /**
      * ActorState constructor.
@@ -35,13 +46,16 @@ abstract class ActorState
      */
     public function __construct(private string $_internal_dapr_type, private mixed $_internal_actor_id)
     {
+        global $dapr_container;
         $this->_internal_reflection  = new ReflectionClass($this);
-        $this->_internal_transaction = new Transaction();
+        $this->_internal_transaction = $dapr_container->make(Transaction::class);
+        $this->_internal_logger = $dapr_container->get(LoggerInterface::class);
+        $this->_internal_client = $dapr_container->get(DaprClient::class);
 
         foreach ($this->_internal_reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
             unset($this->{$property->name});
         }
-        Runtime::$logger?->debug(
+        $this->_internal_logger->debug(
             'Starting transaction for {t}||{i}',
             ['t' => $this->_internal_dapr_type, 'i' => $this->_internal_actor_id]
         );
@@ -54,7 +68,7 @@ abstract class ActorState
      */
     public function save_state(): void
     {
-        Runtime::$logger?->debug(
+        $this->_internal_logger->debug(
             'Committing transaction for {t}||{i}',
             ['t' => $this->_internal_dapr_type, 'i' => $this->_internal_actor_id]
         );
@@ -63,8 +77,8 @@ abstract class ActorState
             return;
         }
 
-        DaprClient::post(
-            DaprClient::get_api("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state"),
+        $this->_internal_client->post(
+            $this->_internal_client->get_api_path("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state"),
             $operations
         );
 
@@ -76,8 +90,9 @@ abstract class ActorState
      */
     public function roll_back(): void
     {
-        Runtime::$logger?->debug('Rolled back transaction');
-        $this->_internal_transaction = new Transaction();
+        global $dapr_container;
+        $this->_internal_logger->debug('Rolled back transaction');
+        $this->_internal_transaction = $dapr_container->make(Transaction::class);
         $this->_internal_data        = [];
     }
 
@@ -110,12 +125,14 @@ abstract class ActorState
      */
     private function _load_key(string $key): void
     {
-        $state = DaprClient::get(
-            DaprClient::get_api("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state/$key")
+        global $dapr_container;
+        $deserializer = $dapr_container->get(IDeserializer::class);
+        $state = $this->_internal_client->get(
+            $this->_internal_client->get_api_path("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state/$key")
         );
         if(isset($state->data)) {
             $property = $this->_internal_reflection->getProperty($key);
-            $state->data = Deserializer::detect_from_parameter($property, $state->data);
+            $state->data = $deserializer->detect_from_property($property, $state->data);
         }
         switch ($state?->code) {
             case KeyResponse::SUCCESS:

@@ -45,7 +45,7 @@ class ActorStateTest extends DaprTests
 
         unset($state->state);
 
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             "/actors/actor/id/state",
             204,
             '',
@@ -74,7 +74,7 @@ class ActorStateTest extends DaprTests
         $id    = uniqid();
         $state = $this->get_state('type', $id);
 
-        \Dapr\DaprClient::register_get(
+        $this->get_client()->register_get(
             "/actors/type/$id/state/state",
             KeyResponse::SUCCESS,
             'hello world'
@@ -89,7 +89,7 @@ class ActorStateTest extends DaprTests
         $id    = uniqid();
         $state = $this->get_state('type', $id);
 
-        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::KEY_NOT_FOUND, '');
+        $this->get_client()->register_get("/actors/type/$id/state/state", KeyResponse::KEY_NOT_FOUND, '');
 
         $this->assertSame('initial', $state->state);
         $this->assertSame('initial', $state->state);
@@ -100,7 +100,7 @@ class ActorStateTest extends DaprTests
         $id    = uniqid();
         $state = $this->get_state('nope', $id);
 
-        \Dapr\DaprClient::register_get("/actors/nope/$id/state/state", KeyResponse::ACTOR_NOT_FOUND, '');
+        $this->get_client()->register_get("/actors/nope/$id/state/state", KeyResponse::ACTOR_NOT_FOUND, '');
 
         $this->expectException(\Dapr\exceptions\DaprException::class);
 
@@ -112,14 +112,14 @@ class ActorStateTest extends DaprTests
         $id    = uniqid();
         $state = $this->get_state('type', $id);
 
-        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, 'test');
+        $this->get_client()->register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, 'test');
 
         $this->assertTrue(isset($state->state));
         $this->assertTrue(isset($state->state));
 
         $state->roll_back();
 
-        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, null);
+        $this->get_client()->register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, null);
 
         $this->assertFalse(isset($state->state));
     }
