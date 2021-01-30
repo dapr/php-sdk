@@ -98,7 +98,7 @@ class TestClient extends DaprClient
     {
         $url = "DELETE $url";
         $this->validate($url, '');
-        $next = array_shift($this->responses);
+        $next = array_shift($this->responses[$url]);
         if ($next === null) {
             $this->not_registered($url, '');
         }

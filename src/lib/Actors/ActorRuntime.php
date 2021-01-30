@@ -3,11 +3,12 @@
 namespace Dapr\Actors;
 
 use Dapr\Actors\Attributes\DaprType;
-use Dapr\Deserialization\Deserializer;
+use Dapr\Deserialization\IDeserializer;
 use Dapr\Formats;
 use Dapr\Runtime;
-use Dapr\Serialization\Serializer;
+use Dapr\Serialization\ISerializer;
 use JetBrains\PhpStorm\ArrayShape;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 
 /**
@@ -77,15 +78,15 @@ class ActorRuntime
             'body'          => 'array',
         ])] array $description
     ): array {
+        global $dapr_container;
         if ($description['type'] === null || ! class_exists($description['type'])) {
             Runtime::$logger?->critical('Unable to locate an actor for {t}', ['t' => $description['type']]);
 
             return [
                 'code' => 404,
-                'body' =>
-                    Serializer::as_json(
-                        new \UnexpectedValueException("class ${description['type']} not found")
-                    ),
+                'body' => $dapr_container->get(ISerializer::class)->as_json(
+                    new \UnexpectedValueException("class ${description['type']} not found")
+                ),
             ];
         }
 
@@ -103,7 +104,7 @@ class ActorRuntime
 
             return [
                 'code' => 500,
-                'body' => Serializer::as_json($ex),
+                'body' => $dapr_container->get(ISerializer::class)->as_json($ex),
             ];
         }
 
@@ -112,7 +113,9 @@ class ActorRuntime
 
             return [
                 'code' => 404,
-                'body' => Serializer::as_json(new \LogicException('Actor does not implement IActor interface.')),
+                'body' => $dapr_container->get(ISerializer::class)->as_json(
+                    new \LogicException('Actor does not implement IActor interface.')
+                ),
             ];
         }
 
@@ -184,7 +187,7 @@ class ActorRuntime
                         $args   = $description['body'];
                         $result = self::call_method($reflection->getMethod($method), $actor, $args);
 
-                        $return['body'] = Serializer::as_json($result);
+                        $return['body'] = $dapr_container->get(ISerializer::class)->as_json($result);
                         break;
                 }
                 break;
@@ -203,27 +206,6 @@ class ActorRuntime
         }
 
         return $return;
-    }
-
-    private static function call_method(\ReflectionMethod $method, object $actor, $args): mixed
-    {
-        if (empty($args)) {
-            return $method->invoke($actor);
-        }
-
-        Runtime::$logger?->debug('Preparing to call {method} with {args}', ['method' => $method->name, 'args' => $args]);
-
-        $params = [];
-        $reflected_param = $method->getParameters()[0] ?? null;
-
-        if(isset($reflected_param)) {
-            $p = $reflected_param->getName();
-            $params[$p] = Deserializer::detect_from_parameter($reflected_param, $args);
-        }
-
-        Runtime::$logger?->debug('Calling {method} with {args}', ['method' => $method->name, 'args' => $params]);
-
-        return $method->invokeArgs($actor, $params);
     }
 
     /**
@@ -254,6 +236,42 @@ class ActorRuntime
         }
 
         return $states;
+    }
+
+    private static function call_method(\ReflectionMethod $method, object $actor, $args): mixed
+    {
+        global $dapr_container;
+        if (empty($args)) {
+            return $method->invoke($actor);
+        }
+
+        Runtime::$logger?->debug(
+            'Preparing to call {method} with {args}',
+            ['method' => $method->name, 'args' => $args]
+        );
+
+        $params          = [];
+        $reflected_param = $method->getParameters()[0] ?? null;
+
+        if (isset($reflected_param)) {
+            $p = $reflected_param->getName();
+            try {
+                $params[$p] = $dapr_container->get(IDeserializer::class)->detect_from_parameter(
+                    $reflected_param,
+                    $args
+                );
+            } catch (\LogicException $exception) {
+                $dapr_container->get(LoggerInterface::class)->warning(
+                    'Unknown type in parameter: {param}',
+                    ['param' => $p, 'method' => $method->getName(), 'actor' => get_class($actor)]
+                );
+                $params[$p] = $args;
+            }
+        }
+
+        Runtime::$logger?->debug('Calling {method} with {args}', ['method' => $method->name, 'args' => $params]);
+
+        return $method->invokeArgs($actor, $params);
     }
 
     /**

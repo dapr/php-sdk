@@ -172,7 +172,7 @@ class Deserializer implements IDeserializer
         return false;
     }
 
-    private function get_type_from_type(ReflectionType $type): string
+    private function get_type_from_type(ReflectionType|null $type): string
     {
         if ($type instanceof ReflectionNamedType) {
             return $type->getName();

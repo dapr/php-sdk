@@ -66,7 +66,7 @@ class ActorTest extends DaprTests
                 ];
             }
         }
-        \Dapr\DaprClient::register_post("/actors/TestActor/$id/state", 201, [], $return);
+        $this->get_client()->register_post("/actors/TestActor/$id/state", 201, [], $return);
     }
 
     public function testActorRuntime()
@@ -109,7 +109,7 @@ class ActorTest extends DaprTests
         $proxy = ActorProxy::get(\Fixtures\ITestActor::class, $id);
 
         $this->assertSame($id, $proxy->get_id());
-        \Dapr\DaprClient::register_get(
+        $this->get_client()->register_get(
             "/actors/TestActor/$id/reminders/reminder",
             200,
             [
@@ -123,7 +123,7 @@ class ActorTest extends DaprTests
         $this->assertSame(10, $reminder->period->s);
         $this->assertSame([0], $reminder->data);
 
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             "/actors/TestActor/$id/timers/timer",
             200,
             [],
@@ -138,7 +138,7 @@ class ActorTest extends DaprTests
             new \Dapr\Actors\Timer('timer', new DateInterval('PT1S'), new DateInterval('PT1S'), 'callback')
         );
 
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             "/actors/TestActor/$id/reminders/reminder",
             200,
             [],
@@ -154,13 +154,13 @@ class ActorTest extends DaprTests
             )
         );
 
-        \Dapr\DaprClient::register_delete("/actors/TestActor/$id/timers/timer", 204);
+        $this->get_client()->register_delete("/actors/TestActor/$id/timers/timer", 204);
         $proxy->delete_timer('timer');
 
-        \Dapr\DaprClient::register_delete("/actors/TestActor/$id/reminders/reminder", 204);
+        $this->get_client()->register_delete("/actors/TestActor/$id/reminders/reminder", 204);
         $proxy->delete_reminder('reminder');
 
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             path: "/actors/TestActor/$id/method/a_function",
             code: 200,
             response_data: true,
@@ -168,7 +168,7 @@ class ActorTest extends DaprTests
         );
         $proxy->a_function(null);
 
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             path: "/actors/TestActor/$id/method/a_function",
             code: 200,
             response_data: true,

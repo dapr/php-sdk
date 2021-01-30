@@ -38,6 +38,7 @@ abstract class ActorProxy
      */
     public static function get(string $interface, mixed $id, string|null $override_type = null): object
     {
+        global $dapr_container;
         Runtime::$logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
 
         $reflected_interface = new ReflectionClass($interface);

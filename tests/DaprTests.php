@@ -62,6 +62,7 @@ abstract class DaprTests extends TestCase
     protected function set_body($data)
     {
         ActorRuntime::$input = tempnam(sys_get_temp_dir(), uniqid());
-        file_put_contents(ActorRuntime::$input, Serializer::as_json($data));
+        $serializer = $this->container->get(ISerializer::class);
+        file_put_contents(ActorRuntime::$input, $serializer->as_json($data));
     }
 }
