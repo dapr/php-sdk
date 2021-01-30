@@ -49,7 +49,7 @@ abstract class Secret
             case 204:
                 return;
             case 400:
-                throw new DaprException('Secret store missing or misconfigured');
+                throw new DaprException('Secret store missing or not configured');
             case 403:
                 throw new DaprException('Access denied');
             case 500:

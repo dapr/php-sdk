@@ -48,7 +48,7 @@ class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 	 * @param string $name The name of the reminder
 	 * @param mixed $data The data from passed when the reminder was setup
 	 */
-	public function remind(string $name, $data): void
+	public function remind(string $name, mixed $data): void
 	{
 		throw new \LogicException("Cannot call 'remind' outside the actor");
 	}

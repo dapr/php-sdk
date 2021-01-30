@@ -17,7 +17,7 @@ abstract class GenerateProxy implements IGenerateProxy
     ) {
     }
 
-    protected function generate_method(Method $method, string $id)
+    protected function generate_method(Method $method, string $id): Method|callable|null
     {
         switch ($method->getName()) {
             case 'remind':
@@ -59,12 +59,15 @@ abstract class GenerateProxy implements IGenerateProxy
      * Write a method that calls the actor.
      *
      * @param Method $method
+     * @param string $id
      *
      * @return Method
      */
     protected abstract function generate_proxy_method(Method $method, string $id);
 
     /**
+     * @param ClassType $interface
+     *
      * @return Method[] available methods for the interface
      */
     protected function get_methods(ClassType $interface): array
@@ -85,8 +88,7 @@ abstract class GenerateProxy implements IGenerateProxy
     protected function get_short_class_name()
     {
         $internal_type = preg_replace('/[^a-zA-Z0-9_]*/', '', $this->dapr_type);
-        $proxy_type    = 'dapr_proxy_'.$internal_type;
 
-        return $proxy_type;
+        return 'dapr_proxy_'.$internal_type;
     }
 }

@@ -21,7 +21,6 @@ use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscribe;
 use Dapr\Runtime;
 use Dapr\State\Attributes\StateStore;
-use Dapr\State\State;
 use Dapr\State\TransactionalState;
 use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;

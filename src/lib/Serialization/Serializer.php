@@ -5,7 +5,10 @@ namespace Dapr\Serialization;
 use Dapr\exceptions\DaprException;
 use Dapr\Serialization\Attributes\AlwaysObject;
 use Dapr\Serialization\Serializers\ISerialize;
+use Exception;
 use Psr\Log\LoggerInterface;
+use ReflectionClass;
+use stdClass;
 
 class Serializer implements ISerializer
 {
@@ -30,7 +33,7 @@ class Serializer implements ISerializer
             case is_array($value):
                 return array_map([$this, 'as_array'], $value);
             case is_object($value):
-                if ($value instanceof \Exception) {
+                if ($value instanceof Exception) {
                     return DaprException::serialize_to_array($value);
                 }
 
@@ -41,7 +44,7 @@ class Serializer implements ISerializer
 
                 $obj = [];
                 if (class_exists($type_name)) {
-                    $reflection_class = new \ReflectionClass($type_name);
+                    $reflection_class = new ReflectionClass($type_name);
                 }
                 foreach ($value as $prop_name => $prop_value) {
                     if (is_array($prop_value)
@@ -50,7 +53,7 @@ class Serializer implements ISerializer
                         && $reflection_class->hasProperty($prop_name)) {
                         $attrs = $reflection_class->getProperty($prop_name)->getAttributes(AlwaysObject::class);
                         if (isset($attrs[0])) {
-                            $obj[$prop_name] = new \stdClass();
+                            $obj[$prop_name] = new stdClass();
                         } else {
                             $obj[$prop_name] = [];
                         }
@@ -61,7 +64,7 @@ class Serializer implements ISerializer
                 if (empty($obj) && isset($reflection_class)) {
                     $attrs = $reflection_class->getAttributes(AlwaysObject::class);
                     if (isset($attrs[0])) {
-                        $obj = new \stdClass();
+                        $obj = new stdClass();
                     }
                 }
 

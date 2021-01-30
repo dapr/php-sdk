@@ -11,14 +11,17 @@ use Dapr\exceptions\DaprException;
 use Dapr\Serialization\ISerializer;
 use Dapr\State\Attributes\StateStore;
 use Dapr\State\Internal\StateHelpers;
+use LogicException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
+use ReflectionProperty;
+use WeakMap;
 
 class StateManager implements IManageState
 {
     use StateHelpers;
 
-    protected static \WeakMap $obj_meta;
+    protected static WeakMap $obj_meta;
 
     public function __construct(
         protected LoggerInterface $logger,
@@ -27,7 +30,7 @@ class StateManager implements IManageState
         protected DaprClient $client
     ) {
         if ( ! isset(self::$obj_meta)) {
-            self::$obj_meta = new \WeakMap();
+            self::$obj_meta = new WeakMap();
         }
     }
 
@@ -74,7 +77,7 @@ class StateManager implements IManageState
         $store      = self::get_description($reflection);
         $keys       = self::$obj_meta[$item] ?? [];
         $request    = [];
-        foreach ($reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+        foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             $key   = $prefix.$property->getName();
             $value = [
                 'key'   => $key,
@@ -103,7 +106,7 @@ class StateManager implements IManageState
         $reflection = new ReflectionClass($into);
         $store_name = self::get_description($reflection)->name;
         $keys       = [];
-        $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC);
+        $properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
         $result     = $this->client->post(
             $this->client->get_api_path("/state/$store_name/bulk", $metadata),
             [
@@ -140,6 +143,6 @@ class StateManager implements IManageState
         foreach ($reflection->getAttributes(StateStore::class) as $attribute) {
             return $attribute->newInstance()->name;
         }
-        throw new \LogicException('Tried to load state without a Dapr\State\Attributes\StateStore attribute');
+        throw new LogicException('Tried to load state without a Dapr\State\Attributes\StateStore attribute');
     }
 }

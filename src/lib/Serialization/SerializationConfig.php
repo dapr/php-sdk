@@ -23,7 +23,7 @@ class SerializationConfig
             $this->add(\DateTime::class, new DateTime());
         }
         if (empty($this->serializers[StateItem::class])) {
-            $this->add(StateItem::class, new \Dapr\Serialization\Serializers\StateItem());
+            $this->add(StateItem::class, new Serializers\StateItem());
         }
     }
 

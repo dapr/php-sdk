@@ -3,9 +3,11 @@
 namespace Dapr\State;
 
 use Dapr\DaprClient;
+use Dapr\exceptions\DaprException;
 use Dapr\exceptions\StateAlreadyCommitted;
 use Dapr\State\Internal\StateHelpers;
 use Dapr\State\Internal\Transaction;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionProperty;
@@ -26,19 +28,24 @@ abstract class TransactionalState
     /**
      * TransactionalState constructor.
      *
-     * @param LoggerInterface $logger
-     * @param DaprClient $client
+     * @param LoggerInterface|null $_internal_logger
+     * @param DaprClient|null $_internal_client
+     * @param IManageState|null $_internal_state
+     * @param Transaction|null $_internal_transaction
+     *
+     * @throws \DI\DependencyException
+     * @throws \DI\NotFoundException
      */
     public function __construct(
         private ?LoggerInterface $_internal_logger = null,
         private ?DaprClient $_internal_client = null,
-        private ?IManageState $_inernal_state = null,
+        private ?IManageState $_internal_state = null,
         private ?Transaction $_internal_transaction = null
     ) {
         global $dapr_container;
         $this->_internal_logger      ??= $dapr_container->get(LoggerInterface::class);
         $this->_internal_client      ??= $dapr_container->get(DaprClient::class);
-        $this->_inernal_state        ??= $dapr_container->get(IManageState::class);
+        $this->_internal_state        ??= $dapr_container->get(IManageState::class);
         $this->_internal_transaction ??= $dapr_container->make(Transaction::class);
         $this->_internal_reflection  = new ReflectionClass($this);
     }
@@ -55,11 +62,11 @@ abstract class TransactionalState
         global $dapr_container;
         $this->_internal_logger->info('Beginning transaction');
         $this->_internal_transaction = $dapr_container->make(Transaction::class);
-        $this->_inernal_state->load_object(
+        $this->_internal_state->load_object(
             $this,
+            prefix: $prefix,
             parallelism: $parallelism,
-            metadata: $metadata ?? [],
-            prefix: $prefix
+            metadata: $metadata ?? []
         );
 
         foreach ($this->_internal_reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
@@ -93,7 +100,7 @@ abstract class TransactionalState
                 '{key} is not defined on transactional class and is not stored',
                 ['key' => $key]
             );
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "$key does not_exist on ".get_class($this)." is not defined and thus will not be stored."
             );
         }
@@ -133,7 +140,7 @@ abstract class TransactionalState
      * @param array|null $metadata Component specific metadata
      *
      * @throws StateAlreadyCommitted
-     * @throws \Dapr\exceptions\DaprException
+     * @throws DaprException
      */
     public function commit(?array $metadata = null): void
     {
@@ -175,10 +182,10 @@ abstract class TransactionalState
 
     private function get_etag_for_key(string $key): ?string
     {
-        return (new class($this->_inernal_state, $key, $this) extends StateManager {
+        return (new class($key, $this) extends StateManager {
             public ?string $etag = '';
 
-            public function __construct(IManageState $other, string $key, $obj)
+            public function __construct(string $key, $obj)
             {
                 $etag       = self::$obj_meta[$obj][$key] ?? [];
                 $this->etag = $etag['etag'] ?? null;

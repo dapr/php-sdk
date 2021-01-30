@@ -10,7 +10,7 @@ class DateInterval implements ISerialize
     private const CLEAN_DT = ['S', 'M', 'H', 'DT', 'M', 'P', 'Y', 'P'];
     private const DEFAULT_DT = 'PT0S';
 
-    public function serialize(mixed $value, ISerializer $serializer): mixed
+    public function serialize(mixed $value, ISerializer $serializer): string
     {
         return rtrim(
             str_replace(self::REM_DT, self::CLEAN_DT, $value->format('P%yY%mM%dDT%hH%iM%sS%fF')),

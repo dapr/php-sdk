@@ -32,7 +32,7 @@ class Topic
         }
 
         try {
-            $result = $this->client->post(
+            $this->client->post(
                 $this->client->get_api_path("/publish/{$this->pubsub}/{$this->topic}", $metadata),
                 $event
             );
@@ -40,7 +40,7 @@ class Topic
             $this->client->extra_headers = [];
 
             return true;
-        } catch (DaprException $exception) {
+        } catch (DaprException) {
             return false;
         }
     }

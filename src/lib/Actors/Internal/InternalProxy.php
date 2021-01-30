@@ -3,7 +3,6 @@
 namespace Dapr\Actors\Internal;
 
 use Dapr\Actors\ActorTrait;
-use Dapr\Actors\IActor;
 
 /**
  * Class InternalProxy
@@ -21,7 +20,7 @@ class InternalProxy
      *
      * @return false|mixed
      */
-    public function __call(string $name, array $arguments)
+    public function __call(string $name, array $arguments): mixed
     {
         return call_user_func_array($this->$name, $arguments);
     }

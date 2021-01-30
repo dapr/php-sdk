@@ -2,7 +2,9 @@
 
 namespace Dapr\Deserialization\Attributes;
 
-#[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_PARAMETER | \Attribute::TARGET_METHOD)]
+use Attribute;
+
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER | Attribute::TARGET_METHOD)]
 class Union
 {
     public array $types = [];

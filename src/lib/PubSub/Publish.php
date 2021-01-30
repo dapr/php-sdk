@@ -10,6 +10,7 @@ class Publish
      * Publish constructor.
      *
      * @param string $pubsub
+     * @param Container $container
      */
     public function __construct(private string $pubsub, private Container $container)
     {

@@ -2,18 +2,21 @@
 
 namespace Dapr;
 
+use BadFunctionCallException;
 use Closure;
 use Dapr\Actors\ActorRuntime;
 use Dapr\Attributes\FromRoute;
-use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Subscribe;
 use Dapr\Serialization\ISerializer;
-use Dapr\Serialization\Serializer;
+use Exception;
 use JetBrains\PhpStorm\ArrayShape;
 use Psr\Log\LoggerInterface;
+use ReflectionFunction;
+use ReflectionMethod;
+use Throwable;
 
 abstract class Runtime
 {
@@ -72,22 +75,18 @@ abstract class Runtime
     ): DaprResponse {
         global $dapr_container;
         $client = $dapr_container->get(DaprClient::class);
-        $url = "/invoke/$app_id/method/$method";
+        $url    = "/invoke/$app_id/method/$method";
         self::$logger?->info(
             "Invoking {http_method} {app_id}.{method}",
             ['http_method' => $http_method, 'app_id' => $app_id, 'method' => $method]
         );
-        switch ($http_method) {
-            case 'GET':
-                return $client->get($client->get_api_path($url, $param));
-            case 'POST':
-            case 'PUT':
-                return $client->post($client->get_api_path($url), $param);
-            case 'DELETE':
-                return $client->delete($client->get_api_path($url));
-            default:
-                throw new DaprException('Unknown http method: '.$http_method);
-        }
+
+        return match ($http_method) {
+            'GET' => $client->get($client->get_api_path($url, $param)),
+            'POST', 'PUT' => $client->post($client->get_api_path($url), $param),
+            'DELETE' => $client->delete($client->get_api_path($url)),
+            default => throw new DaprException('Unknown http method: '.$http_method),
+        };
     }
 
     /**
@@ -115,8 +114,9 @@ abstract class Runtime
                 }
 
                 return $result;
-            } catch (\Exception $exception) {
+            } catch (Exception $exception) {
                 $body = $dapr_container->get(ISerializer::class)->as_json($exception);
+
                 return ['code' => 500, 'body' => $body];
             }
         };
@@ -167,7 +167,7 @@ abstract class Runtime
                         foreach (self::$health_checks as $callback) {
                             $callback();
                         }
-                    } catch (\Throwable $ex) {
+                    } catch (Throwable $ex) {
                         self::$logger?->critical('Health check failed: {exception}', ['exception' => $ex]);
 
                         return ['code' => 500, 'body' => $dapr_container->get(ISerializer::class)->as_json($ex)];
@@ -209,7 +209,7 @@ abstract class Runtime
     {
         global $dapr_container;
         $deserializer = $dapr_container->get(IDeserializer::class);
-        $serializer = $dapr_container->get(ISerializer::class);
+        $serializer   = $dapr_container->get(ISerializer::class);
         if ( ! isset(self::$methods[$http_method][$method])) {
             self::$logger?->critical(
                 'Did not find a method for {http_method} {method}',
@@ -218,23 +218,26 @@ abstract class Runtime
 
             return [
                 'code' => 404,
-                'body' => $serializer->as_json(new \BadFunctionCallException('unable to locate handler for method')),
+                'body' => $serializer->as_json(new BadFunctionCallException('unable to locate handler for method')),
             ];
         }
 
         try {
             $callback = self::$methods[$http_method][$method];
             if ($callback instanceof Closure || is_string($callback)) {
-                $reflection = new \ReflectionFunction($callback);
+                $reflection = new ReflectionFunction($callback);
             } elseif (is_array($callback)) {
-                $reflection = new \ReflectionMethod($callback[0], $callback[1]);
+                $reflection = new ReflectionMethod($callback[0], $callback[1]);
             }
             $parameter_reflection = $reflection->getParameters();
             $params               = [];
             $uri                  = explode('/', $uri);
             foreach ($parameter_reflection as $parameter) {
                 if (count($parameter->getAttributes(FromRoute::class))) {
-                    $params[$parameter->getName()] = $deserializer->detect_from_parameter($parameter, array_shift($uri));
+                    $params[$parameter->getName()] = $deserializer->detect_from_parameter(
+                        $parameter,
+                        array_shift($uri)
+                    );
                 } else {
                     $params[$parameter->getName()] = $deserializer->detect_from_parameter($parameter, $body);
                 }
@@ -245,7 +248,7 @@ abstract class Runtime
             if (is_array($result) && isset($result['code'])) {
                 return $result;
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::$logger?->critical('Method failed: {exception}', ['exception' => $exception]);
 
             return ['code' => 500, 'body' => $serializer->as_json($exception)];

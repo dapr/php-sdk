@@ -2,9 +2,11 @@
 
 namespace Dapr\exceptions;
 
-class DaprException extends \Exception
+use Exception;
+
+class DaprException extends Exception
 {
-    public $dapr_error_code;
+    public string $dapr_error_code;
 
     public static function deserialize_from_array(array $array): DaprException
     {
@@ -29,13 +31,13 @@ class DaprException extends \Exception
     }
 
     /**
-     * @param \Exception|null $exception
+     * @param Exception|null $exception
      *
      * @return array|null
      */
-    public static function serialize_to_array($exception): ?array
+    public static function serialize_to_array(?Exception $exception): ?array
     {
-        if ($exception === null || ! ($exception instanceof \Exception)) {
+        if ($exception === null || ! ($exception instanceof Exception)) {
             return null;
         }
 

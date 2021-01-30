@@ -6,6 +6,7 @@ use Dapr\Actors\Attributes\DaprType;
 use Dapr\DaprClient;
 use Dapr\exceptions\DaprException;
 use Dapr\Runtime;
+use ReflectionClass;
 
 /**
  * Trait Actor
@@ -32,7 +33,7 @@ trait ActorTrait
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new \ReflectionClass($this);
+            $class      = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
             if ( ! empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;
@@ -46,7 +47,7 @@ trait ActorTrait
 
         $client = $dapr_container->get(DaprClient::class);
         $client->post(
-            $client->get_api_path("/actors/$type/$id/reminders/{$reminder->name}", null),
+            $client->get_api_path("/actors/$type/$id/reminders/{$reminder->name}"),
             $reminder->to_array()
         );
 
@@ -69,7 +70,7 @@ trait ActorTrait
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new \ReflectionClass($this);
+            $class      = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
             if ( ! empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;
@@ -102,7 +103,7 @@ trait ActorTrait
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new \ReflectionClass($this);
+            $class      = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
             if ( ! empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;
@@ -136,7 +137,7 @@ trait ActorTrait
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new \ReflectionClass($this);
+            $class      = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
             if ( ! empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;
@@ -172,7 +173,7 @@ trait ActorTrait
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new \ReflectionClass($this);
+            $class      = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
             if ( ! empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;

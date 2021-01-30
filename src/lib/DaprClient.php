@@ -4,6 +4,7 @@ namespace Dapr;
 
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
+use JetBrains\PhpStorm\Pure;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -75,8 +76,7 @@ class DaprClient
         $return->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $return->etag = array_reduce(
             curl_getinfo($curl, CURLINFO_HEADER_OUT),
-            fn($carry, $item) => str_starts_with($item, 'etag:') ? str_replace('etag: ', '', $item) : $carry,
-            null
+            fn($carry, $item) => str_starts_with($item, 'etag:') ? str_replace('etag: ', '', $item) : $carry
         );
         self::detect_trace_from_response($curl);
 
@@ -94,7 +94,7 @@ class DaprClient
         return array_merge(["Accept: application/json"], self::detect_trace(), $this->extra_headers);
     }
 
-    private function detect_trace()
+    private function detect_trace(): array
     {
         if (isset(self::$trace)) {
             return self::$trace;
@@ -128,7 +128,7 @@ class DaprClient
         $header = array_filter(
             explode("\r\n", $header),
             function ($ii) {
-                return strpos($ii, 'Traceparent:') === 0;
+                return str_starts_with($ii, 'Traceparent:');
             }
         );
         if ( ! empty($header)) {
@@ -177,7 +177,7 @@ class DaprClient
         return $response;
     }
 
-    private function as_json(array $headers): array
+    #[Pure] private function as_json(array $headers): array
     {
         return array_merge($headers, ["Content-type: application/json"], $this->extra_headers);
     }

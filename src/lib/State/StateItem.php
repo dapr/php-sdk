@@ -4,10 +4,11 @@ namespace Dapr\State;
 
 use Dapr\consistency\Consistency;
 use Dapr\consistency\StrongLastWrite;
+use JetBrains\PhpStorm\Pure;
 
 class StateItem
 {
-    public function __construct(
+    #[Pure] public function __construct(
         public string $key,
         public mixed $value,
         public Consistency|null $consistency = null,

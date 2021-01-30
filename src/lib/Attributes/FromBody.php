@@ -2,13 +2,15 @@
 
 namespace Dapr\Attributes;
 
+use Attribute;
+
 /**
  * Class FromBody
  * @package Dapr\Attributes
  *
  * Indicates that the parameter comes from the body (default)
  */
-#[\Attribute(\Attribute::TARGET_PARAMETER)]
+#[Attribute(Attribute::TARGET_PARAMETER)]
 class FromBody
 {
 }

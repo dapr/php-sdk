@@ -20,7 +20,7 @@ interface IActor
      * @param string $name The name of the reminder
      * @param mixed $data The data from passed when the reminder was setup
      */
-    function remind(string $name, $data): void;
+    function remind(string $name, mixed $data): void;
 
     /**
      * Called when the actor is activated

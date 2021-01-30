@@ -4,6 +4,7 @@ namespace Dapr\Actors;
 
 use Dapr\Formats;
 use DateInterval;
+use JetBrains\PhpStorm\ArrayShape;
 
 class Reminder
 {
@@ -45,6 +46,7 @@ class Reminder
         );
     }
 
+    #[ArrayShape(['dueTime' => "string", 'period' => "string", 'data' => "false|string"])]
     public function to_array(): array
     {
         return [

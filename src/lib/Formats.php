@@ -61,21 +61,12 @@ abstract class Formats
         $interval = ['PT'];
         $seconds  = 0.0;
         foreach ($parts as $time => $value) {
-            switch ($time) {
-                case 'ns':
-                    $seconds += ((float)$value) * self::NANOSECOND_TO_SECOND;
-                    break;
-                case 'us':
-                case 'µs':
-                    $seconds += ((float)$value) * self::MICROSECOND_TO_SECOND;
-                    break;
-                case 'ms':
-                    $seconds += ((float)$value) * self::MILLISECOND_TO_SECOND;
-                    break;
-                case 's':
-                    $seconds += (float)$value;
-                    break;
-            }
+            $seconds    += match ($time) {
+                'ns' => ((float)$value) * self::NANOSECOND_TO_SECOND,
+                'us', 'µs' => ((float)$value) * self::MICROSECOND_TO_SECOND,
+                'ms' => ((float)$value) * self::MILLISECOND_TO_SECOND,
+                's' => (float)$value,
+            };
             $interval[] = match ($time) {
                 'm' => $value.'M',
                 'h' => $value.'H',

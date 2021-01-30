@@ -11,15 +11,15 @@ class DaprResponse
     /**
      * @var int
      */
-    public $code;
+    public int $code;
 
     /**
      * @var array
      */
-    public $data;
+    public array $data;
 
     /**
      * @var string
      */
-    public $etag;
+    public string $etag;
 }

@@ -7,8 +7,11 @@ use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\State\Internal\Transaction;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
+use ReflectionException;
+use ReflectionProperty;
 
 abstract class ActorState
 {
@@ -50,7 +53,7 @@ abstract class ActorState
         $this->_internal_logger      = $dapr_container->get(LoggerInterface::class);
         $this->_internal_client      = $dapr_container->get(DaprClient::class);
 
-        foreach ($this->_internal_reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+        foreach ($this->_internal_reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             unset($this->{$property->name});
         }
         $this->_internal_logger->debug(
@@ -103,7 +106,7 @@ abstract class ActorState
      *
      * @return mixed
      * @throws DaprException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function __get(string $key): mixed
     {
@@ -127,7 +130,7 @@ abstract class ActorState
     public function __set(string $key, mixed $value): void
     {
         if ( ! $this->_internal_reflection->hasProperty($key)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "$key on ".get_class($this)." is not defined and thus will not be stored."
             );
         }
@@ -143,7 +146,7 @@ abstract class ActorState
      * @param string $key The key to load
      *
      * @throws DaprException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function _load_key(string $key): void
     {
@@ -182,7 +185,7 @@ abstract class ActorState
      *
      * @return bool
      * @throws DaprException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function __isset(string $key): bool
     {

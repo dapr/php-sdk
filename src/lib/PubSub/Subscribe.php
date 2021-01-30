@@ -2,8 +2,10 @@
 
 namespace Dapr\PubSub;
 
+use BadFunctionCallException;
 use Dapr\Runtime;
 use Dapr\Serialization\ISerializer;
+use Exception;
 use JetBrains\PhpStorm\ArrayShape;
 
 abstract class Subscribe
@@ -54,7 +56,7 @@ abstract class Subscribe
         if (isset(self::$handlers[$id])) {
             try {
                 $result = call_user_func(self::$handlers[$id], $event);
-            } catch (\Exception $exception) {
+            } catch (Exception $exception) {
                 Runtime::$logger?->critical(
                     'Failed to handle message {id}: {exception}',
                     ['id' => $id, 'exception' => $exception]
@@ -69,7 +71,7 @@ abstract class Subscribe
         return [
             'code' => 404,
             'body' => $dapr_container->get(ISerializer::class)->as_json(
-                new \BadFunctionCallException('Unable to handle subscription')
+                new BadFunctionCallException('Unable to handle subscription')
             ),
         ];
     }

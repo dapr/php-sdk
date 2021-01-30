@@ -20,8 +20,12 @@ use ReflectionClass;
 
 class FileGenerator extends GenerateProxy
 {
-    public function __construct(protected string $interface, protected string $dapr_type, Container $container, private array $usings = [])
-    {
+    #[Pure] public function __construct(
+        protected string $interface,
+        protected string $dapr_type,
+        Container $container,
+        private array $usings = []
+    ) {
         parent::__construct($interface, $dapr_type, $container);
     }
 
@@ -32,7 +36,6 @@ class FileGenerator extends GenerateProxy
      * @param string|null $override_type Allows overriding the dapr type
      *
      * @return PhpFile
-     * @throws \ReflectionException
      */
     public static function generate(string $interface, string|null $override_type = null): PhpFile
     {
@@ -50,6 +53,22 @@ class FileGenerator extends GenerateProxy
         $generator = $dapr_container->make(FileGenerator::class, ['interface' => $interface, 'dapr_type' => $type]);
 
         return $generator->generate_file();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function get_proxy(string $id): IActor
+    {
+        if ( ! class_exists($this->get_full_class_name())) {
+            foreach ($this->generate_file()->getNamespaces() as $namespace) {
+                eval($namespace);
+            }
+        }
+        $proxy = $this->container->make($this->get_full_class_name());
+        $proxy->id = $id;
+
+        return $proxy;
     }
 
     public function generate_file(): PhpFile
@@ -98,22 +117,6 @@ class FileGenerator extends GenerateProxy
         }
 
         return $file;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function get_proxy(string $id): IActor
-    {
-        if ( ! class_exists($this->get_full_class_name())) {
-            foreach ($this->generate_file()->getNamespaces() as $namespace) {
-                eval($namespace);
-            }
-        }
-        $proxy = $this->container->make($this->get_full_class_name());
-        $proxy->id = $id;
-
-        return $proxy;
     }
 
     protected function generate_constructor(): Method
