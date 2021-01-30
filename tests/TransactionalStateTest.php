@@ -7,14 +7,15 @@ class TransactionalStateTest extends DaprTests
     public function testBegin()
     {
         $this->register_simple_load();
-        $state = new TestState();
+        $state = $this->container->make(TestState::class);
         $state->begin();
         $this->assertSame('initial', $state->with_initial);
     }
 
     private function register_simple_load()
     {
-        \Dapr\DaprClient::register_post(
+        $client = $this->get_client();
+        $client->register_post(
             '/state/store/bulk',
             200,
             [
@@ -36,7 +37,7 @@ class TransactionalStateTest extends DaprTests
     public function testEmptyCommit()
     {
         $this->register_simple_load();
-        $state = new TestState();
+        $state = $this->container->get(TestState::class);
         $state->begin();
         $state->commit();
     }
@@ -44,7 +45,7 @@ class TransactionalStateTest extends DaprTests
     public function testInvalidKey()
     {
         $this->register_simple_load();
-        $state = new TestState();
+        $state = $this->container->get(TestState::class);
         $state->begin();
 
         $this->expectException(InvalidArgumentException::class);
@@ -56,7 +57,7 @@ class TransactionalStateTest extends DaprTests
     public function testIsSet()
     {
         $this->register_simple_load();
-        $state = new TestState();
+        $state = $this->container->get(TestState::class);
         $state->begin();
 
         $this->assertFalse(isset($state->complex));
@@ -68,7 +69,7 @@ class TransactionalStateTest extends DaprTests
 
     public function testCommit()
     {
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             '/state/store/bulk',
             200,
             [
@@ -86,7 +87,7 @@ class TransactionalStateTest extends DaprTests
             ]
         );
 
-        $state = new TestState();
+        $state = $this->container->get(TestState::class);
         $state->begin();
         $state->set_something();
         unset($state->with_initial);
@@ -95,7 +96,7 @@ class TransactionalStateTest extends DaprTests
         $state->complex      = new \Fixtures\TestObj();
         $state->complex->foo = "baz";
 
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             '/state/store/transaction',
             201,
             null,
@@ -106,7 +107,7 @@ class TransactionalStateTest extends DaprTests
                         'request'   => [
                             'key'     => 'without_initial',
                             'value'   => 'something',
-                            'etag'    => 1,
+                            'etag'    => '1',
                             'options' => [
                                 'consistency' => 'eventual',
                                 'concurrency' => 'last-write',

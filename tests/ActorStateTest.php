@@ -7,13 +7,6 @@ require_once __DIR__.'/DaprTests.php';
 
 class ActorStateTest extends DaprTests
 {
-    public function get_state(string $type, string $id)
-    {
-        return new class($type, $id) extends ActorState {
-            public string $state = 'initial';
-        };
-    }
-
     public function testSaveEmptyTransaction()
     {
         $state = $this->get_state('type', uniqid());
@@ -21,32 +14,50 @@ class ActorStateTest extends DaprTests
         $this->assertTrue(true); // no exception thrown
     }
 
-    public function testSave() {
-        $state= $this->get_state('actor', 'id');
+    public function get_state(string $type, string $id)
+    {
+        return new class($type, $id) extends ActorState {
+            public string $state = 'initial';
+        };
+    }
+
+    public function testSave()
+    {
+        $state        = $this->get_state('actor', 'id');
         $state->state = 'ok';
 
-        \Dapr\DaprClient::register_post("/actors/actor/id/state", 204, '', [
+        $this->get_client()->register_post(
+            "/actors/actor/id/state",
+            204,
+            '',
             [
-                'operation' => 'upsert',
-                'request' => [
-                    'key' => 'state',
-                    'value' => 'ok'
-                ]
+                [
+                    'operation' => 'upsert',
+                    'request'   => [
+                        'key'   => 'state',
+                        'value' => 'ok',
+                    ],
+                ],
             ]
-        ]);
+        );
 
         $state->save_state();
 
         unset($state->state);
 
-        \Dapr\DaprClient::register_post("/actors/actor/id/state", 204, '', [
+        \Dapr\DaprClient::register_post(
+            "/actors/actor/id/state",
+            204,
+            '',
             [
-                'operation' => 'delete',
-                'request' => [
-                    'key' => 'state',
-                ]
+                [
+                    'operation' => 'delete',
+                    'request'   => [
+                        'key' => 'state',
+                    ],
+                ],
             ]
-        ]);
+        );
 
         $state->save_state();
     }
@@ -73,8 +84,9 @@ class ActorStateTest extends DaprTests
         $this->assertSame('hello world', $state->state);
     }
 
-    public function testLoadingNoValue() {
-        $id = uniqid();
+    public function testLoadingNoValue()
+    {
+        $id    = uniqid();
         $state = $this->get_state('type', $id);
 
         \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::KEY_NOT_FOUND, '');
@@ -83,8 +95,9 @@ class ActorStateTest extends DaprTests
         $this->assertSame('initial', $state->state);
     }
 
-    public function testLoadingNoActor() {
-        $id = uniqid();
+    public function testLoadingNoActor()
+    {
+        $id    = uniqid();
         $state = $this->get_state('nope', $id);
 
         \Dapr\DaprClient::register_get("/actors/nope/$id/state/state", KeyResponse::ACTOR_NOT_FOUND, '');
@@ -94,8 +107,9 @@ class ActorStateTest extends DaprTests
         $state->state;
     }
 
-    public function testIsSet() {
-        $id = uniqid();
+    public function testIsSet()
+    {
+        $id    = uniqid();
         $state = $this->get_state('type', $id);
 
         \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, 'test');

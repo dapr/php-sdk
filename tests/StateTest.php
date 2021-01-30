@@ -10,7 +10,7 @@ class StateTest extends DaprTests
 {
     public function testLoadObject()
     {
-        $state  = new \Fixtures\TestState();
+        $state = $this->container->get(\Fixtures\TestState::class);
         $client = $this->get_client();
         $client->register_post(
             '/state/store/bulk?test=meta',
@@ -29,7 +29,7 @@ class StateTest extends DaprTests
         $state_manager->load_object($state, metadata: ['test' => 'meta']);
         $this->assertSame('initial', $state->with_initial);
 
-        $state = new \Fixtures\TestState;
+        $state = $this->container->get(\Fixtures\TestState::class);
         $client->register_post(
             '/state/store/bulk',
             code: 200,
@@ -65,7 +65,7 @@ class StateTest extends DaprTests
 
     public function testSaveObject()
     {
-        $state         = new \Fixtures\TestState();
+        $state = $this->container->get(\Fixtures\TestState::class);
         $client        = $this->get_client();
         $state_manager = $this->container->get(IManageState::class);
         $client->register_post(

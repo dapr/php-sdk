@@ -19,7 +19,7 @@ class StateManager implements IManageState
 {
     use StateHelpers;
 
-    private static \WeakMap $obj_meta;
+    protected static \WeakMap $obj_meta;
 
     public function __construct(
         protected LoggerInterface $logger,

@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__.'/Mocks/DaprClient.php';
+require_once __DIR__.'/../vendor/autoload.php';
 
 use Dapr\Actors\ActorRuntime;
 use Dapr\DaprClient;
@@ -25,24 +26,11 @@ abstract class DaprTests extends TestCase
     {
         global $dapr_container;
         $builder = new \DI\ContainerBuilder();
+        $builder->addDefinitions(__DIR__.'/../src/config.php');
         $builder->addDefinitions(
             [
                 'dapr.log.level'                => \Psr\Log\LogLevel::CRITICAL,
-                'dapr.log.handler'              => [
-                    create(\Monolog\Handler\ErrorLogHandler::class)->constructor(
-                        level: get('dapr.log.level')
-                    ),
-                ],
-                'dapr.log.processor'            => [create(\Monolog\Processor\PsrLogMessageProcessor::class)],
-                \Psr\Log\LoggerInterface::class => create(\Monolog\Logger::class)->constructor(
-                    'DAPRPHP',
-                    get('dapr.log.handler'),
-                    get('dapr.log.processor')
-                ),
-                ISerializer::class              => autowire(Serializer::class),
-                IDeserializer::class            => autowire(Deserializer::class),
                 DaprClient::class         => autowire(TestClient::class),
-                IManageState::class => autowire(StateManager::class)
             ]
         );
         $this->container = $builder->build();

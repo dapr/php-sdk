@@ -2,6 +2,7 @@
 
 namespace Dapr\State\Internal;
 
+use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializer;
 
 /**
@@ -30,6 +31,8 @@ class Transaction
      */
     public bool $is_closed = false;
 
+    public function __construct(private ISerializer $serializer) {}
+
     /**
      * Get the ordered transaction to commit
      *
@@ -44,7 +47,7 @@ class Transaction
             function ($a) {
                 unset($a['order']);
                 if (isset($a['request']['value'])) {
-                    $a['request']['value'] = Serializer::as_array($a['request']['value']);
+                    $a['request']['value'] = $this->serializer->as_array($a['request']['value']);
                 }
 
                 return $a;

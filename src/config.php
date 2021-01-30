@@ -5,6 +5,8 @@ use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializer;
+use Dapr\State\IManageState;
+use Dapr\State\StateManager;
 use Monolog\Handler\ErrorLogHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 use Psr\Log\LoggerInterface;
@@ -29,4 +31,5 @@ return [
     ),
     IDeserializer::class   => autowire(Deserializer::class),
     ISerializer::class     => autowire(Serializer::class),
+    IManageState::class    => autowire(StateManager::class),
 ];
