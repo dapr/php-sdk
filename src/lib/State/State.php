@@ -3,11 +3,12 @@
 namespace Dapr\State;
 
 use Dapr\DaprClient;
-use Dapr\Deserialization\Attributes\Union;
-use Dapr\Deserialization\Deserializer;
-use Dapr\Runtime;
+use Dapr\Deserialization\IDeserializer;
+use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializer;
+use Dapr\State\Attributes\StateStore;
 use Dapr\State\Internal\StateHelpers;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionProperty;
 
@@ -19,45 +20,56 @@ use ReflectionProperty;
 final class State
 {
     use StateHelpers;
+
     private static \WeakMap $data;
 
-    public static function save_state(object $obj, ?array $metadata = null): void
-    {
-        Runtime::$logger?->debug('Saving state');
-        $map = self::$data ?? new \WeakMap();
+    public static function save_state(
+        object $obj,
+        ?array $metadata = null
+    ): void {
+        $logger?->debug('Saving state');
+        $map        = self::$data ?? new \WeakMap();
         $reflection = new ReflectionClass($obj);
-        $store = self::get_description($reflection);
-        $keys = $map[$obj] ?? [];
-        $request = [];
-        foreach($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
-            $key = $property->name;
+        $store      = self::get_description($reflection);
+        $keys       = $map[$obj] ?? [];
+        $request    = [];
+        foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            $key  = $property->name;
             $item = [
-                'key' => $key,
+                'key'   => $key,
                 'value' => Serializer::as_array($obj->$key),
             ];
 
-            if(isset($keys[$key]['etag'])) {
-                $item['etag'] = $keys[$key]['etag'];
+            if (isset($keys[$key]['etag'])) {
+                $item['etag']    = $keys[$key]['etag'];
                 $item['options'] = [
                     'consistency' => (new $store->consistency)->get_consistency(),
                     'concurrency' => (new $store->consistency)->get_concurrency(),
                 ];
             }
 
-            if(isset($metadata)) $item['metadata'] = $metadata;
+            if (isset($metadata)) {
+                $item['metadata'] = $metadata;
+            }
             $request[] = $item;
         }
 
         DaprClient::post(DaprClient::get_api("/state/{$store->name}"), $request);
     }
 
-    public static function get_etag(object $obj, string $key) {
+    public static function get_etag(object $obj, string $key)
+    {
         return ((self::$data[$obj] ?? [])[$key] ?? [])['etag'] ?? null;
     }
 
+
+
     public static function load_state(object $obj, int $parallelism = 10, ?array $metadata = null): void
     {
-        Runtime::$logger?->debug('Loading state');
+        global $dapr_container;
+        $logger       = $dapr_container->get(LoggerInterface::class);
+        $deserializer = $dapr_container->get(IDeserializer::class);
+        $logger?->debug('Loading state');
         $map        = self::$data ?? new \WeakMap();
         $reflection = new ReflectionClass($obj);
         $store      = self::get_description($reflection);
@@ -77,8 +89,11 @@ final class State
 
         foreach ($result->data as $value) {
             $key = $value['key'];
-            if(isset($value['data'])) {
-                $value['data'] = Deserializer::detect_from_parameter($reflection->getProperty($value['key']), $value['data']);
+            if (isset($value['data'])) {
+                $value['data'] = $deserializer->detect_from_property(
+                    $reflection->getProperty($value['key']),
+                    $value['data']
+                );
             }
             if (isset($value['data']) && $value['data'] !== null) {
                 $obj->$key          = $value['data'];

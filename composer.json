@@ -16,7 +16,7 @@
     "ext-curl": "*",
     "psr/log": "^1.1",
     "nette/php-generator": "^3.5",
-    "php-di/php-di": "^6.3"
+    "php-di/php-di": "^6.3",
     "monolog/monolog": "^2.2"
   },
   "require-dev": {
@@ -28,13 +28,16 @@
     "psr-4": {
       "Dapr\\": "src/lib",
       "Dapr\\TestActors\\": "test/actors"
-    }
+    },
+    "files": [
+      "src/bootstrap.php"
+    ]
   },
   "scripts": {
     "test": "./vendor/bin/phpunit --testdox tests --coverage-clover coverage.xml tests --whitelist src",
     "start": [
       "PHP_CLI_SERVER_WORKERS=100 dapr run --components-path components -a dev -p 9502 -- php -S 0.0.0.0:9502 -t src"
-      ],
+    ],
     "dapr-init": [
       "dapr init --runtime-version 1.0.0-rc.3"
     ],

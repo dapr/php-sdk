@@ -4,6 +4,7 @@ require_once __DIR__.'/Fixtures/TestObj.php';
 require_once __DIR__.'/Fixtures/Serialization.php';
 
 use Dapr\Serialization\Attributes\AlwaysObject;
+use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
 use Dapr\Serialization\Serializer;
 use Dapr\Serialization\Serializers\ISerialize;
@@ -124,7 +125,7 @@ JSON
                 [
                     ASpecialType::class => new class implements ISerialize {
 
-                        public static function serialize(mixed $value): mixed
+                        public function serialize(mixed $value, ISerializer $serializer): mixed
                         {
                             return serialize_ASpecialType($value);
                         }

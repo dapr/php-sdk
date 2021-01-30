@@ -2,21 +2,24 @@
 
 namespace Dapr;
 
-use Dapr\Deserialization\Deserializer;
+use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
+use Psr\Log\LoggerInterface;
 
 /**
  * Helper functions for accessing the dapr api.
  * @package Dapr
  */
-abstract class DaprClient
+class DaprClient
 {
-
     private static array $trace;
     private static bool $added_trace = false;
-
     // temp hack to allow custom headers
-    public static array $extra_headers = [];
+    public array $extra_headers = [];
+
+    public function __construct(protected LoggerInterface $logger, protected IDeserializer $deserializer)
+    {
+    }
 
     /**
      * Composes an URI for accessing the API.
@@ -26,7 +29,7 @@ abstract class DaprClient
      *
      * @return string The API URI
      */
-    public static function get_api(string $path, ?array $params = null): string
+    public function get_api_path(string $path, ?array $params = null): string
     {
         $params = $params ? http_build_query($params) : '';
         $params = $params ? '?'.$params : '';
@@ -39,7 +42,7 @@ abstract class DaprClient
      *
      * @return string The base uri
      */
-    public static function get_api_base(): string
+    protected function get_api_base(): string
     {
         $port = getenv('DAPR_HTTP_PORT') ?: 3500;
 
@@ -54,9 +57,9 @@ abstract class DaprClient
      * @return DaprResponse The parsed response.
      * @throws DaprException
      */
-    public static function get(string $url): DaprResponse
+    public function get(string $url): DaprResponse
     {
-        Runtime::$logger?->debug('Calling GET {url}', ['url' => $url]);
+        $this->logger->debug('Calling GET {url}', ['url' => $url]);
         $curl = curl_init($url);
         curl_setopt_array(
             $curl,
@@ -70,23 +73,28 @@ abstract class DaprClient
         $return       = new DaprResponse();
         $return->data = json_decode($result, true);
         $return->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $return->etag = array_reduce(
+            curl_getinfo($curl, CURLINFO_HEADER_OUT),
+            fn($carry, $item) => str_starts_with($item, 'etag:') ? str_replace('etag: ', '', $item) : $carry,
+            null
+        );
         self::detect_trace_from_response($curl);
 
-        Runtime::$logger?->debug('Got response: {response}', ['response' => $return]);
+        $this->logger->debug('Got response: {response}', ['response' => $return]);
 
-        if (Deserializer::is_exception($return->data)) {
-            throw Deserializer::get_exception($return->data);
+        if ($this->deserializer->is_exception($return->data)) {
+            throw $this->deserializer->get_exception($return->data);
         }
 
         return $return;
     }
 
-    private static function get_headers(): array
+    private function get_headers(): array
     {
-        return array_merge(["Accept: application/json"], self::detect_trace(), self::$extra_headers);
+        return array_merge(["Accept: application/json"], self::detect_trace(), $this->extra_headers);
     }
 
-    private static function detect_trace()
+    private function detect_trace()
     {
         if (isset(self::$trace)) {
             return self::$trace;
@@ -106,8 +114,12 @@ abstract class DaprClient
     /**
      * @param \CurlHandle|false $curl
      */
-    private static function detect_trace_from_response(mixed $curl): void
+    private function detect_trace_from_response(mixed $curl): void
     {
+        if (isset(self::$trace)) {
+            return;
+        }
+
         if ($curl === false) {
             return;
         }
@@ -137,9 +149,9 @@ abstract class DaprClient
      * @return DaprResponse The parsed response.
      * @throws DaprException
      */
-    public static function post(string $url, mixed $data): DaprResponse
+    public function post(string $url, mixed $data): DaprResponse
     {
-        Runtime::$logger?->debug('Calling POST {url} with data: {data}', ['url' => $url, 'data' => $data]);
+        $this->logger->debug('Calling POST {url} with data: {data}', ['url' => $url, 'data' => $data]);
         $curl = curl_init($url);
         curl_setopt_array(
             $curl,
@@ -156,18 +168,18 @@ abstract class DaprClient
         $response->data = json_decode($response->data, true);
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
-        Runtime::$logger?->debug('Got response: {r}', ['r' => $response]);
+        $this->logger->debug('Got response: {r}', ['r' => $response]);
 
-        if (Deserializer::is_exception($response->data)) {
-            throw Deserializer::get_exception($response->data);
+        if ($this->deserializer->is_exception($response->data)) {
+            throw $this->deserializer->get_exception($response->data);
         }
 
         return $response;
     }
 
-    private static function as_json(array $headers): array
+    private function as_json(array $headers): array
     {
-        return array_merge($headers, ["Content-type: application/json"], self::$extra_headers);
+        return array_merge($headers, ["Content-type: application/json"], $this->extra_headers);
     }
 
     /**
@@ -178,9 +190,9 @@ abstract class DaprClient
      * @return DaprResponse The response
      * @throws DaprException
      */
-    public static function delete(string $url): DaprResponse
+    public function delete(string $url): DaprResponse
     {
-        Runtime::$logger?->debug('Calling DELETE {url}', ['url' => $url]);
+        $this->logger->debug('Calling DELETE {url}', ['url' => $url]);
         $curl = curl_init($url);
         curl_setopt_array(
             $curl,
@@ -196,10 +208,10 @@ abstract class DaprClient
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         self::detect_trace_from_response($curl);
 
-        Runtime::$logger?->debug('Got response: {r}', ['r' => $response]);
+        $this->logger->debug('Got response: {r}', ['r' => $response]);
 
-        if (Deserializer::is_exception($response->data)) {
-            throw Deserializer::get_exception($response->data);
+        if ($this->deserializer->is_exception($response->data)) {
+            throw $this->deserializer->get_exception($response->data);
         }
 
         return $response;

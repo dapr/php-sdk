@@ -2,9 +2,11 @@
 
 namespace Dapr\Serialization\Serializers;
 
+use Dapr\Serialization\ISerializer;
+
 class DateTime implements ISerialize
 {
-    public static function serialize(mixed $value): mixed
+    public function serialize(mixed $value, ISerializer $serializer): mixed
     {
         if ($value instanceof \DateTime) {
             return $value->format(DATE_W3C);

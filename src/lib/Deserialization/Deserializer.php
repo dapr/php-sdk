@@ -11,6 +11,7 @@ use Dapr\exceptions\DaprException;
 use Exception;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
@@ -21,7 +22,7 @@ use ReflectionType;
 
 class Deserializer implements IDeserializer
 {
-    public function __construct(protected DeserializationConfig $config, protected DaprLogger $logger)
+    public function __construct(protected DeserializationConfig $config, protected LoggerInterface $logger)
     {
     }
 

@@ -2,14 +2,14 @@
 
 namespace Dapr\Serialization;
 
-use Dapr\DaprLogger;
 use Dapr\exceptions\DaprException;
 use Dapr\Serialization\Attributes\AlwaysObject;
 use Dapr\Serialization\Serializers\ISerialize;
+use Psr\Log\LoggerInterface;
 
 class Serializer implements ISerializer
 {
-    public function __construct(protected SerializationConfig $config, protected DaprLogger $logger)
+    public function __construct(protected SerializationConfig $config, protected LoggerInterface $logger)
     {
     }
 
@@ -36,7 +36,7 @@ class Serializer implements ISerializer
 
                 $type_name = get_class($value);
                 if ($serializer = $this->get_serializer($type_name)) {
-                    return $serializer->serialize($value);
+                    return $serializer->serialize($value, $this);
                 }
 
                 $obj = [];
@@ -68,7 +68,7 @@ class Serializer implements ISerializer
                 return $obj;
             default:
                 if ($serializer = $this->get_serializer(gettype($value))) {
-                    return $serializer->serialize($value);
+                    return $serializer->serialize($value, $this);
                 }
 
                 return $value;

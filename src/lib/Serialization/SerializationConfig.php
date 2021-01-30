@@ -5,6 +5,7 @@ namespace Dapr\Serialization;
 use Dapr\Serialization\Serializers\DateInterval;
 use Dapr\Serialization\Serializers\DateTime;
 use Dapr\Serialization\Serializers\ISerialize;
+use Dapr\State\StateItem;
 
 class SerializationConfig
 {
@@ -20,6 +21,9 @@ class SerializationConfig
         }
         if (empty($this->serializers[\DateTime::class])) {
             $this->add(\DateTime::class, new DateTime());
+        }
+        if(empty($this->serializers[StateItem::class])) {
+            $this->add(StateItem::class, new \Dapr\Serialization\Serializers\StateItem());
         }
     }
 
