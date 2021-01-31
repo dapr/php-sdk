@@ -81,7 +81,7 @@ class StateManager implements IManageState
             $key   = $prefix.$property->getName();
             $value = [
                 'key'   => $key,
-                'value' => $this->serializer->as_array($item->{$property->getName()}),
+                'value' => $this->serializer->as_array($item->{$property->getName()} ?? null),
             ];
 
             if (isset($keys[$key]['etag'])) {

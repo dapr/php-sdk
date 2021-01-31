@@ -2,13 +2,15 @@
 
 namespace Dapr\PubSub;
 
+use Dapr\Deserialization\Deserializers\IDeserialize;
+use Dapr\Deserialization\IDeserializer;
 use Dapr\Runtime;
 use DateTime;
 use InvalidArgumentException;
 use JetBrains\PhpStorm\ArrayShape;
 use LogicException;
 
-class CloudEvent
+class CloudEvent implements IDeserialize
 {
     /**
      * Identifies the event. Producers MUST ensure that source + id is unique for each distinct event. If a duplicate
@@ -122,13 +124,17 @@ class CloudEvent
     public static function parse(string $json): CloudEvent
     {
         Runtime::$logger?->debug('Parsing cloud event {json}', ['json' => $json]);
-        $event = new CloudEvent();
-        $raw   = json_decode($json, true);
+        $raw = json_decode($json, true);
 
+        return self::from_array($raw);
+    }
+
+    private static function from_array(array $raw): CloudEvent
+    {
         if ($raw['specversion'] !== '1.0') {
             throw new InvalidArgumentException('Cloud Event must be spec version 1.0');
         }
-
+        $event                    = new CloudEvent();
         $event->spec_version      = $raw['specversion'];
         $event->id                = (string)$raw['id'];
         $event->source            = (string)$raw['source'];
@@ -145,6 +151,11 @@ class CloudEvent
         $event->data = $raw['data'] ?? null;
 
         return $event;
+    }
+
+    public static function deserialize(mixed $raw, IDeserializer $deserializer): mixed
+    {
+        return self::from_array($raw);
     }
 
     /**

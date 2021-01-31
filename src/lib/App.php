@@ -75,7 +75,7 @@ class App
             function ($err_no, $err_str, $err_file, $err_line, $err_context = null) {
                 http_response_code(500);
                 header('Content-Type: application/json');
-                echo 'hi'.json_encode(
+                echo json_encode(
                     [
                         'errorCode' => 'Exception',
                         'message'   => (E_WARNING & $err_no ? 'WARNING' : (E_NOTICE & $err_no ? 'NOTICE' : (E_ERROR & $err_no ? 'ERROR' : 'OTHER'))).': '.$err_str,

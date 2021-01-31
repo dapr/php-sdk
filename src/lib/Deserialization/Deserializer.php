@@ -103,7 +103,7 @@ class Deserializer implements IDeserializer
             $reflection = new ReflectionClass($as);
             $obj        = $reflection->newInstanceWithoutConstructor();
             if($obj instanceof IDeserialize) {
-                return $obj->deserialize($obj, $this);
+                return $obj->deserialize($value, $this);
             }
         } catch (ReflectionException $exception) {
             $this->logger->warning(
