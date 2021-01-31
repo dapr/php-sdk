@@ -2,6 +2,8 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Deserialization\Deserializers\IDeserialize;
+use Dapr\Deserialization\IDeserializer;
 use Dapr\Formats;
 use DateInterval;
 use JetBrains\PhpStorm\ArrayShape;
@@ -13,13 +15,13 @@ class Reminder
      *
      * @param string $name The name of the reminder
      * @param DateInterval $due_time The due time of the reminder
-     * @param array|null $data The data to pass to the reminder
+     * @param mixed $data The data to pass to the reminder
      * @param DateInterval|null $period The period of the reminder
      */
     public function __construct(
         public string $name,
         public DateInterval $due_time,
-        public ?array $data,
+        public mixed $data,
         public ?DateInterval $period = null
     ) {
     }

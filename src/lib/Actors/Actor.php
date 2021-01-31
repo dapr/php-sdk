@@ -15,7 +15,7 @@ abstract class Actor implements IActor
         return $this->id;
     }
 
-    public function remind(string $name, $data): void
+    public function remind(string $name, Reminder $data): void
     {
     }
 

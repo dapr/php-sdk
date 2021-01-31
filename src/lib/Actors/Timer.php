@@ -13,7 +13,7 @@ class Timer
         public DateInterval $due_time,
         public DateInterval $period,
         public string $callback,
-        public ?array $data = null
+        public mixed $data = null
     ) {
     }
 

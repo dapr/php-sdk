@@ -8,5 +8,5 @@ namespace Dapr;
  */
 class DaprResponse
 {
-    public function __construct(public int $code = 0, public array $data = [], public string|null $etag = null) {}
+    public function __construct(public int $code = 0, public mixed $data = [], public string|null $etag = null) {}
 }

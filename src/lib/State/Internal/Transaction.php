@@ -2,6 +2,7 @@
 
 namespace Dapr\State\Internal;
 
+use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
 
 /**
@@ -27,7 +28,7 @@ class Transaction
      */
     private int $counter = 0;
 
-    public function __construct(private ISerializer $serializer)
+    public function __construct(private ISerializer $serializer, private IDeserializer $deserializer)
     {
     }
 

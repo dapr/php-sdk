@@ -2,13 +2,15 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Serialization\ISerializer;
+use Dapr\Serialization\Serializers\ISerialize;
 use DateInterval;
 
 /**
  * Class ActorConfig
  * @package Dapr\Actors
  */
-class ActorConfig
+class ActorConfig implements ISerialize
 {
     /**
      * ActorConfig constructor.
@@ -53,7 +55,7 @@ class ActorConfig
      */
     public function get_idle_timeout(): DateInterval|null
     {
-        return $this->idle_timeout;
+        return $this->idle_timeout ?? null;
     }
 
     /**
@@ -61,7 +63,7 @@ class ActorConfig
      */
     public function get_scan_interval(): DateInterval|null
     {
-        return $this->scan_interval;
+        return $this->scan_interval ?? null;
     }
 
     /**
@@ -69,7 +71,7 @@ class ActorConfig
      */
     public function get_drain_timeout(): DateInterval|null
     {
-        return $this->drain_timeout;
+        return $this->drain_timeout ?? null;
     }
 
     /**
@@ -77,6 +79,26 @@ class ActorConfig
      */
     public function drain_enabled(): bool|null
     {
-        return $this->drain_enabled;
+        return $this->drain_enabled ?? null;
+    }
+
+    public function serialize(mixed $value, ISerializer $serializer): array
+    {
+        $return = [
+            'entities' => $value->get_supported_actors(),
+        ];
+        if($a = $value->get_idle_timeout()) {
+            $return['actorIdleTimeout'] = $serializer->as_array($a);
+        }
+        if($a = $value->get_scan_interval()) {
+            $return['actorScanInterval'] = $serializer->as_array($a);
+        }
+        if($a = $value->get_drain_timeout()) {
+            $return['drainOngoingCallTimeout'] = $serializer->as_array($a);
+        }
+        if($a = $value->drain_enabled()) {
+            $return['drainRebalancedActors'] = $a;
+        }
+        return $return;
     }
 }

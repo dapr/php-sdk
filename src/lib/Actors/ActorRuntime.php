@@ -33,7 +33,7 @@ class ActorRuntime
     {
         $reflection = new ReflectionClass($actor);
         $method     = $reflection->getMethod($method);
-        if (empty($args)) {
+        if (empty($arg)) {
             return $method->invoke($actor);
         }
 
@@ -109,10 +109,10 @@ class ActorRuntime
                 if (class_exists($type_name)) {
                     $reflected_type = new ReflectionClass($type_name);
                     if ($reflected_type->isSubclassOf(ActorState::class)) {
-                        $states[] = $this->container->make(
-                            $type_name,
-                            ['_internal_dapr_type' => $dapr_type, '_internal_actor_id' => $id]
-                        );
+                        $state = $this->container->make($type_name);
+                        $this->begin_transaction($state, $reflected_type, $dapr_type, $id);
+
+                        $states[$parameter->name] = $state;
                         Runtime::$logger?->debug('Found state {t}', ['t' => $type_name]);
                     }
                 }
@@ -122,9 +122,33 @@ class ActorRuntime
         return $states;
     }
 
+    protected function begin_transaction(
+        ActorState $state,
+        ReflectionClass $reflected_type,
+        string $dapr_type,
+        string $actor_id,
+        ?ReflectionClass $original = null
+    ) {
+        if ($reflected_type->name !== ActorState::class) {
+            $this->begin_transaction(
+                $state,
+                $reflected_type->getParentClass(),
+                $dapr_type,
+                $actor_id,
+                $original ?? $reflected_type
+            );
+
+            return;
+        }
+        $begin_transaction = $reflected_type->getMethod('begin_transaction');
+        $begin_transaction->setAccessible(true);
+        $begin_transaction->invoke($state, $dapr_type, $actor_id);
+    }
+
     protected function get_actor(ReflectionClass $reflection, string $dapr_type, string $id, array $states): IActor
     {
-        $actor              = $this->container->make($reflection->getName(), [$id, ...$states]);
+        $states['id']       = $id;
+        $actor              = $this->container->make($reflection->getName(), $states);
         $activation_tracker = hash('sha256', $dapr_type.$id);
         $activation_tracker = rtrim(
                                   sys_get_temp_dir(),

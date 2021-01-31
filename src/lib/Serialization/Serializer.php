@@ -41,6 +41,9 @@ class Serializer implements ISerializer
                 if ($serializer = $this->get_serializer($type_name)) {
                     return $serializer->serialize($value, $this);
                 }
+                if($value instanceof ISerialize) {
+                    return $value->serialize($value, $this);
+                }
 
                 $obj = [];
                 if (class_exists($type_name)) {

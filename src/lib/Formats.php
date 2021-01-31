@@ -66,6 +66,7 @@ abstract class Formats
                 'us', 'µs' => ((float)$value) * self::MICROSECOND_TO_SECOND,
                 'ms' => ((float)$value) * self::MILLISECOND_TO_SECOND,
                 's' => (float)$value,
+                default => 0,
             };
             $interval[] = match ($time) {
                 'm' => $value.'M',

@@ -1,14 +1,14 @@
 <?php
 
 require_once __DIR__.'/../vendor/autoload.php';
+require_once __DIR__.'/../tests/Fixtures/SimpleActor.php';
 
 define('STORE', 'statestore');
 
-use Dapr\Actors\Actor;
 use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorRuntime;
-use Dapr\Actors\ActorState;
-use Dapr\Actors\Attributes\DaprType;
+use Dapr\Actors\Generators\ProxyFactory;
+use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
 use Dapr\Binding;
@@ -18,114 +18,112 @@ use Dapr\exceptions\SaveStateFailure;
 use Dapr\exceptions\StateAlreadyCommitted;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Publish;
-use Dapr\PubSub\Subscribe;
 use Dapr\Runtime;
 use Dapr\State\Attributes\StateStore;
 use Dapr\State\TransactionalState;
-use Monolog\Handler\ErrorLogHandler;
-use Monolog\Logger;
+use Psr\Http\Message\ResponseInterface;
 
-$logger  = new Logger('dapr', '', '', '');
-$handler = new ErrorLogHandler(level: Logger::WARNING);
-$logger->pushHandler($handler);
-$logger->pushProcessor(new \Monolog\Processor\PsrLogMessageProcessor());
-$logger->pushProcessor(new \Monolog\Processor\IntrospectionProcessor());
-Runtime::set_logger($logger);
+use function DI\autowire;
 
-function testsub(): void
-{
-    touch('/tmp/sub-received');
-    file_put_contents('/tmp/sub-received', file_get_contents('php://input'));
-    echo json_encode(
-        [
+$app = \Dapr\App::create(
+    configure: fn(\DI\ContainerBuilder $builder) => $builder->addDefinitions(
+    [
+        \Dapr\Actors\ActorConfig::class   => new class extends \Dapr\Actors\ActorConfig {
+            public function __construct()
+            {
+                $this->actor_name_to_type = ['SimpleActor' => SimpleActor::class];
+            }
+        },
+        \Dapr\PubSub\Subscriptions::class => new class extends \Dapr\PubSub\Subscriptions {
+            public function __construct()
+            {
+                $this->subscriptions = [new \Dapr\PubSub\Subscription('pubsub', 'test', '/testsub')];
+            }
+        },
+        ProxyFactory::class               => autowire(ProxyFactory::class)->constructorParameter(
+            'mode',
+            ProxyFactory::GENERATED
+        ),
+    ]
+)
+);
+
+$app->get(
+    '/test/actors',
+    function (ActorProxy $actorProxy) {
+        $id = uniqid(prefix: 'actor_');
+
+        /**
+         * @var ISimpleActor|IActor $actor
+         */
+        $actor = $actorProxy->get(ISimpleActor::class, $id);
+        $body  = [];
+
+        $body = assert_equals($body, 0, $actor->get_count(), 'Empty actor should have no data');
+        $actor->increment();
+        $body = assert_equals($body, 1, $actor->get_count(), 'Actor should have data');
+
+        $reminder = new Reminder(
+            name: 'increment',
+            due_time: new DateInterval('PT1S'),
+            data: ['amount' => 2],
+            period: new DateInterval('PT10M')
+        );
+        $actor->create_reminder(reminder: $reminder);
+        sleep(2);
+        $body          = assert_equals($body, 3, $actor->get_count(), 'Reminder should increment');
+        $read_reminder = $actor->get_reminder('increment');
+        $body          = assert_equals(
+            $body,
+            $reminder->due_time->format(\Dapr\Formats::FROM_INTERVAL),
+            $read_reminder->due_time->format(\Dapr\Formats::FROM_INTERVAL),
+            'time formats are delivered ok'
+        );
+
+        $timer = new Timer(
+            name: 'increment',
+            due_time: new DateInterval('PT1S'),
+            period: new DateInterval('P2D'),
+            callback: 'increment',
+            data: 2
+        );
+        $actor->create_timer(timer: $timer);
+        sleep(2);
+        $body = assert_equals($body, 5, $actor->get_count(), 'Timer should increment');
+
+        $actor->delete_timer('increment');
+        $actor->delete_reminder('increment');
+        $actor->delete_reminder('nope');
+        $actor->delete_timer('nope');
+
+        $object      = new SimpleObject();
+        $object->bar = ['hello', 'world'];
+        $object->foo = "hello world";
+        $actor->set_object($object);
+        $saved_object = $actor->get_object();
+        $body         = assert_equals($body, $object->bar, $saved_object->bar, "[object] saved array should match");
+        $body         = assert_equals($body, $object->foo, $saved_object->foo, "[object] saved string should match");
+
+        $body = assert_equals($body, true, $actor->a_function(), 'actor can return a simple value');
+
+        return $body;
+    }
+);
+//$app->get('/cron', fn() => 'hello world');
+$app->post(
+    '/testsub',
+    function (#[\Dapr\Attributes\FromBody] CloudEvent $event, \Psr\Http\Message\RequestInterface $request) {
+        touch('/tmp/sub-received');
+        file_put_contents('/tmp/sub-received', $request->getBody()->getContents());
+
+        return [
             'status' => 'SUCCESS',
-        ]
-    );
-}
-
-#[DaprType('SimpleActor')]
-interface ISimpleActor
-{
-    function increment($amount = 1);
-
-    function get_count(): int;
-
-    function set_object(SimpleObject $object): void;
-
-    function get_object(): SimpleObject;
-
-    function a_function(): bool;
-}
-
-class SimpleObject
-{
-    public string $foo = "";
-    public array $bar = [];
-}
-
-class SimpleActorState extends ActorState
-{
-    /**
-     * @property int
-     */
-    public int $count = 0;
-
-    public SimpleObject $complex_object;
-}
-
-#[DaprType('SimpleActor')]
-class SimpleActor extends Actor
-{
-    /**
-     * SimpleActor constructor.
-     *
-     * @param string $id
-     * @param SimpleActorState $state
-     */
-    public function __construct(protected string $id, private SimpleActorState $state)
-    {
-        parent::__construct($id);
+        ];
     }
+);
 
-    public function remind(string $name, $data): void
-    {
-        switch ($name) {
-            case 'increment':
-                $this->increment($data['amount'] ?? 1);
-                break;
-        }
-    }
-
-    /**
-     * @param int $amount
-     *
-     * @return void
-     */
-    public function increment($amount = 1)
-    {
-        $this->state->count += $amount;
-    }
-
-    public function get_count(): int
-    {
-        return $this->state->count ?? 0;
-    }
-
-    function set_object(SimpleObject $object): void
-    {
-        $this->state->complex_object = $object;
-    }
-
-    function get_object(): SimpleObject
-    {
-        return $this->state->complex_object;
-    }
-
-    function a_function(): bool
-    {
-        return true;
-    }
-}
+$app->start();
+die();
 
 #[StateStore(STORE, StrongFirstWrite::class)]
 class SimpleState
@@ -194,26 +192,26 @@ if (isset($result['body'])) {
 }
 die();
 
-function assert_equals($expected, $actual, $message = null): void
+function assert_equals(array $body, $expected, $actual, $message = null): array
 {
-    echo $message ? "$message: " : '';
     if ($actual === $expected) {
-        echo "✔\n";
+        $body[$message ? "$message: " : ''] = "✔";
     } else {
-        echo "❌\n";
-        throw new Exception("Expected $expected, but got $actual.\n");
+        $body[$message ? "$message: " : ''] = "❌";
     }
+
+    return $body;
 }
 
-function assert_not_equals($expected, $actual, $message = null): void
+function assert_not_equals(array $body, $expected, $actual, $message = null): array
 {
-    echo $message ? "$message: " : '';
     if ($actual !== $expected) {
-        echo "✔\n";
+        $body[$message ? "$message: " : ''] = "✔";
     } else {
-        echo "❌\n";
-        throw new Exception("Expected $actual to not equal $expected.\n");
+        $body[$message ? "$message: " : ''] = "❌";
     }
+
+    return $body;
 }
 
 function assert_throws($exception, $message, $callback): void
@@ -228,7 +226,7 @@ function assert_throws($exception, $message, $callback): void
     }
 }
 
-function state_test(): void
+function test_state(): void
 {
     $state = new SimpleState();
     State::save_state($state);
@@ -332,7 +330,7 @@ function multiple_transactions(): void
     assert_equals(2, $one->counter, 'first-write transaction failed');
 }
 
-function test_actor(): void
+function test_actor(): array
 {
     $id = uniqid(prefix: 'actor_');
 
@@ -340,10 +338,11 @@ function test_actor(): void
      * @var ISimpleActor $actor
      */
     $actor = ActorProxy::get(interface: ISimpleActor::class, id: $id);
+    $body  = [];
 
-    assert_equals(0, $actor->get_count(), 'Empty actor should have no data');
+    $body = assert_equals($body, 0, $actor->get_count(), 'Empty actor should have no data');
     $actor->increment();
-    assert_equals(1, $actor->get_count(), 'Actor should have data');
+    $body = assert_equals($body, 1, $actor->get_count(), 'Actor should have data');
 
     $reminder = new Reminder(
         name: 'increment',
@@ -353,9 +352,10 @@ function test_actor(): void
     );
     $actor->create_reminder(reminder: $reminder);
     sleep(2);
-    assert_equals(3, $actor->get_count(), 'Reminder should increment');
+    $body          = assert_equals($body, 3, $actor->get_count(), 'Reminder should increment');
     $read_reminder = $actor->get_reminder('increment');
-    assert_equals(
+    $body          = assert_equals(
+        $body,
         $reminder->due_time->format(\Dapr\Formats::FROM_INTERVAL),
         $read_reminder->due_time->format(\Dapr\Formats::FROM_INTERVAL),
         'time formats are delivered ok'
@@ -370,7 +370,7 @@ function test_actor(): void
     );
     $actor->create_timer(timer: $timer);
     sleep(2);
-    assert_equals(5, $actor->get_count(), 'Timer should increment');
+    $body = assert_equals($body, 5, $actor->get_count(), 'Timer should increment');
 
     $actor->delete_timer('increment');
     $actor->delete_reminder('increment');
@@ -382,10 +382,12 @@ function test_actor(): void
     $object->foo = "hello world";
     $actor->set_object($object);
     $saved_object = $actor->get_object();
-    assert_equals($object->bar, $saved_object->bar, "[object] saved array should match");
-    assert_equals($object->foo, $saved_object->foo, "[object] saved string should match");
+    $body         = assert_equals($body, $object->bar, $saved_object->bar, "[object] saved array should match");
+    $body         = assert_equals($body, $object->foo, $saved_object->foo, "[object] saved string should match");
 
-    assert_equals(true, $actor->a_function(), 'actor can return a simple value');
+    $body = assert_equals($body, true, $actor->a_function(), 'actor can return a simple value');
+
+    return $body;
 }
 
 function test_pubsub(): void
@@ -495,8 +497,9 @@ function do_tests()
     return $result;
 }
 
-function exec_tests()
+function exec_tests(ResponseInterface $response)
 {
+    $response = $response->withAddedHeader('Content-Type', 'text/html; charset=UTF-8');
     header('Content-Type: text/html; charset=UTF-8');
     $tests = [
         'state_test'                => [

@@ -88,7 +88,7 @@ class Deserializer implements IDeserializer
     public function from_value(string $as, mixed $value): mixed
     {
         if ($deserializer = $this->get_deserializer($as)) {
-            return $deserializer->deserialize($value);
+            return $deserializer->deserialize($value, $this);
         }
 
         if ( ! class_exists($as)) {
@@ -102,6 +102,9 @@ class Deserializer implements IDeserializer
         try {
             $reflection = new ReflectionClass($as);
             $obj        = $reflection->newInstanceWithoutConstructor();
+            if($obj instanceof IDeserialize) {
+                return $obj->deserialize($obj, $this);
+            }
         } catch (ReflectionException $exception) {
             $this->logger->warning(
                 'Failure trying to deserialize to {as}: {exception}',

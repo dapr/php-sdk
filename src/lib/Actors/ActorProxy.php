@@ -3,7 +3,7 @@
 namespace Dapr\Actors;
 
 use Dapr\Actors\Attributes\DaprType;
-use Dapr\Actors\Generators\ProxyModes;
+use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Runtime;
 use LogicException;
 use ReflectionClass;
@@ -13,9 +13,9 @@ use ReflectionException;
  * Class ActorProxy
  * @package Dapr
  */
-abstract class ActorProxy
+class ActorProxy
 {
-    public static int $mode = ProxyModes::GENERATED;
+    public function __construct(protected ProxyFactory $proxyFactory) {}
 
     /**
      * Returns an actor proxy
@@ -27,7 +27,7 @@ abstract class ActorProxy
      * @return object
      * @throws ReflectionException
      */
-    public static function get(string $interface, mixed $id, string|null $override_type = null): object
+    public function get(string $interface, mixed $id, string|null $override_type = null): object
     {
         Runtime::$logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
 
@@ -41,7 +41,7 @@ abstract class ActorProxy
             throw new LogicException("$interface must have a DaprType attribute");
         }
 
-        $generator = ProxyModes::get_generator(self::$mode, $interface, $type);
+        $generator = $this->proxyFactory->get_generator($interface, $type);
 
         return $generator->get_proxy($id);
     }

@@ -17,9 +17,15 @@ class DaprClient
     private static bool $added_trace = false;
     // temp hack to allow custom headers
     public array $extra_headers = [];
+    private static DaprClient $client;
+
+    public static function get_client() {
+        return self::$client;
+    }
 
     public function __construct(protected LoggerInterface $logger, protected IDeserializer $deserializer)
     {
+        self::$client = $this;
     }
 
     /**
@@ -75,7 +81,7 @@ class DaprClient
         $return->data = json_decode($result, true);
         $return->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $return->etag = array_reduce(
-            curl_getinfo($curl, CURLINFO_HEADER_OUT),
+            explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT)),
             fn($carry, $item) => str_starts_with($item, 'etag:') ? str_replace('etag: ', '', $item) : $carry
         );
         self::detect_trace_from_response($curl);
