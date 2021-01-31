@@ -8,18 +8,5 @@ namespace Dapr;
  */
 class DaprResponse
 {
-    /**
-     * @var int
-     */
-    public int $code;
-
-    /**
-     * @var array
-     */
-    public array $data;
-
-    /**
-     * @var string
-     */
-    public string $etag;
+    public function __construct(public int $code = 0, public array $data = [], public string|null $etag = null) {}
 }

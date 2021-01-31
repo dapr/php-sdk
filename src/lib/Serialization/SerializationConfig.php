@@ -2,6 +2,7 @@
 
 namespace Dapr\Serialization;
 
+use Dapr\Actors\ActorConfig;
 use Dapr\Serialization\Serializers\DateInterval;
 use Dapr\Serialization\Serializers\DateTime;
 use Dapr\Serialization\Serializers\ISerialize;
@@ -24,6 +25,9 @@ class SerializationConfig
         }
         if (empty($this->serializers[StateItem::class])) {
             $this->add(StateItem::class, new Serializers\StateItem());
+        }
+        if(empty($this->serializers[ActorConfig::class])) {
+            $this->add(ActorConfig::class, new Serializers\ActorConfig());
         }
     }
 

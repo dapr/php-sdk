@@ -9,6 +9,7 @@ use Dapr\State\StateManager;
 use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
