@@ -9,7 +9,6 @@ use Dapr\Deserialization\Deserializers\IDeserialize;
 use Dapr\exceptions\DaprException;
 use Exception;
 use JetBrains\PhpStorm\Pure;
-use LogicException;
 use Nette\PhpGenerator\Method;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -64,10 +63,10 @@ class Deserializer implements IDeserializer
         return $this->from_value($type, $data);
     }
 
-    private function is_array_of(ReflectionParameter|ReflectionMethod|ReflectionProperty|Method $reflection): string|false
-    {
+    private function is_array_of(ReflectionParameter|ReflectionMethod|ReflectionProperty|Method $reflection
+    ): string|false {
         $attr = $reflection->getAttributes(ArrayOf::class);
-        if($reflection instanceof Method) {
+        if ($reflection instanceof Method) {
             return isset($attr[0]) ? $attr[0]->getArguments()[0] : false;
         }
 
@@ -102,7 +101,7 @@ class Deserializer implements IDeserializer
         try {
             $reflection = new ReflectionClass($as);
             $obj        = $reflection->newInstanceWithoutConstructor();
-            if($obj instanceof IDeserialize) {
+            if ($obj instanceof IDeserialize) {
                 return $obj->deserialize($value, $this);
             }
         } catch (ReflectionException $exception) {
@@ -162,7 +161,7 @@ class Deserializer implements IDeserializer
     {
         $attr = $reflection->getAttributes(AsClass::class);
 
-        if($reflection instanceof Method) {
+        if ($reflection instanceof Method) {
             return isset($attr[0]) ? $attr[0]->getArguments()[0] : false;
         }
 
@@ -176,7 +175,6 @@ class Deserializer implements IDeserializer
         $attr = $reflection->getAttributes(Union::class);
 
         if (isset($attr[0])) {
-
             $discriminator = $attr[0]->newInstance()->discriminator;
 
             return $discriminator($data);

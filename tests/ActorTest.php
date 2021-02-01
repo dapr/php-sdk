@@ -123,10 +123,11 @@ class ActorTest extends DaprTests
         $this->assertTrue($result);
     }
 
-    #[ArrayShape(['Dynamic Mode'   => "array",
-                  'Generated Mode' => "array",
-                  'Cached Mode'    => "array",
-                  'Only Existing'  => "array"
+    #[ArrayShape([
+        'Dynamic Mode'   => "array",
+        'Generated Mode' => "array",
+        'Cached Mode'    => "array",
+        'Only Existing'  => "array",
     ])] public function getModes(): array
     {
         return [
@@ -298,6 +299,23 @@ class ActorTest extends DaprTests
         $proxy = $this->get_actor_generator($mode, ITestActor::class, 'TestActor')->get_proxy($id);
         $this->expectException(LogicException::class);
         $proxy->remind('', new Reminder('', new DateInterval('PT10S'), ''));
+    }
+
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    public function testCachedGeneratorGenerates()
+    {
+        $cache = sys_get_temp_dir().'/dapr-proxy-cache/dapr_proxy_GCached';
+        if (file_exists($cache)) {
+            unlink($cache);
+        }
+        $this->assertFalse(file_exists($cache));
+        $proxy = $this->get_actor_generator(ProxyFactory::GENERATED_CACHED, ITestActor::class, 'GCached');
+        $proxy->get_proxy('hi');
+        $this->assertTrue(file_exists($cache));
+        unlink($cache);
     }
 
     /**

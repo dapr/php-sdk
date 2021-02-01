@@ -10,7 +10,6 @@ use DI\ContainerBuilder;
 use DI\DependencyException;
 use DI\NotFoundException;
 use PHPUnit\Framework\TestCase;
-
 use Psr\Log\LogLevel;
 
 use function DI\autowire;

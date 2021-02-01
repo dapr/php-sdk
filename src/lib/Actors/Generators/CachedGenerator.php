@@ -21,7 +21,10 @@ class CachedGenerator extends ExistingOnly
             );
             $file           = $file_generator->generate_file();
             $dir            = sys_get_temp_dir().DIRECTORY_SEPARATOR.'dapr-proxy-cache'.DIRECTORY_SEPARATOR;
-            $filename       = $dir.$this->get_short_class_name();
+            if ( ! is_dir($dir)) {
+                mkdir($dir);
+            }
+            $filename = $dir.$this->get_short_class_name();
             file_put_contents($filename, $file);
             require_once $filename;
         }

@@ -17,17 +17,63 @@ class DaprClient
     private static array $trace;
     private static bool $added_trace = false;
     // temp hack to allow custom headers
-    public array $extra_headers = [];
     private static DaprClient $client;
+    public array $extra_headers = [];
+
+    public function __construct(protected LoggerInterface $logger, protected IDeserializer $deserializer)
+    {
+        self::$client = $this;
+    }
 
     public static function get_client(): DaprClient
     {
         return self::$client;
     }
 
-    public function __construct(protected LoggerInterface $logger, protected IDeserializer $deserializer)
+    /**
+     * Get a uri.
+     *
+     * @param string $url The URL to get.
+     * @param array|null $params
+     *
+     * @return DaprResponse The parsed response.
+     * @throws DaprException
+     */
+    public function get(string $url, ?array $params = null): DaprResponse
     {
-        self::$client = $this;
+        $url = $this->get_api_path($url, $params);
+        $this->logger->debug('Calling GET {url}', ['url' => $url]);
+        $curl = curl_init($url);
+        curl_setopt_array(
+            $curl,
+            [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => self::get_headers(),
+                CURLINFO_HEADER_OUT    => true,
+            ]
+        );
+        $result          = curl_exec($curl);
+        $return          = new DaprResponse();
+        $return->data    = json_decode($result, true);
+        $return->code    = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $return->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
+        $return->etag    = array_reduce(
+            $return->headers,
+            fn($carry, $item) => str_starts_with($item, 'etag:') ? str_replace('etag: ', '', $item) : $carry
+        );
+        self::detect_trace_from_response($return);
+
+        $this->logger->debug('Got response: {response}', ['response' => $return]);
+
+        if ($this->deserializer->is_exception($return->data)) {
+            /**
+             * @var DaprException $ex
+             */
+            $ex = $this->deserializer->get_exception($return->data);
+            throw $ex;
+        }
+
+        return $return;
     }
 
     /**
@@ -56,52 +102,6 @@ class DaprClient
         $port = getenv('DAPR_HTTP_PORT') ?: 3500;
 
         return "http://localhost:$port/v1.0";
-    }
-
-    /**
-     * Get a uri.
-     *
-     * @param string $url The URL to get.
-     * @param array|null $params
-     *
-     * @return DaprResponse The parsed response.
-     * @throws DaprException
-     */
-    public function get(string $url, ?array $params = null): DaprResponse
-    {
-        $url = $this->get_api_path($url, $params);
-        $this->logger->debug('Calling GET {url}', ['url' => $url]);
-        $curl = curl_init($url);
-        curl_setopt_array(
-            $curl,
-            [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER     => self::get_headers(),
-                CURLINFO_HEADER_OUT    => true,
-            ]
-        );
-        $result       = curl_exec($curl);
-        $return       = new DaprResponse();
-        $return->data = json_decode($result, true);
-        $return->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        $return->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
-        $return->etag = array_reduce(
-            $return->headers,
-            fn($carry, $item) => str_starts_with($item, 'etag:') ? str_replace('etag: ', '', $item) : $carry
-        );
-        self::detect_trace_from_response($return);
-
-        $this->logger->debug('Got response: {response}', ['response' => $return]);
-
-        if ($this->deserializer->is_exception($return->data)) {
-            /**
-             * @var DaprException $ex
-             */
-            $ex = $this->deserializer->get_exception($return->data);
-            throw $ex;
-        }
-
-        return $return;
     }
 
     private function get_headers(): array

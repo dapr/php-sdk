@@ -19,10 +19,11 @@ function deserialize_special_type($obj)
  */
 final class DeserializerTest extends DaprTests
 {
-    #[ArrayShape(['Type'    => "array",
-                  'Nested'  => "array",
-                  'Complex' => "array",
-                  'Null'    => "array",
+    #[ArrayShape([
+        'Type'    => "array",
+        'Nested'  => "array",
+        'Complex' => "array",
+        'Null'    => "array",
     ])] public function generate_deserializers(): array
     {
         $obj = new class {

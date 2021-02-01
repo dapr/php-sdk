@@ -68,7 +68,7 @@ class FileGenerator extends GenerateProxy
                 eval($namespace);
             }
         }
-        $proxy = $this->container->make($this->get_full_class_name());
+        $proxy     = $this->container->make($this->get_full_class_name());
         $proxy->id = $id;
 
         return $proxy;

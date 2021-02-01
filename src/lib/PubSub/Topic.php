@@ -8,8 +8,12 @@ use Psr\Log\LoggerInterface;
 
 class Topic
 {
-    public function __construct(private string $pubsub, private string $topic, private DaprClient $client, private LoggerInterface $logger)
-    {
+    public function __construct(
+        private string $pubsub,
+        private string $topic,
+        private DaprClient $client,
+        private LoggerInterface $logger
+    ) {
     }
 
     /**

@@ -68,8 +68,8 @@ class ActorRuntime
         $is_activated = file_exists($activation_tracker);
 
         if ($is_activated) {
-            $actor->on_deactivation();
             unlink($activation_tracker);
+            $actor->on_deactivation();
         }
     }
 

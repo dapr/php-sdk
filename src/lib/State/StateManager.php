@@ -70,7 +70,9 @@ class StateManager implements IManageState
 
     public function delete_keys(string $store_name, array $keys, array $metadata = []): void
     {
-        // TODO: Implement delete_keys() method.
+        foreach ($keys as $key) {
+            $this->client->delete("/state/$store_name/$key", $metadata);
+        }
     }
 
     /**

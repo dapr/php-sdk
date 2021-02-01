@@ -57,7 +57,7 @@ class SecretTest extends DaprTests
     {
         $this->get_client()->register_get('/secrets/store/test', 204, null);
         $secretManager = $this->container->get(SecretManager::class);
-        $secret = $secretManager->retrieve('store', 'test');
+        $secret        = $secretManager->retrieve('store', 'test');
         $this->assertSame(null, $secret);
     }
 }

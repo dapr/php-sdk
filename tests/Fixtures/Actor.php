@@ -14,7 +14,9 @@ use SimpleObject;
 interface ITestActor
 {
     #[ArrayOf('string')]
-    public function a_function(#[AsClass(SimpleObject::class)] $value): array;
+    public function a_function(
+        #[AsClass(SimpleObject::class)] $value
+    ): array;
 }
 
 class TestActorState extends ActorState

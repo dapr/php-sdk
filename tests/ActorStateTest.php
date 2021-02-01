@@ -24,17 +24,6 @@ class ActorStateTest extends DaprTests
         $this->assertTrue(true); // no exception thrown
     }
 
-    private function get_state(): ActorState
-    {
-        return new class($this->container) extends ActorState {
-            #[Pure] public function __construct(Container $container)
-            {
-                parent::__construct($container);
-            }
-            public string $state = 'initial';
-        };
-    }
-
     /**
      * @param string $type
      * @param string $id
@@ -46,7 +35,20 @@ class ActorStateTest extends DaprTests
     {
         $state = $this->get_state();
         $this->begin_transaction($state, $type, $id);
+
         return $state;
+    }
+
+    private function get_state(): ActorState
+    {
+        return new class($this->container) extends ActorState {
+            #[Pure] public function __construct(Container $container)
+            {
+                parent::__construct($container);
+            }
+
+            public string $state = 'initial';
+        };
     }
 
     /**
@@ -56,10 +58,11 @@ class ActorStateTest extends DaprTests
      *
      * @throws ReflectionException
      */
-    private function begin_transaction(ActorState $state, string $type, string $id) {
+    private function begin_transaction(ActorState $state, string $type, string $id)
+    {
         $reflection = new ReflectionClass($state);
         $reflection = $reflection->getParentClass();
-        $method = $reflection->getMethod('begin_transaction');
+        $method     = $reflection->getMethod('begin_transaction');
         $method->setAccessible(true);
         $method->invoke($state, $type, $id);
     }

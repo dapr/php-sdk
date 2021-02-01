@@ -34,28 +34,6 @@ class SecretManager
     }
 
     /**
-     * Retrieve a secret from the store.
-     *
-     * @param string $secret_store The store to get the secret from.
-     * @param string $name The name of the secret to get.
-     * @param array $parameters Optional parameters for the secret store
-     *
-     * @return array
-     * @throws DaprException
-     */
-    public function retrieve(string $secret_store, string $name, array $parameters = []): ?array
-    {
-        $this->logger->debug(
-            'Retrieving secret {name} from {secret_store}',
-            ['name' => $name, 'secret_store' => $secret_store]
-        );
-        $result = $this->client->get("/secrets/$secret_store/$name", $parameters);
-        $this->handle_response_code($result->code);
-
-        return $result->data;
-    }
-
-    /**
      * Throw exceptions on errors
      *
      * @param int $code
@@ -75,5 +53,27 @@ class SecretManager
             case 500:
                 throw new DaprException('Failed to get secret or no secret store defined');
         }
+    }
+
+    /**
+     * Retrieve a secret from the store.
+     *
+     * @param string $secret_store The store to get the secret from.
+     * @param string $name The name of the secret to get.
+     * @param array $parameters Optional parameters for the secret store
+     *
+     * @return array
+     * @throws DaprException
+     */
+    public function retrieve(string $secret_store, string $name, array $parameters = []): ?array
+    {
+        $this->logger->debug(
+            'Retrieving secret {name} from {secret_store}',
+            ['name' => $name, 'secret_store' => $secret_store]
+        );
+        $result = $this->client->get("/secrets/$secret_store/$name", $parameters);
+        $this->handle_response_code($result->code);
+
+        return $result->data;
     }
 }

@@ -313,6 +313,7 @@ class App
                     $actual_response = $actual_response->withStatus($response->code)->withBody(
                         $this->serialize_as_stream($response->data)
                     );
+
                     return $actual_response;
                 }
 

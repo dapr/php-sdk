@@ -17,7 +17,9 @@ use ReflectionException;
  */
 class ActorProxy
 {
-    public function __construct(protected ProxyFactory $proxyFactory, protected LoggerInterface $logger) {}
+    public function __construct(protected ProxyFactory $proxyFactory, protected LoggerInterface $logger)
+    {
+    }
 
     /**
      * Returns an actor proxy

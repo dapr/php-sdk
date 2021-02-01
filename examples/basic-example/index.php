@@ -1,7 +1,7 @@
 <?php
 
-function configure_dapr(\DI\ContainerBuilder $builder) {
-
+function configure_dapr(\DI\ContainerBuilder $builder)
+{
 }
 
 require_once __DIR__.'/vendor/autoload.php';

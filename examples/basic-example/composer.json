@@ -1,20 +1,20 @@
 {
-    "name": "dapr/basic-example",
-    "type": "project",
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Rob Landers",
-            "email": "landers.robert@gmail.com"
-        }
-    ],
-    "require": {
-        "dapr/php-sdk": "dev-add/gprc"
-    },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "../.."
-        }
-    ]
+  "name": "dapr/basic-example",
+  "type": "project",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Rob Landers",
+      "email": "landers.robert@gmail.com"
+    }
+  ],
+  "require": {
+    "dapr/php-sdk": "dev-add/gprc"
+  },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "../.."
+    }
+  ]
 }

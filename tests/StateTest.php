@@ -206,4 +206,12 @@ class StateTest extends DaprTests
 
         $this->assertNull($state->null);
     }
+
+    public function testDeleteState()
+    {
+        $client        = $this->get_client();
+        $state_manager = $this->container->get(IManageState::class);
+        $client->register_delete('/state/store/key1', 204);
+        $state_manager->delete_keys('store', ['key1']);
+    }
 }
