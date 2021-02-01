@@ -43,7 +43,7 @@ class SecretManager
      * @return array
      * @throws DaprException
      */
-    public function retrieve(string $secret_store, string $name, array $parameters = []): array
+    public function retrieve(string $secret_store, string $name, array $parameters = []): ?array
     {
         $this->logger->debug(
             'Retrieving secret {name} from {secret_store}',

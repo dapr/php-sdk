@@ -5,19 +5,18 @@ require_once __DIR__.'/Fixtures/Serialization.php';
 
 use Dapr\Serialization\Attributes\AlwaysObject;
 use Dapr\Serialization\ISerializer;
-use Dapr\Serialization\SerializationConfig;
 use Dapr\Serialization\Serializer;
 use Dapr\Serialization\Serializers\ISerialize;
 use Fixtures\TestObj;
 
-class ASpecialType
+class ASpecialType implements ISerialize
 {
     public $hello = 'world';
-}
 
-function serialize_ASpecialType(ASpecialType $item)
-{
-    return $item->hello;
+    public function serialize(mixed $value, ISerializer $serializer): mixed
+    {
+        return $value->hello;
+    }
 }
 
 /**
@@ -26,7 +25,7 @@ function serialize_ASpecialType(ASpecialType $item)
  */
 final class SerializerTest extends DaprTests
 {
-    public function generate_serializer()
+    public function generate_serializer(): array
     {
         $obj      = new TestObj();
         $obj->foo = 'bar';
@@ -119,20 +118,6 @@ JSON
      */
     public function testSerializer($value, $expected)
     {
-        $this->container->set(
-            SerializationConfig::class,
-            new SerializationConfig(
-                [
-                    ASpecialType::class => new class implements ISerialize {
-
-                        public function serialize(mixed $value, ISerializer $serializer): mixed
-                        {
-                            return serialize_ASpecialType($value);
-                        }
-                    },
-                ]
-            )
-        );
         $serializer = $this->container->get(Serializer::class);
         $serialized = $serializer->as_json($value, JSON_PRETTY_PRINT);
         $this->assertSame($expected, $serialized);
@@ -147,7 +132,7 @@ JSON
                 'message'   => 'testing',
                 'errorCode' => 'Exception',
                 'file'      => __FILE__,
-                'line'      => 144,
+                'line'      => 129,
                 'inner'     => null,
             ],
             $serialized

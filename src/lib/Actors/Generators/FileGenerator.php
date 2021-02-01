@@ -42,9 +42,8 @@ class FileGenerator extends GenerateProxy
      * @throws NotFoundException
      * @throws ReflectionException
      */
-    public static function generate(string $interface, string|null $override_type = null): PhpFile
+    public static function generate(string $interface, Container $container, string|null $override_type = null): PhpFile
     {
-        global $dapr_container;
         $reflected_interface = new ReflectionClass($interface);
         $type                = $override_type ?? ($reflected_interface->getAttributes(
                     DaprType::class
@@ -54,7 +53,7 @@ class FileGenerator extends GenerateProxy
             throw new LogicException("$interface must have a DaprType attribute");
         }
 
-        $generator = $dapr_container->make(FileGenerator::class, ['interface' => $interface, 'dapr_type' => $type]);
+        $generator = $container->make(FileGenerator::class, ['interface' => $interface, 'dapr_type' => $type]);
 
         return $generator->generate_file();
     }
@@ -110,7 +109,6 @@ class FileGenerator extends GenerateProxy
 
         // configure namespace
         $namespace->add($interface);
-        $namespace->addUse('\Swytch\Actors\Devices\IDeviceActor');
         $namespace->addUse('\Dapr\Actors\IActor');
         $namespace->addUse('\Dapr\Actors\Attributes\DaprType');
         $namespace->addUse('\Dapr\Actors\ActorTrait');

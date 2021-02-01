@@ -5,6 +5,9 @@ require_once __DIR__.'/Fixtures/Serialization.php';
 use Dapr\Deserialization\Attributes\AsClass;
 use Dapr\Deserialization\Deserializer;
 use Dapr\exceptions\DaprException;
+use DI\DependencyException;
+use DI\NotFoundException;
+use JetBrains\PhpStorm\ArrayShape;
 
 function deserialize_special_type($obj)
 {
@@ -16,7 +19,11 @@ function deserialize_special_type($obj)
  */
 final class DeserializerTest extends DaprTests
 {
-    public function generate_deserializers()
+    #[ArrayShape(['Type'    => "array",
+                  'Nested'  => "array",
+                  'Complex' => "array",
+                  'Null'    => "array",
+    ])] public function generate_deserializers(): array
     {
         $obj = new class {
             public string $foo = 'bar';
@@ -45,6 +52,12 @@ final class DeserializerTest extends DaprTests
 
     /**
      * @dataProvider generate_deserializers
+     *
+     * @param $value
+     * @param $expected
+     *
+     * @throws DependencyException
+     * @throws NotFoundException
      */
     public function testDeserializeValues($value, $expected)
     {
@@ -53,6 +66,10 @@ final class DeserializerTest extends DaprTests
         $this->assertEquals($expected, $result);
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testDaprException()
     {
         $deserializer = $this->container->get(Deserializer::class);
@@ -66,6 +83,10 @@ final class DeserializerTest extends DaprTests
         $this->assertSame($obj['message'], $exception->getMessage());
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testPHPException()
     {
         $deserializer = $this->container->get(Deserializer::class);
@@ -84,6 +105,10 @@ final class DeserializerTest extends DaprTests
         $this->assertSame(null, $exception->getPrevious());
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testExceptionChain()
     {
         $deserializer = $this->container->get(Deserializer::class);

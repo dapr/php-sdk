@@ -3,7 +3,7 @@
 use Dapr\Deserialization\Attributes\ArrayOf;
 use Dapr\Deserialization\Attributes\AsClass;
 
-function get_example_json()
+function get_example_json(): string
 {
     return <<<JSON
 {
@@ -33,7 +33,7 @@ function get_example_json()
 JSON;
 }
 
-function get_example_object()
+function get_example_object(): WeatherForecastWithPOPOs
 {
     $other_sdk                                  = new WeatherForecastWithPOPOs();
     $other_sdk->Date                            = new DateTime('2019-08-01T00:00:00-07:00');

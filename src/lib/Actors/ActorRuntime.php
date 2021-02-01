@@ -20,12 +20,6 @@ use ReflectionNamedType;
  */
 class ActorRuntime
 {
-    public static string $input = 'php://input';
-    public static array $actors = [];
-    public static array $config = [
-        'entities' => [],
-    ];
-
     public function __construct(
         protected LoggerInterface $logger,
         protected ActorConfig $actor_config,

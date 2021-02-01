@@ -298,6 +298,24 @@ class App
                     return $response;
                 }
 
+                if (is_array($response)) {
+                    if (isset($response['code'])) {
+                        $actual_response = $actual_response->withStatus($response['code']);
+                    }
+                    if (isset($response['body'])) {
+                        $actual_response = $actual_response->withBody($this->serialize_as_stream($response['body']));
+                    }
+
+                    return $actual_response;
+                }
+
+                if ($response instanceof DaprResponse) {
+                    $actual_response = $actual_response->withStatus($response->code)->withBody(
+                        $this->serialize_as_stream($response->data)
+                    );
+                    return $actual_response;
+                }
+
                 return $actual_response->withBody($this->serialize_as_stream($response));
         }
     }

@@ -5,6 +5,7 @@ namespace Fixtures;
 use Dapr\consistency\EventualLastWrite;
 use Dapr\State\Attributes\StateStore;
 use Dapr\State\TransactionalState;
+use DI\Container;
 
 #[StateStore('store', EventualLastWrite::class)]
 class TestState extends TransactionalState
@@ -13,9 +14,9 @@ class TestState extends TransactionalState
     public ?string $without_initial = null;
     public ?TestObj $complex = null;
 
-    public function __construct()
+    public function __construct(Container $container)
     {
-        parent::__construct();
+        parent::__construct($container);
     }
 
     public function set_something()

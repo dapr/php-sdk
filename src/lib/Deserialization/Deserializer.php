@@ -191,7 +191,7 @@ class Deserializer implements IDeserializer
             return $type->getName();
         }
 
-        throw new LogicException('Type is missing or is a union type without the union attribute.');
+        return 'mixed';
     }
 
     /**

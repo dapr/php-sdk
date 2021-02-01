@@ -1,14 +1,21 @@
 <?php
 
-use Dapr\PubSub\Subscribe;
+use Dapr\PubSub\CloudEvent;
+use Dapr\PubSub\Publish;
+use DI\DependencyException;
+use DI\NotFoundException;
 
 require_once __DIR__.'/DaprTests.php';
 
 class PublishTest extends DaprTests
 {
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testSimplePublish()
     {
-        $publisher = $this->container->make(\Dapr\PubSub\Publish::class, ['pubsub' => 'pubsub']);
+        $publisher = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
         $this->get_client()->register_post(
             '/publish/pubsub/topic',
             200,
@@ -20,10 +27,14 @@ class PublishTest extends DaprTests
         $publisher->topic('topic')->publish(['my' => 'event']);
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testCloudEventPublish()
     {
-        $publisher                = $this->container->make(\Dapr\PubSub\Publish::class, ['pubsub' => 'pubsub']);
-        $event                    = new \Dapr\PubSub\CloudEvent();
+        $publisher                = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
+        $event                    = new CloudEvent();
         $event->data              = ['my' => 'event'];
         $event->type              = 'type';
         $event->subject           = 'subject';
@@ -51,6 +62,9 @@ class PublishTest extends DaprTests
         $publisher->topic('topic')->publish($event);
     }
 
+    /**
+     * @throws Exception
+     */
     public function testParsingCloudEvent()
     {
         $eventjson = <<<JSON
@@ -65,50 +79,8 @@ class PublishTest extends DaprTests
     "data" : "<note><to>User1</to><from>user2</from><message>hi</message></note>"
 }
 JSON;
-        $event     = \Dapr\PubSub\CloudEvent::parse($eventjson);
+        $event     = CloudEvent::parse($eventjson);
         $this->assertTrue($event->validate());
         $this->assertSame('https://example.com/message', $event->source);
-    }
-
-    public function testSubscibe()
-    {
-        $topic          = uniqid();
-        $eventjson      = <<<JSON
-{
-    "specversion" : "1.0",
-    "type" : "xml.message",
-    "source" : "https://example.com/message",
-    "subject" : "Test XML Message",
-    "id" : "id-1234-5678-9101",
-    "datacontenttype" : "application/json",
-    "data" : "{\"hello\": \"world\"}}"
-}
-JSON;
-        $event          = \Dapr\PubSub\CloudEvent::parse($eventjson);
-        $called_handler = false;
-        $handler        = function (\Dapr\PubSub\CloudEvent $event) use (&$called_handler, $eventjson) {
-            $called_handler = true;
-            $expected_event = json_decode($eventjson, true);
-            $event          = json_decode($event->to_json(), true);
-            ksort($event);
-            ksort($expected_event);
-            $this->assertSame($expected_event, $event);
-
-            return [
-                'status' => 'SUCCESS',
-            ];
-        };
-        Subscribe::to_topic('pubsub', $topic, $handler);
-        $result = Subscribe::handle_subscription($topic, $event);
-        $this->assertTrue($called_handler);
-        $this->assertSame(200, $result['code']);
-        $this->assertSame(['status' => 'SUCCESS'], $this->deserialize($result['body']));
-
-        $called_handler = false;
-        $this->set_body($event->to_array());
-        $result = \Dapr\Runtime::get_handler_for_route('PUT', '/dapr/runtime/sub/'.$topic)();
-        $this->assertTrue($called_handler);
-        $this->assertSame(200, $result['code']);
-        $this->assertSame(['status' => 'SUCCESS'], $this->deserialize($result['body']));
     }
 }

@@ -10,7 +10,6 @@ use Dapr\Actors\ActorTrait;
 use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\IActor;
 use Dapr\DaprClient;
-use Swytch\Actors\Devices\IDeviceActor;
 
 #[DaprType('TestActor')]
 class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
@@ -46,9 +45,9 @@ class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 	 * Handle a reminder
 	 *
 	 * @param string $name The name of the reminder
-	 * @param mixed $data The data from passed when the reminder was setup
+	 * @param Reminder $data The data from passed when the reminder was setup
 	 */
-	public function remind(string $name, mixed $data): void
+	public function remind(string $name, \Dapr\Actors\Reminder $data): void
 	{
 		throw new \LogicException("Cannot call 'remind' outside the actor");
 	}

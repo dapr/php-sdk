@@ -43,10 +43,9 @@ class DynamicGenerator extends GenerateProxy
     protected function generate_proxy_method(Method $method, string $id): callable
     {
         return function (...$params) use ($method, $id) {
-            global $dapr_container;
-            $serializer   = $dapr_container->get(ISerializer::class);
-            $client       = $dapr_container->get(DaprClient::class);
-            $deserializer = $dapr_container->get(IDeserializer::class);
+            $serializer   = $this->container->get(ISerializer::class);
+            $client       = $this->container->get(DaprClient::class);
+            $deserializer = $this->container->get(IDeserializer::class);
             if ( ! empty($params)) {
                 $params = $serializer->as_array($params[0]);
             }

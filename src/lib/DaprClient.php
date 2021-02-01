@@ -84,11 +84,12 @@ class DaprClient
         $return       = new DaprResponse();
         $return->data = json_decode($result, true);
         $return->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $return->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
         $return->etag = array_reduce(
-            explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT)),
+            $return->headers,
             fn($carry, $item) => str_starts_with($item, 'etag:') ? str_replace('etag: ', '', $item) : $carry
         );
-        self::detect_trace_from_response($curl);
+        self::detect_trace_from_response($return);
 
         $this->logger->debug('Got response: {response}', ['response' => $return]);
 
@@ -128,19 +129,14 @@ class DaprClient
     /**
      * @param CurlHandle|false $curl
      */
-    private function detect_trace_from_response(mixed $curl): void
+    private function detect_trace_from_response(DaprResponse $response): void
     {
         if (isset(self::$trace)) {
             return;
         }
 
-        if ($curl === false) {
-            return;
-        }
-
-        $header = curl_getinfo($curl, CURLINFO_HEADER_OUT);
         $header = array_filter(
-            explode("\r\n", $header),
+            $response->headers,
             function ($ii) {
                 return str_starts_with($ii, 'Traceparent:');
             }

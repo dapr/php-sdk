@@ -2,15 +2,24 @@
 
 require_once __DIR__.'/Fixtures/TestState.php';
 
+use Dapr\consistency\StrongFirstWrite;
+use Dapr\consistency\StrongLastWrite;
+use Dapr\State\Attributes\StateStore;
 use Dapr\State\IManageState;
-use Dapr\State\State;
 use Dapr\State\StateItem;
+use DI\DependencyException;
+use DI\NotFoundException;
+use Fixtures\TestState;
 
 class StateTest extends DaprTests
 {
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testLoadObject()
     {
-        $state  = $this->container->get(\Fixtures\TestState::class);
+        $state  = $this->container->get(TestState::class);
         $client = $this->get_client();
         $client->register_post(
             '/state/store/bulk?test=meta',
@@ -29,7 +38,7 @@ class StateTest extends DaprTests
         $state_manager->load_object($state, metadata: ['test' => 'meta']);
         $this->assertSame('initial', $state->with_initial);
 
-        $state = $this->container->get(\Fixtures\TestState::class);
+        $state = $this->container->get(TestState::class);
         $client->register_post(
             '/state/store/bulk',
             code: 200,
@@ -47,25 +56,33 @@ class StateTest extends DaprTests
         $this->assertSame('hello world', $state->with_initial);
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testLoadState()
     {
         $client        = $this->get_client();
         $state_manager = $this->container->get(IManageState::class);
         $client->register_get('/state/store/a-key?test=meta', 200, 'data');
         $this->assertEquals(
-            new StateItem('a-key', 'data', new \Dapr\consistency\StrongLastWrite(), null, []),
+            new StateItem('a-key', 'data', new StrongLastWrite(), null, []),
             $state_manager->load_state('store', 'a-key', default_value: 1, metadata: ['test' => 'meta'])
         );
         $client->register_get('/state/store/a-key?test=meta', 204, '');
         $this->assertEquals(
-            new StateItem('a-key', 1, new \Dapr\consistency\StrongLastWrite(), null, []),
+            new StateItem('a-key', 1, new StrongLastWrite(), null, []),
             $state_manager->load_state('store', 'a-key', default_value: 1, metadata: ['test' => 'meta'])
         );
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testSaveObject()
     {
-        $state         = $this->container->get(\Fixtures\TestState::class);
+        $state         = $this->container->get(TestState::class);
         $client        = $this->get_client();
         $state_manager = $this->container->get(IManageState::class);
         $client->register_post(
@@ -111,6 +128,10 @@ class StateTest extends DaprTests
         $state_manager->save_object($state);
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testSaveSate()
     {
         $client        = $this->get_client();
@@ -136,10 +157,14 @@ class StateTest extends DaprTests
         );
         $state_manager->save_state(
             'store',
-            new StateItem('a-key', 'a-value', new \Dapr\consistency\StrongLastWrite(), '123', ['ok' => 'test'])
+            new StateItem('a-key', 'a-value', new StrongLastWrite(), '123', ['ok' => 'test'])
         );
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testNotAbleToLoadState()
     {
         $state         = new class {
@@ -153,9 +178,13 @@ class StateTest extends DaprTests
         $state_manager->load_object($state);
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testSetToNull()
     {
-        $state         = new #[\Dapr\State\Attributes\StateStore('store', \Dapr\consistency\StrongFirstWrite::class)] class {
+        $state         = new #[StateStore('store', StrongFirstWrite::class)] class {
             public $null = 1;
         };
         $client        = $this->get_client();

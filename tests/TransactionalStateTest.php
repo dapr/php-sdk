@@ -1,9 +1,18 @@
 <?php
 
+use Dapr\exceptions\DaprException;
+use Dapr\exceptions\StateAlreadyCommitted;
+use DI\DependencyException;
+use DI\NotFoundException;
+use Fixtures\TestObj;
 use Fixtures\TestState;
 
 class TransactionalStateTest extends DaprTests
 {
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testBegin()
     {
         $this->register_simple_load();
@@ -12,6 +21,10 @@ class TransactionalStateTest extends DaprTests
         $this->assertSame('initial', $state->with_initial);
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     private function register_simple_load()
     {
         $client = $this->get_client();
@@ -34,6 +47,12 @@ class TransactionalStateTest extends DaprTests
         );
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     * @throws StateAlreadyCommitted
+     * @throws DaprException
+     */
     public function testEmptyCommit()
     {
         $this->register_simple_load();
@@ -42,6 +61,10 @@ class TransactionalStateTest extends DaprTests
         $state->commit();
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testInvalidKey()
     {
         $this->register_simple_load();
@@ -54,6 +77,10 @@ class TransactionalStateTest extends DaprTests
         $state->not_exist = true;
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testIsSet()
     {
         $this->register_simple_load();
@@ -63,10 +90,16 @@ class TransactionalStateTest extends DaprTests
         $this->assertFalse(isset($state->complex));
         $this->assertTrue(isset($state->with_initial));
 
-        $state->complex = new \Fixtures\TestObj();
+        $state->complex = new TestObj();
         $this->assertTrue(isset($state->complex));
     }
 
+    /**
+     * @throws DaprException
+     * @throws DependencyException
+     * @throws NotFoundException
+     * @throws StateAlreadyCommitted
+     */
     public function testCommit()
     {
         $this->get_client()->register_post(
@@ -91,9 +124,9 @@ class TransactionalStateTest extends DaprTests
         $state->begin();
         $state->set_something();
         unset($state->with_initial);
-        $state->complex      = new \Fixtures\TestObj();
+        $state->complex      = new TestObj();
         $state->complex->foo = "bar";
-        $state->complex      = new \Fixtures\TestObj();
+        $state->complex      = new TestObj();
         $state->complex->foo = "baz";
 
         $this->get_client()->register_post(
@@ -137,7 +170,7 @@ class TransactionalStateTest extends DaprTests
         );
         $state->commit(['test' => true]);
 
-        $this->expectException(\Dapr\exceptions\StateAlreadyCommitted::class);
+        $this->expectException(StateAlreadyCommitted::class);
         $state->commit();
     }
 }
