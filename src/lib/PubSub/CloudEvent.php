@@ -123,7 +123,6 @@ class CloudEvent implements IDeserialize
 
     public static function parse(string $json): CloudEvent
     {
-        Runtime::$logger?->debug('Parsing cloud event {json}', ['json' => $json]);
         $raw = json_decode($json, true);
 
         return self::from_array($raw);
@@ -163,8 +162,6 @@ class CloudEvent implements IDeserialize
      */
     public function to_json(): string|bool
     {
-        Runtime::$logger?->debug('Serializing cloud event');
-
         return json_encode($this->to_array());
     }
 

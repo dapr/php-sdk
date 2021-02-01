@@ -46,7 +46,6 @@ class FileGenerator extends GenerateProxy
                 )[0] ?? null)?->newInstance()->type;
 
         if (empty($type)) {
-            Runtime::$logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
             throw new LogicException("$interface must have a DaprType attribute");
         }
 

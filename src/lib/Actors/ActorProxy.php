@@ -4,8 +4,8 @@ namespace Dapr\Actors;
 
 use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\Generators\ProxyFactory;
-use Dapr\Runtime;
 use LogicException;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionException;
 
@@ -15,7 +15,7 @@ use ReflectionException;
  */
 class ActorProxy
 {
-    public function __construct(protected ProxyFactory $proxyFactory) {}
+    public function __construct(protected ProxyFactory $proxyFactory, protected LoggerInterface $logger) {}
 
     /**
      * Returns an actor proxy
@@ -29,7 +29,7 @@ class ActorProxy
      */
     public function get(string $interface, mixed $id, string|null $override_type = null): object
     {
-        Runtime::$logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
+        $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
 
         $reflected_interface = new ReflectionClass($interface);
         $type                = $override_type ?? ($reflected_interface->getAttributes(
@@ -37,7 +37,7 @@ class ActorProxy
                 )[0] ?? null)?->newInstance()->type;
 
         if (empty($type)) {
-            Runtime::$logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
+            $this->logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
             throw new LogicException("$interface must have a DaprType attribute");
         }
 

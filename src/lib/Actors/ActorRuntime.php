@@ -4,7 +4,6 @@ namespace Dapr\Actors;
 
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\Http\NotFound;
-use Dapr\Runtime;
 use DI\Container;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -113,7 +112,7 @@ class ActorRuntime
                         $this->begin_transaction($state, $reflected_type, $dapr_type, $id);
 
                         $states[$parameter->name] = $state;
-                        Runtime::$logger?->debug('Found state {t}', ['t' => $type_name]);
+                        $this->logger?->debug('Found state {t}', ['t' => $type_name]);
                     }
                 }
             }
@@ -158,7 +157,7 @@ class ActorRuntime
         $is_activated = file_exists($activation_tracker);
 
         if ( ! $is_activated) {
-            Runtime::$logger?->info(
+            $this->logger?->info(
                 'Activating {type}||{id}',
                 ['type' => $dapr_type, 'id' => $id]
             );

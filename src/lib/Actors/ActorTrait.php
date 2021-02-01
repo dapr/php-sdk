@@ -5,7 +5,6 @@ namespace Dapr\Actors;
 use Dapr\Actors\Attributes\DaprType;
 use Dapr\DaprClient;
 use Dapr\exceptions\DaprException;
-use Dapr\Runtime;
 use ReflectionClass;
 
 /**
@@ -42,7 +41,6 @@ trait ActorTrait
         }
         // end function
         $id = $this->get_id();
-        Runtime::$logger?->info('Creating reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
         $client->post("/actors/$type/$id/reminders/{$reminder->name}", $reminder->to_array());
@@ -75,7 +73,6 @@ trait ActorTrait
         }
         // end function
         $id = $this->get_id();
-        Runtime::$logger?->info('Getting reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
         $result = $client->get("/actors/$type/$id/reminders/$name");
@@ -108,7 +105,6 @@ trait ActorTrait
         }
         // end function
         $id = $this->get_id();
-        Runtime::$logger?->info('Deleting reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
         $client->delete("/actors/$type/$id/reminders/$name");
@@ -142,7 +138,6 @@ trait ActorTrait
         }
         // end function
         $id = $this->get_id();
-        Runtime::$logger?->info('Creating timer for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
         $client->post("/actors/$type/$id/timers/{$timer->name}", $timer->to_array());
@@ -175,7 +170,6 @@ trait ActorTrait
         }
         // end function
         $id = $this->get_id();
-        Runtime::$logger?->info('Deleting timer for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
         $client->delete("/actors/$type/$id/timers/$name");

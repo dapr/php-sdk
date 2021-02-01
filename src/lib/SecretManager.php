@@ -3,14 +3,36 @@
 namespace Dapr;
 
 use Dapr\exceptions\DaprException;
+use Psr\Log\LoggerInterface;
 
 /**
  * Enables reading Dapr secrets
  * @see https://v1-rc1.docs.dapr.io/reference/api/secrets_api/
  * @package Dapr
  */
-abstract class Secret
+class SecretManager
 {
+    public function __construct(protected DaprClient $client, protected LoggerInterface $logger)
+    {
+    }
+
+    /**
+     * Get all defined secrets in a secret store
+     *
+     * @param string $secret_store The secret store name
+     *
+     * @return array The secrets
+     * @throws DaprException
+     */
+    public function all(string $secret_store)
+    {
+        $this->logger->debug('Retrieving all secrets from {secret_store}', ['secret_store' => $secret_store]);
+        $result = $this->client->get("/secrets/$secret_store/bulk");
+        self::handle_response_code($result->code);
+
+        return $result->data;
+    }
+
     /**
      * Retrieve a secret from the store.
      *
@@ -21,16 +43,14 @@ abstract class Secret
      * @return array
      * @throws DaprException
      */
-    public static function retrieve(string $secret_store, string $name, array $parameters = [])
+    public function retrieve(string $secret_store, string $name, array $parameters = []): array
     {
-        global $dapr_container;
-        Runtime::$logger?->debug(
+        $this->logger->debug(
             'Retrieving secret {name} from {secret_store}',
             ['name' => $name, 'secret_store' => $secret_store]
         );
-        $client = $dapr_container->get(DaprClient::class);
-        $result = $client->get("/secrets/$secret_store/$name", $parameters);
-        self::handle_response_code($result->code);
+        $result = $this->client->get("/secrets/$secret_store/$name", $parameters);
+        $this->handle_response_code($result->code);
 
         return $result->data;
     }
@@ -42,7 +62,7 @@ abstract class Secret
      *
      * @throws DaprException
      */
-    private static function handle_response_code(int $code)
+    private function handle_response_code(int $code)
     {
         switch ($code) {
             case 200:
@@ -55,22 +75,5 @@ abstract class Secret
             case 500:
                 throw new DaprException('Failed to get secret or no secret store defined');
         }
-    }
-
-    /**
-     * Get all defined secrets in a secret store
-     *
-     * @param string $secret_store The secret store name
-     *
-     * @return array The secrets
-     * @throws DaprException
-     */
-    public static function all(string $secret_store)
-    {
-        Runtime::$logger?->debug('Retrieving all secrets from {secret_store}', ['secret_store' => $secret_store]);
-        $result = DaprClient::get(DaprClient::get_api("/secrets/$secret_store/bulk"));
-        self::handle_response_code($result->code);
-
-        return $result->data;
     }
 }
