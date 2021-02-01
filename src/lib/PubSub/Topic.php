@@ -32,10 +32,7 @@ class Topic
         }
 
         try {
-            $this->client->post(
-                $this->client->get_api_path("/publish/{$this->pubsub}/{$this->topic}", $metadata),
-                $event
-            );
+            $this->client->post("/publish/{$this->pubsub}/{$this->topic}", $event, $metadata);
 
             $this->client->extra_headers = [];
 

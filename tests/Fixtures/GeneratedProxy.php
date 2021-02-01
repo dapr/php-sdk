@@ -28,7 +28,7 @@ class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 		$id = $this->get_id();
 		$current_method = 'a_function';
 		$result = $this->client->post(
-		  $this->client->get_api_path("/actors/$type/$id/method/$current_method"),
+		  "/actors/$type/$id/method/$current_method",
 		  $this->serializer->as_array($data)
 		);
 		$result->data = $this->deserializer->detect_from_method((new \ReflectionClass($this))->getMethod('a_function'), $result->data);

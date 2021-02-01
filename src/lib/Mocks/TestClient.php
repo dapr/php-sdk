@@ -10,8 +10,9 @@ class TestClient extends DaprClient
 {
     public array $responses = [];
 
-    public function get(string $url): DaprResponse
+    public function get(string $url, ?array $params = null): DaprResponse
     {
+        $url = $this->get_api_path($url, $params);
         $url = "GET $url";
         $this->validate($url, '');
         $next = array_shift($this->responses[$url]);
@@ -54,8 +55,9 @@ class TestClient extends DaprClient
         $this->responses["GET $path"][] = $response;
     }
 
-    public function post(string $url, mixed $data): DaprResponse
+    public function post(string $url, mixed $data, ?array $params = null): DaprResponse
     {
+        $url = $this->get_api_path($url, $params);
         $url = "POST $url";
         $this->validate($url, json_encode($data, JSON_PRETTY_PRINT));
         $next = array_shift($this->responses[$url]);
@@ -87,15 +89,16 @@ class TestClient extends DaprClient
         ];
     }
 
-    public function get_api_path(string $path, ?array $params = null): string
+    protected function get_api_path(string $path, ?array $params = null): string
     {
         $params = empty($params) ? '' : '?'.http_build_query($params);
 
         return $path.$params;
     }
 
-    public function delete(string $url): DaprResponse
+    public function delete(string $url, ?array $params = null): DaprResponse
     {
+        $url = $this->get_api_path($url, $params);
         $url = "DELETE $url";
         $this->validate($url, '');
         $next = array_shift($this->responses[$url]);

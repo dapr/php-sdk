@@ -159,7 +159,7 @@ class FileGenerator extends GenerateProxy
         $method->addBody('$id = $this->get_id();');
         $method->addBody('$current_method = ?;', [$method->getName()]);
         $method->addBody('$result = $this->client->post(');
-        $method->addBody('  $this->client->get_api_path("/actors/$type/$id/method/$current_method"),');
+        $method->addBody('  "/actors/$type/$id/method/$current_method",');
         if (empty($params)) {
             $method->addBody('  null);');
         } else {

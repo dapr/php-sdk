@@ -82,9 +82,9 @@ abstract class Runtime
         );
 
         return match ($http_method) {
-            'GET' => $client->get($client->get_api_path($url, $param)),
-            'POST', 'PUT' => $client->post($client->get_api_path($url), $param),
-            'DELETE' => $client->delete($client->get_api_path($url)),
+            'GET' => $client->get($url, $param),
+            'POST', 'PUT' => $client->post($url, $param),
+            'DELETE' => $client->delete($url),
             default => throw new DaprException('Unknown http method: '.$http_method),
         };
     }

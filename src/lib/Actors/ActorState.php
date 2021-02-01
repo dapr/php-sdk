@@ -27,13 +27,12 @@ abstract class ActorState
     private ISerializer $serializer;
     private ReflectionClass $reflection;
     private DaprClient $client;
+    private string $actor_id;
+    private string $dapr_type;
 
     public function __construct(private Container $container)
     {
     }
-
-    private string $actor_id;
-    private string $dapr_type;
 
     /**
      * Commits the current transaction
@@ -51,14 +50,29 @@ abstract class ActorState
             return;
         }
 
-        $this->client->post(
-            $this->client->get_api_path(
-                "/actors/{$this->dapr_type}/{$this->actor_id}/state"
-            ),
-            $operations
-        );
+        $this->client->post("/actors/{$this->dapr_type}/{$this->actor_id}/state", $operations);
 
         $this->begin_transaction($this->dapr_type, $this->actor_id);
+    }
+
+    private function begin_transaction(string $dapr_type, string $actor_id)
+    {
+        $this->dapr_type    = $dapr_type;
+        $this->actor_id     = $actor_id;
+        $this->reflection   = new ReflectionClass($this);
+        $this->logger       = $this->container->get(LoggerInterface::class);
+        $this->deserializer = $this->container->get(IDeserializer::class);
+        $this->serializer   = $this->container->get(ISerializer::class);
+        $this->client       = $this->container->get(DaprClient::class);
+
+        foreach ($this->reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            unset($this->{$property->name});
+        }
+        $this->transaction = $this->container->make(Transaction::class);
+        $this->logger->debug(
+            'Starting a new transaction for {t}||{i}',
+            ['t' => $this->dapr_type, 'i' => $this->actor_id]
+        );
     }
 
     /**
@@ -122,11 +136,7 @@ abstract class ActorState
      */
     private function _load_key(string $key): void
     {
-        $state = $this->client->get(
-            $this->client->get_api_path(
-                "/actors/{$this->dapr_type}/{$this->actor_id}/state/$key"
-            )
-        );
+        $state = $this->client->get("/actors/{$this->dapr_type}/{$this->actor_id}/state/$key");
         if (isset($state->data)) {
             $property    = $this->reflection->getProperty($key);
             $state->data = $this->deserializer->detect_from_property($property, $state->data);
@@ -175,25 +185,5 @@ abstract class ActorState
             $this->_internal_data[$key] = 'unset';
         }
         $this->transaction?->delete($key);
-    }
-
-    private function begin_transaction(string $dapr_type, string $actor_id)
-    {
-        $this->dapr_type = $dapr_type;
-        $this->actor_id = $actor_id;
-        $this->reflection   = new ReflectionClass($this);
-        $this->logger       = $this->container->get(LoggerInterface::class);
-        $this->deserializer = $this->container->get(IDeserializer::class);
-        $this->serializer   = $this->container->get(ISerializer::class);
-        $this->client       = $this->container->get(DaprClient::class);
-
-        foreach ($this->reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
-            unset($this->{$property->name});
-        }
-        $this->transaction = $this->container->make(Transaction::class);
-        $this->logger->debug(
-            'Starting a new transaction for {t}||{i}',
-            ['t' => $this->dapr_type, 'i' => $this->actor_id]
-        );
     }
 }

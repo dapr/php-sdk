@@ -36,7 +36,7 @@ class DaprClient
      *
      * @return string The API URI
      */
-    public function get_api_path(string $path, ?array $params = null): string
+    protected function get_api_path(string $path, ?array $params = null): string
     {
         $params = $params ? http_build_query($params) : '';
         $params = $params ? '?'.$params : '';
@@ -60,12 +60,14 @@ class DaprClient
      * Get a uri.
      *
      * @param string $url The URL to get.
+     * @param array|null $params
      *
      * @return DaprResponse The parsed response.
      * @throws DaprException
      */
-    public function get(string $url): DaprResponse
+    public function get(string $url, ?array $params = null): DaprResponse
     {
+        $url = $this->get_api_path($url, $params);
         $this->logger->debug('Calling GET {url}', ['url' => $url]);
         $curl = curl_init($url);
         curl_setopt_array(
@@ -155,8 +157,9 @@ class DaprClient
      * @return DaprResponse The parsed response.
      * @throws DaprException
      */
-    public function post(string $url, mixed $data): DaprResponse
+    public function post(string $url, mixed $data, ?array $params = null): DaprResponse
     {
+        $url = $this->get_api_path($url, $params);
         $this->logger->debug('Calling POST {url} with data: {data}', ['url' => $url, 'data' => $data]);
         $curl = curl_init($url);
         curl_setopt_array(
@@ -196,8 +199,9 @@ class DaprClient
      * @return DaprResponse The response
      * @throws DaprException
      */
-    public function delete(string $url): DaprResponse
+    public function delete(string $url, ?array $params = []): DaprResponse
     {
+        $url = $this->get_api_path($url, $params);
         $this->logger->debug('Calling DELETE {url}', ['url' => $url]);
         $curl = curl_init($url);
         curl_setopt_array(

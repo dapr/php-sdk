@@ -41,7 +41,7 @@ class StateManager implements IManageState
         $request = [
             $this->serializer->as_array($item),
         ];
-        $this->client->post($this->client->get_api_path("/state/$store_name"), $request);
+        $this->client->post("/state/$store_name", $request);
     }
 
     public function load_state(
@@ -51,7 +51,7 @@ class StateManager implements IManageState
         array $metadata = [],
         ?Consistency $consistency = null
     ): StateItem {
-        $data = $this->client->get($this->client->get_api_path("/state/$store_name/$key", $metadata));
+        $data = $this->client->get("/state/$store_name/$key", $metadata);
         switch ($data->code) {
             case KeyResponse::KEY_NOT_FOUND:
                 return new StateItem($key, $default_value, $consistency, $data->etag);
@@ -97,7 +97,7 @@ class StateManager implements IManageState
             $request[] = $value;
         }
 
-        $this->client->post($this->client->get_api_path("/state/{$store->name}"), $request);
+        $this->client->post("/state/{$store->name}", $request);
     }
 
     public function load_object(object $into, string $prefix = '', int $parallelism = 10, array $metadata = []): void
@@ -108,14 +108,15 @@ class StateManager implements IManageState
         $keys       = [];
         $properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
         $result     = $this->client->post(
-            $this->client->get_api_path("/state/$store_name/bulk", $metadata),
+            "/state/$store_name/bulk",
             [
                 'keys'        => array_map(
                     fn($key) => $prefix.$key,
                     array_column($properties, 'name')
                 ),
                 'parallelism' => $parallelism,
-            ]
+            ],
+            $metadata
         );
         foreach ($result->data as $value) {
             $key       = $value['key'];

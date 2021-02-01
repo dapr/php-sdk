@@ -9,7 +9,6 @@ use Dapr\State\Internal\StateHelpers;
 use Dapr\State\Internal\Transaction;
 use DI\Container;
 use InvalidArgumentException;
-use Nette\Utils\Image;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionProperty;
@@ -36,11 +35,11 @@ abstract class TransactionalState
     public function __construct(
         private Container $container
     ) {
-        $this->logger = $this->container->get(LoggerInterface::class);
-        $this->client = $this->container->get(DaprClient::class);
-        $this->state = $this->container->get(IManageState::class);
+        $this->logger      = $this->container->get(LoggerInterface::class);
+        $this->client      = $this->container->get(DaprClient::class);
+        $this->state       = $this->container->get(IManageState::class);
         $this->transaction = $this->container->make(Transaction::class);
-        $this->reflection = new ReflectionClass($this);
+        $this->reflection  = new ReflectionClass($this);
     }
 
     /**
@@ -164,10 +163,7 @@ abstract class TransactionalState
         }
 
         if ( ! empty($transaction['operations'])) {
-            $this->client->post(
-                $this->client->get_api_path("/state/{$state_store->name}/transaction"),
-                $transaction
-            );
+            $this->client->post("/state/{$state_store->name}/transaction", $transaction);
         }
         $this->transaction->is_closed = true;
     }

@@ -45,10 +45,7 @@ trait ActorTrait
         Runtime::$logger?->info('Creating reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
-        $client->post(
-            $client->get_api_path("/actors/$type/$id/reminders/{$reminder->name}"),
-            $reminder->to_array()
-        );
+        $client->post("/actors/$type/$id/reminders/{$reminder->name}", $reminder->to_array());
 
         return true;
     }
@@ -81,7 +78,7 @@ trait ActorTrait
         Runtime::$logger?->info('Getting reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
-        $result = $client->get($client->get_api_path("/actors/$type/$id/reminders/$name"));
+        $result = $client->get("/actors/$type/$id/reminders/$name");
 
         return Reminder::from_api($name, $result->data);
     }
@@ -114,7 +111,7 @@ trait ActorTrait
         Runtime::$logger?->info('Deleting reminder for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
-        $client->delete($client->get_api_path("/actors/$type/$id/reminders/$name"));
+        $client->delete("/actors/$type/$id/reminders/$name");
 
         return true;
     }
@@ -148,10 +145,7 @@ trait ActorTrait
         Runtime::$logger?->info('Creating timer for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
-        $client->post(
-            $client->get_api_path("/actors/$type/$id/timers/{$timer->name}"),
-            $timer->to_array()
-        );
+        $client->post("/actors/$type/$id/timers/{$timer->name}", $timer->to_array());
 
         return true;
     }
@@ -184,7 +178,7 @@ trait ActorTrait
         Runtime::$logger?->info('Deleting timer for {type}||{id}', ['type' => $type, 'id' => $id]);
 
         $client = DaprClient::get_client();
-        $client->delete($client->get_api_path("/actors/$type/$id/timers/$name"));
+        $client->delete("/actors/$type/$id/timers/$name");
 
         return true;
     }

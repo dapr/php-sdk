@@ -11,6 +11,7 @@ use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
+use Dapr\Attributes\FromBody;
 use Dapr\Binding;
 use Dapr\consistency\StrongFirstWrite;
 use Dapr\consistency\StrongLastWrite;
@@ -355,29 +356,54 @@ RAW
     }
 );
 
-$app->get('/test/invoke', function () {
-    $body = [];
-    $result = Runtime::invoke_method('dev', 'say_something', 'My Message');
-    $body=assert_equals($body,200, $result->code, 'Should receive a 200 response');
+$app->get(
+    '/test/invoke',
+    function (\Dapr\DaprClient $client) {
+        $body   = [];
+        $result = $client->post("/invoke/dev/method/say_something", "My Message");
+        $body   = assert_equals($body, 200, $result->code, 'Should receive a 200 response');
 
-    $json = '{"ok": true}';
+        $json = '{"ok": true}';
 
-    $result = Runtime::invoke_method('dev', 'test_static', $json);
-    $body=assert_equals($body,200, $result->code, 'Static function should receive json string');
-    $result = Runtime::invoke_method('dev', 'test_instance', $json);
-    $body=assert_equals($body,200, $result->code, 'Instance function should receive json string');
-    $result = Runtime::invoke_method('dev', 'test_inline', $json);
-    $body=assert_equals($body,200, $result->code, 'Closure should receive json string');
-    return $body;
-});
-$app->post('/say_something', function() {
-});
+        $result = $client->post('/invoke/dev/method/test_json', $json);
+        $body   = assert_equals($body, 200, $result->code, 'Static function should receive json string');
 
-//$app->get('/cron', fn() => 'hello world');
+        return $body;
+    }
+);
+$app->post(
+    '/say_something',
+    function () {
+    }
+);
+$app->post(
+    '/test_json',
+    function (#[FromBody] string $body) {
+        return json_decode($body);
+    }
+);
+
+$app->get(
+    '/test/binding',
+    function () {
+        $body      = [];
+        $cron_file = sys_get_temp_dir().'/cron';
+        //Binding::invoke_output('cron', 'delete');
+        $body = assert_equals($body, true, file_exists($cron_file), 'we should have received at least one cron');
+        // see https://github.com/dapr/components-contrib/issues/639
+        //sleep(1);
+        //unlink($cron_file);
+        //sleep(1);
+
+        //assert_equals(false, file_exists($cron_file), 'cron should be stopped');
+        return $body;
+    }
+);
+$app->get('/cron', fn() => 'hello world');
 $app->post(
     '/testsub',
     function (
-        #[\Dapr\Attributes\FromBody] CloudEvent $event,
+        #[FromBody] CloudEvent $event,
         \Psr\Http\Message\RequestInterface $request,
         \Psr\Log\LoggerInterface $logger
     ) {
@@ -388,6 +414,31 @@ $app->post(
         return [
             'status' => 'SUCCESS',
         ];
+    }
+);
+
+$app->get(
+    '/do_tests',
+    function (\Dapr\DaprClient $client) {
+        $test_results = [
+            '/test/actors'            => null,
+            '/test/binding'           => null,
+            '/test/invoke'            => null,
+            '/test/pubsub'            => null,
+            '/test/state/concurrency' => null,
+            '/test/state'             => null,
+        ];
+
+        foreach (array_keys($test_results) as $suite) {
+            $result               = $client->get('/invoke/dev/method'.$suite);
+            $body                 = [];
+            $body                 = assert_equals($body, 200, $result->code, 'test completed successfully');
+            $test_results[$suite] = [
+                'status'  => $body,
+                'results' => $result->data,
+            ];
+        }
+        return $test_results;
     }
 );
 

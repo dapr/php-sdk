@@ -29,7 +29,7 @@ abstract class Secret
             ['name' => $name, 'secret_store' => $secret_store]
         );
         $client = $dapr_container->get(DaprClient::class);
-        $result = $client->get($client->get_api_path("/secrets/$secret_store/$name", $parameters));
+        $result = $client->get("/secrets/$secret_store/$name", $parameters);
         self::handle_response_code($result->code);
 
         return $result->data;

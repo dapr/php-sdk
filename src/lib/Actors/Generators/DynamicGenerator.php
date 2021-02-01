@@ -52,7 +52,7 @@ class DynamicGenerator extends GenerateProxy
             }
 
             $result = $client->post(
-                $client->get_api_path("/actors/{$this->dapr_type}/$id/method/{$method->getName()}"),
+                "/actors/{$this->dapr_type}/$id/method/{$method->getName()}",
                 $serializer->as_array($params)
             );
 

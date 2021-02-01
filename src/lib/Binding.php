@@ -42,7 +42,7 @@ abstract class Binding
             ['name' => $name, 'payload' => $payload]
         );
 
-        return $client->post($client->get_api_path("/bindings/$name"), $payload);
+        return $client->post("/bindings/$name", $payload);
     }
 
     public static function has_binding(string $name): bool
