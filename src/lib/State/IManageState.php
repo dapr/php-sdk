@@ -41,7 +41,7 @@ interface IManageState
      *
      * @param string $store_name The store name
      * @param array $metadata Metadata to pass on to the store
-     * @param string ...$keys The keys to delete
+     * @param string[] $keys The keys to delete
      */
     public function delete_keys(string $store_name, array $keys, array $metadata = []): void;
 

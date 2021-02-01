@@ -2,4 +2,6 @@
 
 namespace Dapr\exceptions\Http;
 
-class HttpException extends \Exception {}
+use Exception;
+
+class HttpException extends Exception {}

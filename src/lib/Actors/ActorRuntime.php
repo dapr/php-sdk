@@ -3,10 +3,16 @@
 namespace Dapr\Actors;
 
 use Dapr\Deserialization\IDeserializer;
+use Dapr\exceptions\DaprException;
 use Dapr\exceptions\Http\NotFound;
+use Dapr\exceptions\SaveStateFailure;
 use DI\Container;
+use DI\DependencyException;
+use DI\NotFoundException;
+use Exception;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionNamedType;
 
 /**
@@ -28,7 +34,17 @@ class ActorRuntime
     ) {
     }
 
-    public function do_method(IActor $actor, string $method, mixed $arg)
+    /**
+     * Call a method on the actor
+     *
+     * @param IActor $actor The actor to call the method on
+     * @param string $method The method to call
+     * @param mixed $arg The argument to pass to the method
+     *
+     * @return mixed The result from the actor
+     * @throws ReflectionException
+     */
+    public function do_method(IActor $actor, string $method, mixed $arg): mixed
     {
         $reflection = new ReflectionClass($actor);
         $method     = $reflection->getMethod($method);
@@ -47,7 +63,7 @@ class ActorRuntime
         );
     }
 
-    public function deactivate_actor(IActor $actor, string $dapr_type, string $id)
+    public function deactivate_actor(IActor $actor, string $dapr_type, string $id): void
     {
         $activation_tracker = hash('sha256', $dapr_type.$id);
         $activation_tracker = rtrim(
@@ -63,18 +79,47 @@ class ActorRuntime
         }
     }
 
+    /**
+     * Resolve an actor, then calls your callback with the actor before committing any state changes
+     *
+     * @param string $dapr_type The dapr type to resolve
+     * @param string $id The id of the actor to resolve
+     * @param callable $loan A callback that takes an IActor
+     *
+     * @return mixed The result of you callback
+     * @throws NotFound
+     * @throws SaveStateFailure
+     */
     public function resolve_actor(string $dapr_type, string $id, callable $loan): mixed
     {
-        $reflection = $this->locate_actor($dapr_type);
-        $this->validate_actor($reflection);
-        $states = $this->get_states($reflection, $dapr_type, $id);
-        $actor  = $this->get_actor($reflection, $dapr_type, $id, $states);
+        try {
+            $reflection = $this->locate_actor($dapr_type);
+            $this->validate_actor($reflection);
+            $states = $this->get_states($reflection, $dapr_type, $id);
+            $actor  = $this->get_actor($reflection, $dapr_type, $id, $states);
+        } catch (Exception $exception) {
+            throw new NotFound('Actor could not be located', previous: $exception);
+        }
         $result = $loan($actor);
-        $this->commit($states);
+
+        try {
+            $this->commit($states);
+        } catch (DependencyException | DaprException | NotFoundException $e) {
+            throw new SaveStateFailure('Failed to commit actor state', previous: $e);
+        }
 
         return $result;
     }
 
+    /**
+     * Locates an actor implementation
+     *
+     * @param string $dapr_type The dapr type to locate
+     *
+     * @return ReflectionClass
+     * @throws NotFound
+     * @throws ReflectionException
+     */
     protected function locate_actor(string $dapr_type): ReflectionClass
     {
         $type = $this->actor_config->get_actor_type_from_dapr_type($dapr_type);
@@ -86,7 +131,13 @@ class ActorRuntime
         return new ReflectionClass($type);
     }
 
-    protected function validate_actor(ReflectionClass $reflection)
+    /**
+     * @param ReflectionClass $reflection
+     *
+     * @return bool
+     * @throws NotFound
+     */
+    protected function validate_actor(ReflectionClass $reflection): bool
     {
         if ($reflection->implementsInterface('Dapr\Actors\IActor')
             && $reflection->isInstantiable() && $reflection->isUserDefined()) {
@@ -97,6 +148,18 @@ class ActorRuntime
         throw new NotFound();
     }
 
+    /**
+     * Retrieves an array of states for a located actor
+     *
+     * @param ReflectionClass $reflection The class we're loading states for
+     * @param string $dapr_type The dapr type
+     * @param string $id The id
+     *
+     * @return array
+     * @throws ReflectionException
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     protected function get_states(ReflectionClass $reflection, string $dapr_type, string $id): array
     {
         $constructor = $reflection->getMethod('__construct');
@@ -121,13 +184,24 @@ class ActorRuntime
         return $states;
     }
 
+    /**
+     * Begins an actor transaction
+     *
+     * @param ActorState $state The state to begin the transaction on
+     * @param ReflectionClass $reflected_type The reflected class
+     * @param string $dapr_type The dapr type
+     * @param string $actor_id The actor id
+     * @param ReflectionClass|null $original The child reflection
+     *
+     * @throws ReflectionException
+     */
     protected function begin_transaction(
         ActorState $state,
         ReflectionClass $reflected_type,
         string $dapr_type,
         string $actor_id,
         ?ReflectionClass $original = null
-    ) {
+    ): void {
         if ($reflected_type->name !== ActorState::class) {
             $this->begin_transaction(
                 $state,
@@ -144,6 +218,18 @@ class ActorRuntime
         $begin_transaction->invoke($state, $dapr_type, $actor_id);
     }
 
+    /**
+     * Instantiates an actor implementation
+     *
+     * @param ReflectionClass $reflection
+     * @param string $dapr_type
+     * @param string $id
+     * @param array $states
+     *
+     * @return IActor
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     protected function get_actor(ReflectionClass $reflection, string $dapr_type, string $id, array $states): IActor
     {
         $states['id']       = $id;
@@ -170,8 +256,12 @@ class ActorRuntime
 
     /**
      * @param ActorState[] $states
+     *
+     * @throws DaprException
+     * @throws DependencyException
+     * @throws NotFoundException
      */
-    protected function commit(array $states)
+    protected function commit(array $states): void
     {
         foreach ($states as $state) {
             $state->save_state();

@@ -33,10 +33,7 @@
     "psr-4": {
       "Dapr\\": "src/lib",
       "Dapr\\TestActors\\": "test/actors"
-    },
-    "files": [
-      "src/bootstrap.php"
-    ]
+    }
   },
   "scripts": {
     "test": "./vendor/bin/phpunit --testdox tests --coverage-clover coverage.xml tests --whitelist src",

@@ -3,10 +3,11 @@
 namespace Dapr\Actors\Generators;
 
 use DI\Container;
+use JetBrains\PhpStorm\Pure;
 
 class CachedGenerator extends ExistingOnly
 {
-    public function __construct(string $interface, string $dapr_type, Container $container)
+    #[Pure] public function __construct(string $interface, string $dapr_type, Container $container)
     {
         parent::__construct($interface, $dapr_type, $container);
     }

@@ -8,6 +8,8 @@ use Dapr\exceptions\StateAlreadyCommitted;
 use Dapr\State\Internal\StateHelpers;
 use Dapr\State\Internal\Transaction;
 use DI\Container;
+use DI\DependencyException;
+use DI\NotFoundException;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -31,6 +33,9 @@ abstract class TransactionalState
      * TransactionalState constructor.
      *
      * @param Container $container
+     *
+     * @throws DependencyException
+     * @throws NotFoundException
      */
     public function __construct(
         private Container $container
@@ -48,6 +53,9 @@ abstract class TransactionalState
      * @param int $parallelism The amount of parallelism to use in loading the state
      * @param array|null $metadata Component specific metadata
      * @param string $prefix
+     *
+     * @throws DependencyException
+     * @throws NotFoundException
      */
     public function begin(int $parallelism = 10, ?array $metadata = null, $prefix = ''): void
     {
@@ -102,6 +110,7 @@ abstract class TransactionalState
      * Throws an exception if this object has been committed.
      *
      * @return void
+     * @throws StateAlreadyCommitted
      */
     protected function throw_if_committed(): void
     {
@@ -118,6 +127,11 @@ abstract class TransactionalState
         return isset($this->transaction->state[$key]);
     }
 
+    /**
+     * @param string $key
+     *
+     * @throws StateAlreadyCommitted
+     */
     public function __unset(string $key): void
     {
         $this->logger->debug('Deleting {key}', ['key' => $key]);

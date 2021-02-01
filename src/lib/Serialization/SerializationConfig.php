@@ -2,7 +2,6 @@
 
 namespace Dapr\Serialization;
 
-use Dapr\Actors\ActorConfig;
 use Dapr\Serialization\Serializers\DateInterval;
 use Dapr\Serialization\Serializers\DateTime;
 use Dapr\Serialization\Serializers\ISerialize;
@@ -28,7 +27,7 @@ class SerializationConfig
         }
     }
 
-    public function add(string $type, ISerialize $serializer)
+    public function add(string $type, ISerialize $serializer): void
     {
         $this->serializers[$type] = $serializer;
     }

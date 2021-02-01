@@ -2,8 +2,9 @@
 
 namespace Dapr\Actors\Generators;
 
-use DI\Annotation\Inject;
 use DI\Container;
+use DI\DependencyException;
+use DI\NotFoundException;
 use InvalidArgumentException;
 
 class ProxyFactory
@@ -19,9 +20,19 @@ class ProxyFactory
      * @param Container $container
      * @param int $mode
      */
-    public function __construct(private Container $container, private int $mode) {}
+    public function __construct(private Container $container, private int $mode)
+    {
+    }
 
-    public function get_generator($interface, $dapr_type): IGenerateProxy
+    /**
+     * @param $interface
+     * @param $dapr_type
+     *
+     * @return IGenerateProxy
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    public function get_generator(string $interface, string $dapr_type): IGenerateProxy
     {
         $params = ['interface' => $interface, 'dapr_type' => $dapr_type];
 

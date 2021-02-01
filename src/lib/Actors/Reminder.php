@@ -2,8 +2,6 @@
 
 namespace Dapr\Actors;
 
-use Dapr\Deserialization\Deserializers\IDeserialize;
-use Dapr\Deserialization\IDeserializer;
 use Dapr\Formats;
 use DateInterval;
 use JetBrains\PhpStorm\ArrayShape;

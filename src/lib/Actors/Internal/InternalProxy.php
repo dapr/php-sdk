@@ -18,7 +18,7 @@ class InternalProxy
      * @param string $name The name of the method to call
      * @param array $arguments Arguments to pass to the method
      *
-     * @return false|mixed
+     * @return mixed
      */
     public function __call(string $name, array $arguments): mixed
     {

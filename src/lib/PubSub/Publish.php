@@ -3,6 +3,8 @@
 namespace Dapr\PubSub;
 
 use DI\Container;
+use DI\DependencyException;
+use DI\NotFoundException;
 
 class Publish
 {
@@ -16,6 +18,13 @@ class Publish
     {
     }
 
+    /**
+     * @param string $topic
+     *
+     * @return Topic
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function topic(string $topic): Topic
     {
         return $this->container->make(Topic::class, ['pubsub' => $this->pubsub, 'topic' => $topic]);

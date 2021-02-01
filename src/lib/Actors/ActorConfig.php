@@ -5,6 +5,8 @@ namespace Dapr\Actors;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializers\ISerialize;
 use DateInterval;
+use JetBrains\PhpStorm\ArrayShape;
+use JetBrains\PhpStorm\Pure;
 
 /**
  * Class ActorConfig
@@ -33,7 +35,7 @@ class ActorConfig implements ISerialize
     /**
      * @return array An array of dapr types
      */
-    public function get_supported_actors(): array
+    #[Pure] public function get_supported_actors(): array
     {
         return array_keys($this->actor_name_to_type);
     }
@@ -82,7 +84,12 @@ class ActorConfig implements ISerialize
         return $this->drain_enabled ?? null;
     }
 
-    public function serialize(mixed $value, ISerializer $serializer): array
+    #[ArrayShape(['entities'                => "",
+                  'drainRebalancedActors'   => "",
+                  'drainOngoingCallTimeout' => "mixed",
+                  'actorScanInterval'       => "mixed",
+                  'actorIdleTimeout'        => "mixed"
+    ])] public function serialize(mixed $value, ISerializer $serializer): array
     {
         $return = [
             'entities' => $value->get_supported_actors(),

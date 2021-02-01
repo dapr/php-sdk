@@ -24,7 +24,7 @@ class SecretManager
      * @return array The secrets
      * @throws DaprException
      */
-    public function all(string $secret_store)
+    public function all(string $secret_store): array
     {
         $this->logger->debug('Retrieving all secrets from {secret_store}', ['secret_store' => $secret_store]);
         $result = $this->client->get("/secrets/$secret_store/bulk");
@@ -62,7 +62,7 @@ class SecretManager
      *
      * @throws DaprException
      */
-    private function handle_response_code(int $code)
+    private function handle_response_code(int $code): void
     {
         switch ($code) {
             case 200:

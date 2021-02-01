@@ -4,8 +4,8 @@ namespace Dapr\PubSub;
 
 use Dapr\Deserialization\Deserializers\IDeserialize;
 use Dapr\Deserialization\IDeserializer;
-use Dapr\Runtime;
 use DateTime;
+use Exception;
 use InvalidArgumentException;
 use JetBrains\PhpStorm\ArrayShape;
 use LogicException;
@@ -121,6 +121,12 @@ class CloudEvent implements IDeserialize
     {
     }
 
+    /**
+     * @param string $json
+     *
+     * @return CloudEvent
+     * @throws Exception
+     */
     public static function parse(string $json): CloudEvent
     {
         $raw = json_decode($json, true);
@@ -128,6 +134,12 @@ class CloudEvent implements IDeserialize
         return self::from_array($raw);
     }
 
+    /**
+     * @param array $raw
+     *
+     * @return CloudEvent
+     * @throws Exception
+     */
     private static function from_array(array $raw): CloudEvent
     {
         if ($raw['specversion'] !== '1.0') {
@@ -152,9 +164,16 @@ class CloudEvent implements IDeserialize
         return $event;
     }
 
-    public static function deserialize(mixed $raw, IDeserializer $deserializer): mixed
+    /**
+     * @param mixed $value
+     * @param IDeserializer $deserializer
+     *
+     * @return CloudEvent
+     * @throws Exception
+     */
+    public static function deserialize(mixed $value, IDeserializer $deserializer): CloudEvent
     {
-        return self::from_array($raw);
+        return self::from_array($value);
     }
 
     /**

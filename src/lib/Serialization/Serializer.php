@@ -8,6 +8,7 @@ use Dapr\Serialization\Serializers\ISerialize;
 use Exception;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
+use ReflectionException;
 use stdClass;
 
 class Serializer implements ISerializer
@@ -47,7 +48,10 @@ class Serializer implements ISerializer
 
                 $obj = [];
                 if (class_exists($type_name)) {
-                    $reflection_class = new ReflectionClass($type_name);
+                    try {
+                        $reflection_class = new ReflectionClass($type_name);
+                    } catch (ReflectionException) {
+                    }
                 }
                 foreach ($value as $prop_name => $prop_value) {
                     if (is_array($prop_value)

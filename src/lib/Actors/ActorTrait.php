@@ -90,7 +90,6 @@ trait ActorTrait
      */
     public function delete_reminder(string $name): bool
     {
-        global $dapr_container;
         // inline function: get name
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
@@ -123,7 +122,6 @@ trait ActorTrait
     public function create_timer(
         Timer $timer,
     ): bool {
-        global $dapr_container;
         // inline function: get name
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
@@ -155,7 +153,6 @@ trait ActorTrait
      */
     public function delete_timer(string $name): bool
     {
-        global $dapr_container;
         // inline function: get name
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;

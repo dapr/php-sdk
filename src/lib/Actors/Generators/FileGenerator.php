@@ -7,9 +7,10 @@ use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\IActor;
 use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
-use Dapr\Runtime;
 use Dapr\Serialization\ISerializer;
 use DI\Container;
+use DI\DependencyException;
+use DI\NotFoundException;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
 use Nette\PhpGenerator\ClassType;
@@ -17,6 +18,7 @@ use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\PhpFile;
 use Nette\PhpGenerator\Type;
 use ReflectionClass;
+use ReflectionException;
 
 class FileGenerator extends GenerateProxy
 {
@@ -36,6 +38,9 @@ class FileGenerator extends GenerateProxy
      * @param string|null $override_type Allows overriding the dapr type
      *
      * @return PhpFile
+     * @throws DependencyException
+     * @throws NotFoundException
+     * @throws ReflectionException
      */
     public static function generate(string $interface, string|null $override_type = null): PhpFile
     {
@@ -81,7 +86,7 @@ class FileGenerator extends GenerateProxy
         $interface->addTrait(ActorTrait::class);
 
         // maybe implement IActor
-        $reflected_interface = new \ReflectionClass($interface);
+        $reflected_interface = new ReflectionClass($interface);
         if ( ! $reflected_interface->isSubclassOf(IActor::class)) {
             $interface->addImplement(IActor::class);
         }

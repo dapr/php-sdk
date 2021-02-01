@@ -6,9 +6,10 @@ use Dapr\Actors\Internal\KeyResponse;
 use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
-use Dapr\Serialization\ISerializer;
 use Dapr\State\Internal\Transaction;
 use DI\Container;
+use DI\DependencyException;
+use DI\NotFoundException;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -24,7 +25,6 @@ abstract class ActorState
     private Transaction $transaction;
     private LoggerInterface $logger;
     private IDeserializer $deserializer;
-    private ISerializer $serializer;
     private ReflectionClass $reflection;
     private DaprClient $client;
     private string $actor_id;
@@ -38,6 +38,8 @@ abstract class ActorState
      * Commits the current transaction
      *
      * @throws DaprException
+     * @throws DependencyException
+     * @throws NotFoundException
      */
     public function save_state(): void
     {
@@ -55,6 +57,15 @@ abstract class ActorState
         $this->begin_transaction($this->dapr_type, $this->actor_id);
     }
 
+    /**
+     * Begins a transaction
+     *
+     * @param string $dapr_type
+     * @param string $actor_id
+     *
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     private function begin_transaction(string $dapr_type, string $actor_id)
     {
         $this->dapr_type    = $dapr_type;
@@ -62,7 +73,6 @@ abstract class ActorState
         $this->reflection   = new ReflectionClass($this);
         $this->logger       = $this->container->get(LoggerInterface::class);
         $this->deserializer = $this->container->get(IDeserializer::class);
-        $this->serializer   = $this->container->get(ISerializer::class);
         $this->client       = $this->container->get(DaprClient::class);
 
         foreach ($this->reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
@@ -81,7 +91,10 @@ abstract class ActorState
     public function roll_back(): void
     {
         $this->logger->debug('Rolled back transaction');
-        $this->transaction    = $this->container->make(Transaction::class);
+        try {
+            $this->transaction = $this->container->make(Transaction::class);
+        } catch (DependencyException | NotFoundException) {
+        }
         $this->_internal_data = [];
     }
 

@@ -9,11 +9,10 @@ use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\Serialization\ISerializer;
-use Dapr\State\Attributes\StateStore;
 use Dapr\State\Internal\StateHelpers;
-use LogicException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionProperty;
 use WeakMap;
 
@@ -34,6 +33,10 @@ class StateManager implements IManageState
         }
     }
 
+    /**
+     * @inheritDoc
+     * @throws DaprException
+     */
     public function save_state(
         string $store_name,
         StateItem $item
@@ -44,6 +47,10 @@ class StateManager implements IManageState
         $this->client->post("/state/$store_name", $request);
     }
 
+    /**
+     * @inheritDoc
+     * @throws DaprException
+     */
     public function load_state(
         string $store_name,
         string $key,
@@ -66,6 +73,10 @@ class StateManager implements IManageState
         // TODO: Implement delete_keys() method.
     }
 
+    /**
+     * @inheritDoc
+     * @throws DaprException
+     */
     public function save_object(
         object $item,
         string $prefix = '',
@@ -100,6 +111,10 @@ class StateManager implements IManageState
         $this->client->post("/state/{$store->name}", $request);
     }
 
+    /**
+     * @inheritDoc
+     * @throws DaprException|ReflectionException
+     */
     public function load_object(object $into, string $prefix = '', int $parallelism = 10, array $metadata = []): void
     {
         $this->logger->debug('Loading state');
@@ -137,13 +152,5 @@ class StateManager implements IManageState
         }
 
         self::$obj_meta[$into] = $keys;
-    }
-
-    protected function get_store_for_obj(ReflectionClass $reflection)
-    {
-        foreach ($reflection->getAttributes(StateStore::class) as $attribute) {
-            return $attribute->newInstance()->name;
-        }
-        throw new LogicException('Tried to load state without a Dapr\State\Attributes\StateStore attribute');
     }
 }

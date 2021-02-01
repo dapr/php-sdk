@@ -4,6 +4,7 @@ namespace Dapr;
 
 use DateInterval;
 use DateTime;
+use Exception;
 use LogicException;
 
 abstract class Formats
@@ -48,6 +49,12 @@ abstract class Formats
         return $diff;
     }
 
+    /**
+     * @param string $dapr_interval
+     *
+     * @return DateInterval|null
+     * @throws Exception
+     */
     public static function from_dapr_interval(string $dapr_interval): ?DateInterval
     {
         if (empty($dapr_interval)) {

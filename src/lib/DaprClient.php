@@ -2,6 +2,7 @@
 
 namespace Dapr;
 
+use CurlHandle;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use JetBrains\PhpStorm\Pure;
@@ -19,7 +20,8 @@ class DaprClient
     public array $extra_headers = [];
     private static DaprClient $client;
 
-    public static function get_client() {
+    public static function get_client(): DaprClient
+    {
         return self::$client;
     }
 
@@ -91,7 +93,11 @@ class DaprClient
         $this->logger->debug('Got response: {response}', ['response' => $return]);
 
         if ($this->deserializer->is_exception($return->data)) {
-            throw $this->deserializer->get_exception($return->data);
+            /**
+             * @var DaprException $ex
+             */
+            $ex = $this->deserializer->get_exception($return->data);
+            throw $ex;
         }
 
         return $return;
@@ -120,7 +126,7 @@ class DaprClient
     }
 
     /**
-     * @param \CurlHandle|false $curl
+     * @param CurlHandle|false $curl
      */
     private function detect_trace_from_response(mixed $curl): void
     {
@@ -153,6 +159,7 @@ class DaprClient
      *
      * @param string $url The url to post to.
      * @param array $data The data to post as a JSON document.
+     * @param array|null $params
      *
      * @return DaprResponse The parsed response.
      * @throws DaprException
@@ -180,7 +187,11 @@ class DaprClient
         $this->logger->debug('Got response: {r}', ['r' => $response]);
 
         if ($this->deserializer->is_exception($response->data)) {
-            throw $this->deserializer->get_exception($response->data);
+            /**
+             * @var DaprException $ex
+             */
+            $ex = $this->deserializer->get_exception($response->data);
+            throw $ex;
         }
 
         return $response;
@@ -195,6 +206,7 @@ class DaprClient
      * Delete a uri
      *
      * @param string $url The url to delete
+     * @param array|null $params
      *
      * @return DaprResponse The response
      * @throws DaprException
@@ -221,7 +233,11 @@ class DaprClient
         $this->logger->debug('Got response: {r}', ['r' => $response]);
 
         if ($this->deserializer->is_exception($response->data)) {
-            throw $this->deserializer->get_exception($response->data);
+            /**
+             * @var DaprException $ex
+             */
+            $ex = $this->deserializer->get_exception($response->data);
+            throw $ex;
         }
 
         return $response;

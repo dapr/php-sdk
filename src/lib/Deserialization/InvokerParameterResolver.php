@@ -17,7 +17,7 @@ class InvokerParameterResolver implements ParameterResolver
         ReflectionFunctionAbstract $reflection,
         array $providedParameters,
         array $resolvedParameters
-    ) {
+    ): array {
         $parameters = $reflection->getParameters();
 
         if ( ! empty($resolvedParameters)) {

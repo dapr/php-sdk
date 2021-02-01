@@ -19,22 +19,12 @@ abstract class GenerateProxy implements IGenerateProxy
 
     protected function generate_method(Method $method, string $id): Method|callable|null
     {
-        switch ($method->getName()) {
-            case 'remind':
-            case 'on_activation':
-            case 'on_deactivation':
-                return $this->generate_failure_method($method);
-            case 'create_reminder':
-            case 'get_reminder':
-            case 'delete_reminder':
-            case 'create_timer':
-            case 'delete_timer':
-                return null;
-            case 'get_id':
-                return $this->generate_get_id($method, $id);
-            default:
-                return $this->generate_proxy_method($method, $id);
-        }
+        return match ($method->getName()) {
+            'remind', 'on_activation', 'on_deactivation' => $this->generate_failure_method($method),
+            'create_reminder', 'get_reminder', 'delete_reminder', 'create_timer', 'delete_timer' => null,
+            'get_id' => $this->generate_get_id($method, $id),
+            default => $this->generate_proxy_method($method, $id),
+        };
     }
 
     /**
@@ -50,6 +40,7 @@ abstract class GenerateProxy implements IGenerateProxy
      * Write a method to get the current actor id.
      *
      * @param Method $method
+     * @param string $id
      *
      * @return Method
      */
@@ -75,17 +66,17 @@ abstract class GenerateProxy implements IGenerateProxy
         return array_merge($interface->getMethods(), ClassType::from(IActor::class)->getMethods());
     }
 
-    protected function get_full_class_name()
+    protected function get_full_class_name(): string
     {
         return "\\".$this->get_namespace()."\\".$this->get_short_class_name();
     }
 
-    protected function get_namespace()
+    protected function get_namespace(): string
     {
         return "Dapr\\Proxies";
     }
 
-    protected function get_short_class_name()
+    protected function get_short_class_name(): string
     {
         $internal_type = preg_replace('/[^a-zA-Z0-9_]*/', '', $this->dapr_type);
 

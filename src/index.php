@@ -5,25 +5,30 @@ require_once __DIR__.'/../tests/Fixtures/SimpleActor.php';
 
 define('STORE', 'statestore');
 
+use Dapr\Actors\ActorConfig;
 use Dapr\Actors\ActorProxy;
-use Dapr\Actors\ActorRuntime;
 use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
+use Dapr\App;
 use Dapr\Attributes\FromBody;
-use Dapr\Binding;
 use Dapr\consistency\StrongFirstWrite;
 use Dapr\consistency\StrongLastWrite;
+use Dapr\DaprClient;
 use Dapr\exceptions\SaveStateFailure;
 use Dapr\exceptions\StateAlreadyCommitted;
+use Dapr\Formats;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Publish;
-use Dapr\Runtime;
+use Dapr\PubSub\Subscription;
+use Dapr\PubSub\Subscriptions;
 use Dapr\State\Attributes\StateStore;
 use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
-use Psr\Http\Message\ResponseInterface;
+use DI\Container;
+use DI\ContainerBuilder;
+use Psr\Log\LoggerInterface;
 
 use function DI\autowire;
 
@@ -38,22 +43,22 @@ class TState extends TransactionalState
     }
 }
 
-$app = \Dapr\App::create(
-    configure: fn(\DI\ContainerBuilder $builder) => $builder->addDefinitions(
+$app = App::create(
+    configure: fn(ContainerBuilder $builder) => $builder->addDefinitions(
     [
-        \Dapr\Actors\ActorConfig::class   => new class extends \Dapr\Actors\ActorConfig {
+        ActorConfig::class   => new class extends ActorConfig {
             public function __construct()
             {
                 $this->actor_name_to_type = ['SimpleActor' => SimpleActor::class];
             }
         },
-        \Dapr\PubSub\Subscriptions::class => new class extends \Dapr\PubSub\Subscriptions {
+        Subscriptions::class => new class extends Subscriptions {
             public function __construct()
             {
-                $this->subscriptions = [new \Dapr\PubSub\Subscription('pubsub', 'test', '/testsub')];
+                $this->subscriptions = [new Subscription('pubsub', 'test', '/testsub')];
             }
         },
-        ProxyFactory::class               => autowire(ProxyFactory::class)->constructorParameter(
+        ProxyFactory::class  => autowire(ProxyFactory::class)->constructorParameter(
             'mode',
             ProxyFactory::GENERATED
         ),
@@ -88,8 +93,8 @@ $app->get(
         $read_reminder = $actor->get_reminder('increment');
         $body          = assert_equals(
             $body,
-            $reminder->due_time->format(\Dapr\Formats::FROM_INTERVAL),
-            $read_reminder->due_time->format(\Dapr\Formats::FROM_INTERVAL),
+            $reminder->due_time->format(Formats::FROM_INTERVAL),
+            $read_reminder->due_time->format(Formats::FROM_INTERVAL),
             'time formats are delivered ok'
         );
 
@@ -191,7 +196,7 @@ $app->get(
 
 $app->get(
     '/test/state/transactions',
-    function (StateManager $stateManager, \DI\Container $container) {
+    function (StateManager $stateManager, Container $container) {
         $reset_state = new TState($container);
         $stateManager->save_object($reset_state);
         ($transaction = new TState($container))->begin();
@@ -209,7 +214,7 @@ $app->get(
         $stateManager->load_object($committed_state);
         $body = assert_equals($body, 0, $committed_state->counter, 'counter not incremented outside transaction');
 
-        $transaction->increment(1);
+        $transaction->increment();
         $stateManager->load_object($committed_state);
 
         $body = assert_equals($body, 2, $transaction->counter, 'counter was incremented in transaction via function');
@@ -262,7 +267,7 @@ $app->get(
 
 $app->get(
     '/test/pubsub',
-    function (\DI\Container $container) {
+    function (Container $container) {
         $publisher = new Publish('pubsub', $container);
         $topic     = $publisher->topic(topic: 'test');
         $body      = [];
@@ -358,7 +363,7 @@ RAW
 
 $app->get(
     '/test/invoke',
-    function (\Dapr\DaprClient $client) {
+    function (DaprClient $client) {
         $body   = [];
         $result = $client->post("/invoke/dev/method/say_something", "My Message");
         $body   = assert_equals($body, 200, $result->code, 'Should receive a 200 response');
@@ -404,8 +409,7 @@ $app->post(
     '/testsub',
     function (
         #[FromBody] CloudEvent $event,
-        \Psr\Http\Message\RequestInterface $request,
-        \Psr\Log\LoggerInterface $logger
+        LoggerInterface $logger
     ) {
         $logger->critical('Received an event: {subject}', ['subject' => $event->subject]);
         touch('/tmp/sub-received');
@@ -419,7 +423,7 @@ $app->post(
 
 $app->get(
     '/do_tests',
-    function (\Dapr\DaprClient $client) {
+    function (DaprClient $client) {
         $test_results = [
             '/test/actors'            => null,
             '/test/binding'           => null,
@@ -438,6 +442,7 @@ $app->get(
                 'results' => $result->data,
             ];
         }
+
         return $test_results;
     }
 );
@@ -486,7 +491,7 @@ function assert_throws(array $body, $exception, $message, $callback): array
         $callback();
         $body[$message] = "❌";
         throw new Exception("Expected $exception, but was not thrown\n");
-    } catch (Exception $ex) {
+    } catch (Exception) {
         $body[$message] = "✔";
     }
 

@@ -7,38 +7,43 @@ use Dapr\Actors\ActorRuntime;
 use Dapr\Actors\HealthCheck;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
-use Dapr\Actors\Timer;
-use Dapr\Attributes\FromBody;
-use Dapr\Deserialization\IDeserializer;
 use Dapr\Deserialization\InvokerParameterResolver;
 use Dapr\exceptions\Http\NotFound;
 use Dapr\PubSub\Subscriptions;
 use Dapr\Serialization\ISerializer;
 use DI\Container;
 use DI\ContainerBuilder;
+use DI\DependencyException;
+use DI\NotFoundException;
+use Exception;
 use FastRoute\DataGenerator\GroupCountBased;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
 use FastRoute\RouteParser\Std;
+use Invoker\Exception\InvocationException;
+use Invoker\Exception\NotCallableException;
+use Invoker\Exception\NotEnoughParametersException;
 use Invoker\Invoker;
 use Invoker\ParameterResolver\AssociativeArrayResolver;
 use Invoker\ParameterResolver\Container\TypeHintContainerResolver;
 use Invoker\ParameterResolver\DefaultValueResolver;
 use Invoker\ParameterResolver\ResolverChain;
 use Invoker\ParameterResolver\TypeHintResolver;
+use JetBrains\PhpStorm\Pure;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 class App
 {
     protected ServerRequestCreator $creator;
     protected RouteCollector $routeCollector;
 
-    public function __construct(
+    #[Pure] public function __construct(
         protected Container $container,
         protected ISerializer $serializer,
         protected Psr17Factory $psr17Factory
@@ -56,6 +61,17 @@ class App
         );
     }
 
+    /**
+     * Create a dapr app
+     *
+     * @param ContainerInterface|null $container
+     * @param callable|null $configure
+     *
+     * @return App
+     * @throws DependencyException
+     * @throws NotFoundException
+     * @throws Exception
+     */
     public static function create(ContainerInterface $container = null, callable $configure = null): App
     {
         if ($container === null) {
@@ -72,7 +88,7 @@ class App
         error_reporting(E_ERROR | E_USER_ERROR);
         ini_set("display_errors", 0);
         set_error_handler(
-            function ($err_no, $err_str, $err_file, $err_line, $err_context = null) {
+            function ($err_no, $err_str, $err_file, $err_line) {
                 http_response_code(500);
                 header('Content-Type: application/json');
                 echo json_encode(
@@ -91,27 +107,27 @@ class App
         return $app;
     }
 
-    public function post(string $route, callable $callback)
+    public function post(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('POST', $route, $callback);
     }
 
-    public function options(string $route, callable $callback)
+    public function options(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('OPTIONS', $route, $callback);
     }
 
-    public function patch(string $route, callable $callback)
+    public function patch(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('PATCH', $route, $callback);
     }
 
-    public function any(string $route, callable $callback)
+    public function any(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute(['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], $route, $callback);
     }
 
-    public function start()
+    public function start(): void
     {
         $this->add_dapr_routes($this);
         try {
@@ -120,7 +136,7 @@ class App
             $response = $this->psr17Factory->createResponse(404)->withBody(
                 $this->psr17Factory->createStream($this->serializer->as_json($exception))
             )->withAddedHeader('Content-Type', 'application/json');
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             $response = $this->psr17Factory->createResponse(500)->withBody(
                 $this->psr17Factory->createStream($this->serializer->as_json($exception))
             )->withHeader('Content-Type', 'application/json');
@@ -132,7 +148,7 @@ class App
     /**
      * @param App $app
      */
-    public function add_dapr_routes($app)
+    public function add_dapr_routes(App $app): void
     {
         /**
          * Actors
@@ -206,26 +222,41 @@ class App
         $app->get('/dapr/subscribe', fn(Subscriptions $subscriptions) => $subscriptions);
     }
 
-    public function delete(string $route, callable $callback)
+    public function delete(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('DELETE', $route, $callback);
     }
 
-    public function put(string $route, callable $callback)
+    public function put(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('PUT', $route, $callback);
     }
 
-    private function serialize_as_stream(mixed $data)
+    /**
+     * @param mixed $data
+     *
+     * @return StreamInterface
+     */
+    private function serialize_as_stream(mixed $data): StreamInterface
     {
         return $this->psr17Factory->createStream($this->serializer->as_json($data));
     }
 
-    public function get(string $route, callable $callback)
+    public function get(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('GET', $route, $callback);
     }
 
+    /**
+     * Creates and handles a request
+     *
+     * @return ResponseInterface
+     * @throws DependencyException
+     * @throws NotFoundException
+     * @throws InvocationException
+     * @throws NotCallableException
+     * @throws NotEnoughParametersException
+     */
     private function handleRequest(): ResponseInterface
     {
         $request  = $this->creator->fromGlobals();
