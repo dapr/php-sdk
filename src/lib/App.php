@@ -388,8 +388,8 @@ class App
             $this->container->get(InvokerParameterResolver::class),
             new AssociativeArrayResolver(),
             new TypeHintResolver(),
-            new DefaultValueResolver(),
             new TypeHintContainerResolver($this->container),
+            new DefaultValueResolver(),
         ];
 
         $invoker = new Invoker(new ResolverChain($resolvers), $this->container);
