@@ -19,8 +19,11 @@ class DaprClient
     private static DaprClient $client;
     public array $extra_headers = [];
 
-    public function __construct(protected LoggerInterface $logger, protected IDeserializer $deserializer)
-    {
+    public function __construct(
+        protected LoggerInterface $logger,
+        protected IDeserializer $deserializer,
+        protected int $port
+    ) {
         self::$client = $this;
     }
 
@@ -83,7 +86,7 @@ class DaprClient
      *
      * @return string The API URI
      */
-    protected function get_api_path(string $path, ?array $params = null): string
+    #[Pure] protected function get_api_path(string $path, ?array $params = null): string
     {
         $params = $params ? http_build_query($params) : '';
         $params = $params ? '?'.$params : '';
@@ -98,9 +101,7 @@ class DaprClient
      */
     protected function get_api_base(): string
     {
-        $port = getenv('DAPR_HTTP_PORT') ?: 3500;
-
-        return "http://localhost:$port/v1.0";
+        return "http://localhost:{$this->port}/v1.0";
     }
 
     private function get_headers(): array
@@ -174,10 +175,10 @@ class DaprClient
                 CURLINFO_HEADER_OUT    => true,
             ]
         );
-        $response       = new DaprResponse();
-        $response->data = curl_exec($curl);
-        $response->data = json_decode($response->data, true);
-        $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $response          = new DaprResponse();
+        $response->data    = curl_exec($curl);
+        $response->data    = json_decode($response->data, true);
+        $response->code    = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $response->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
         self::detect_trace_from_response($response);
         $this->logger->debug('Got response: {r}', ['r' => $response]);
@@ -221,9 +222,9 @@ class DaprClient
                 CURLINFO_HEADER_OUT    => true,
             ]
         );
-        $response       = new DaprResponse();
-        $response->data = json_decode(curl_exec($curl), true);
-        $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $response          = new DaprResponse();
+        $response->data    = json_decode(curl_exec($curl), true);
+        $response->code    = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $response->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
         self::detect_trace_from_response($response);
 
