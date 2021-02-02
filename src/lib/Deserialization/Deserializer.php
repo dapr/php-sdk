@@ -100,10 +100,11 @@ class Deserializer implements IDeserializer
 
         try {
             $reflection = new ReflectionClass($as);
-            $obj        = $reflection->newInstanceWithoutConstructor();
-            if ($obj instanceof IDeserialize) {
-                return $obj->deserialize($value, $this);
+            if($reflection->implementsInterface(IDeserialize::class)) {
+                $callback =  [$as, 'deserialize'];
+                return $callback($value, $this);
             }
+            $obj        = $reflection->newInstanceWithoutConstructor();
         } catch (ReflectionException $exception) {
             $this->logger->warning(
                 'Failure trying to deserialize to {as}: {exception}',
