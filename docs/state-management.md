@@ -9,8 +9,8 @@ Dapr's [supported state stores](https://docs.dapr.io/operations/components/setup
 
 ## Defining State
 
-State is defined through the use of any Plain Old PHP Object (POPO) that has statically declared properties (using a
-stdClass won't work) and an attribute.
+State is defined through the use of any Plain Old PHP Object (POPO) and an attribute to declare which state store it
+belongs to. Each property is stored as a key and are not lazily loaded or saved.
 
 ```php
 #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
@@ -19,23 +19,17 @@ class HelloWorldState {
 }
 ```
 
-Then to load the state from the store, we need to instantiate the class or load from our constructor, both of these are
-valid:
+Then to load the state from the store, we need to use the `StateManager`:
 
 ```php
 #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
 class HelloWorldState {
     public function __construct(public $hello_world = 'hello world') {}
 }
-$state = new HelloWorldState();
-\Dapr\State\State::load_state($state);
-
-#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
-class ConstructedState {
-    public function __construct(public $hello_world = 'hello world') { 
-        \Dapr\State\State::load_state($this);
-    }
-}
+$app->get('/', function(\Dapr\State\StateManager $stateManager) {
+    $state = new HelloWorldState();
+    $stateManager->load_object($state);
+});
 ```
 
 If you have any default values defined in your class, they'll survive loading a non-existent value. Take care when
@@ -45,40 +39,10 @@ to access it with a `null` value.
 It is perfectly safe to add behavior to your state classes as well, the state changes will be captured, even in a
 transaction.
 
-### Loading
-
-```
-public static function load_state(object $obj, int $parallelism = 10, ?array $metadata = null): void
-```
-
-Loads the data from the store as defined by the attribute.
-
-Parameters:
-
-- obj: The object to load state into
-- parallelism: the number of keys to load at one time
-- metadata: optional, component specific metadata
-
-### Saving
-
-```
-public static function save_state(object $obj, ?array $metadata = null): void
-```
-
-Saves the data to the store, using the specified concurrency/consistency option defined in the attribute.
-
-Throws `DaprException` if it fails.
-
-Parameters:
-
-- obj: The object's state to read
-- metadata: optional, component specific metadata
-
 ## Transactions
 
 You can also interact with state using a transaction instead of transactionless. To use state in a transaction, you must
-extend
-`\Dapr\State\TransactionalState` with your state class. You can still use it as normal state too.
+extend `\Dapr\State\TransactionalState` with your state class. You can still use it as normal state too.
 
 ```php
 #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
@@ -87,16 +51,16 @@ class HelloWorldState extends \Dapr\State\TransactionalState {
         parent::__construct();
     }
 }
-($state = new HelloWorldState())->begin();
+$app->get('/', function(\DI\FactoryInterface $factory) {
+    $state = $factory->make(HelloWorldState::class);
+    $state->begin();
+    $state->hello_world = 'goodbye';
+    $state->commit();
+});
 ```
 
-Once you've made your changes to the state, call `commit`
-
-```php
-$state->commit();
-```
-
-Once the transaction is committed, the state may no longer be modified.
+Once you've made your changes to the state, call `commit`. Once the transaction is committed, the state may no longer be
+modified.
 
 ### TransactionalState::begin()
 
