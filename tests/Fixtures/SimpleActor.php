@@ -4,7 +4,6 @@ use Dapr\Actors\Actor;
 use Dapr\Actors\ActorState;
 use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\Reminder;
-use JetBrains\PhpStorm\Pure;
 
 #[DaprType('SimpleActor')]
 interface ISimpleActor
@@ -45,7 +44,7 @@ class SimpleActor extends Actor
      * @param string $id
      * @param SimpleActorState $state
      */
-    #[Pure] public function __construct(protected string $id, private SimpleActorState $state)
+    public function __construct(protected string $id, private SimpleActorState $state)
     {
         parent::__construct($id);
     }

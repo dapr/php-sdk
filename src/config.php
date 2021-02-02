@@ -4,11 +4,14 @@ use Dapr\Actors\ActorConfig;
 use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\DaprClient;
 use Dapr\Deserialization\DeserializationConfig;
+use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\PubSub\Subscriptions;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
+use Dapr\Serialization\Serializer;
 use Dapr\State\IManageState;
+use Dapr\State\StateManager;
 use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
@@ -36,9 +39,9 @@ return [
         get('dapr.log.handler'),
         get('dapr.log.processor')
     ),
-    IDeserializer::class           => autowire(),
-    ISerializer::class             => autowire(),
-    IManageState::class            => autowire(),
+    IDeserializer::class           => autowire(Deserializer::class),
+    ISerializer::class             => autowire(Serializer::class),
+    IManageState::class            => autowire(StateManager::class),
     ProxyFactory::class            => autowire()->constructorParameter(
         'mode',
         get('dapr.actors.proxy.generation')

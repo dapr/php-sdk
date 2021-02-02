@@ -99,7 +99,7 @@ class DaprClient
      *
      * @return string The base uri
      */
-    protected function get_api_base(): string
+    #[Pure] protected function get_api_base(): string
     {
         return "http://localhost:{$this->port}/v1.0";
     }

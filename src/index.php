@@ -190,7 +190,7 @@ $app->get(
 
 $app->get(
     '/test/state/transactions',
-    function (StateManager $stateManager, FactoryInterface $container) {
+    function (StateManager $stateManager, \DI\Container $container) {
         $reset_state = $container->make(TState::class);
         $stateManager->save_object($reset_state);
         ($transaction = $container->make(TState::class))->begin();
@@ -229,9 +229,9 @@ $app->get(
 
         $store = new SimpleState();
         $stateManager->save_object($store);
-        ($one = new #[StateStore(STORE, StrongFirstWrite::class)] class($container) extends TState {
+        ($one = new #[StateStore(STORE, StrongFirstWrite::class)] class($container, $container) extends TState {
         })->begin();
-        ($two = new #[StateStore(STORE, StrongLastWrite::class)] class($container) extends TState {
+        ($two = new #[StateStore(STORE, StrongLastWrite::class)] class($container, $container) extends TState {
         })->begin();
 
         $one->counter = 1;
@@ -251,7 +251,7 @@ $app->get(
             }
         );
         $one->begin();
-        $one = new TState($container);
+        $one = new TState($container, $container);
         $one->begin();
         $body = assert_equals($body, 2, $one->counter, 'first-write transaction failed');
 
