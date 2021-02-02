@@ -11,9 +11,9 @@ use Dapr\Deserialization\InvokerParameterResolver;
 use Dapr\exceptions\Http\NotFound;
 use Dapr\PubSub\Subscriptions;
 use Dapr\Serialization\ISerializer;
-use DI\Container;
 use DI\ContainerBuilder;
 use DI\DependencyException;
+use DI\FactoryInterface;
 use DI\NotFoundException;
 use Exception;
 use FastRoute\DataGenerator\GroupCountBased;
@@ -37,6 +37,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Log\LoggerInterface;
 
 class App
 {
@@ -44,9 +45,11 @@ class App
     protected RouteCollector $routeCollector;
 
     #[Pure] public function __construct(
-        protected Container $container,
+        protected ContainerInterface $container,
+        protected FactoryInterface $factory,
         protected ISerializer $serializer,
-        protected Psr17Factory $psr17Factory
+        protected Psr17Factory $psr17Factory,
+        protected LoggerInterface $logger,
     ) {
         $this->routeCollector = new RouteCollector(
             new Std,
@@ -136,10 +139,12 @@ class App
             $response = $this->psr17Factory->createResponse(404)->withBody(
                 $this->psr17Factory->createStream($this->serializer->as_json($exception))
             )->withAddedHeader('Content-Type', 'application/json');
+            $this->logger->info('Route threw a NotFound exception, returning 404.', ['exception' => $exception]);
         } catch (Exception $exception) {
             $response = $this->psr17Factory->createResponse(500)->withBody(
                 $this->psr17Factory->createStream($this->serializer->as_json($exception))
             )->withHeader('Content-Type', 'application/json');
+            $this->logger->critical('Failed due to {exception}', ['exception' => $exception]);
         }
         $emitter = new SapiEmitter();
         $emitter->emit($response);
@@ -292,13 +297,14 @@ class App
 
                 $invoker         = new Invoker(new ResolverChain($resolvers), $this->container);
                 $actual_response = $response;
-                $response        = $invoker->call($callback, $parameters);
+
+                $response = $invoker->call($callback, $parameters);
 
                 if ($response instanceof ResponseInterface) {
                     return $response;
                 }
 
-                if (is_array($response)) {
+                if (is_array($response) && isset($response['code'])) {
                     if (isset($response['code'])) {
                         $actual_response = $actual_response->withStatus($response['code']);
                     }

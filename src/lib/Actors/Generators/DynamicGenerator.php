@@ -6,18 +6,23 @@ use Dapr\Actors\Internal\InternalProxy;
 use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
-use DI\Container;
+use DI\FactoryInterface;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
+use Psr\Container\ContainerInterface;
 
 class DynamicGenerator extends GenerateProxy
 {
 
-    #[Pure] public function __construct(string $interface, string $dapr_type, Container $container)
-    {
-        parent::__construct($interface, $dapr_type, $container);
+    #[Pure] public function __construct(
+        string $interface,
+        string $dapr_type,
+        FactoryInterface $factory,
+        ContainerInterface $container
+    ) {
+        parent::__construct($interface, $dapr_type, $factory, $container);
     }
 
     public function get_proxy(string $id): InternalProxy

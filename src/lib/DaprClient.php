@@ -2,7 +2,6 @@
 
 namespace Dapr;
 
-use CurlHandle;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use JetBrains\PhpStorm\Pure;
@@ -127,7 +126,7 @@ class DaprClient
     }
 
     /**
-     * @param CurlHandle|false $curl
+     * @param DaprResponse $response
      */
     private function detect_trace_from_response(DaprResponse $response): void
     {
@@ -179,7 +178,8 @@ class DaprClient
         $response->data = curl_exec($curl);
         $response->data = json_decode($response->data, true);
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        self::detect_trace_from_response($curl);
+        $response->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
+        self::detect_trace_from_response($response);
         $this->logger->debug('Got response: {r}', ['r' => $response]);
 
         if ($this->deserializer->is_exception($response->data)) {
@@ -224,7 +224,8 @@ class DaprClient
         $response       = new DaprResponse();
         $response->data = json_decode(curl_exec($curl), true);
         $response->code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        self::detect_trace_from_response($curl);
+        $response->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
+        self::detect_trace_from_response($response);
 
         $this->logger->debug('Got response: {r}', ['r' => $response]);
 

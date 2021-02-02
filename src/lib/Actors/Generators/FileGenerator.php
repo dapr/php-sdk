@@ -8,8 +8,8 @@ use Dapr\Actors\IActor;
 use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
-use DI\Container;
 use DI\DependencyException;
+use DI\FactoryInterface;
 use DI\NotFoundException;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
@@ -17,6 +17,7 @@ use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\PhpFile;
 use Nette\PhpGenerator\Type;
+use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionException;
 
@@ -25,10 +26,11 @@ class FileGenerator extends GenerateProxy
     #[Pure] public function __construct(
         protected string $interface,
         protected string $dapr_type,
-        Container $container,
+        FactoryInterface $factory,
+        ContainerInterface $container,
         private array $usings = []
     ) {
-        parent::__construct($interface, $dapr_type, $container);
+        parent::__construct($interface, $dapr_type, $factory, $container);
     }
 
     /**
@@ -42,8 +44,11 @@ class FileGenerator extends GenerateProxy
      * @throws NotFoundException
      * @throws ReflectionException
      */
-    public static function generate(string $interface, Container $container, string|null $override_type = null): PhpFile
-    {
+    public static function generate(
+        string $interface,
+        FactoryInterface $factory,
+        string|null $override_type = null
+    ): PhpFile {
         $reflected_interface = new ReflectionClass($interface);
         $type                = $override_type ?? ($reflected_interface->getAttributes(
                     DaprType::class
@@ -53,7 +58,7 @@ class FileGenerator extends GenerateProxy
             throw new LogicException("$interface must have a DaprType attribute");
         }
 
-        $generator = $container->make(FileGenerator::class, ['interface' => $interface, 'dapr_type' => $type]);
+        $generator = $factory->make(FileGenerator::class, ['interface' => $interface, 'dapr_type' => $type]);
 
         return $generator->generate_file();
     }
@@ -68,7 +73,7 @@ class FileGenerator extends GenerateProxy
                 eval($namespace);
             }
         }
-        $proxy     = $this->container->make($this->get_full_class_name());
+        $proxy = $this->factory->make($this->get_full_class_name());
         $proxy->id = $id;
 
         return $proxy;

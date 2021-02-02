@@ -1,7 +1,10 @@
 <?php
 
+use Dapr\Actors\ActorConfig;
+use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
+use Dapr\PubSub\Subscriptions;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializer;
 use Dapr\State\IManageState;
@@ -18,23 +21,45 @@ use function DI\get;
 
 return [
     // logging
-    'dapr.log.level'       => LogLevel::WARNING,
-    'dapr.log.handler'     => [
+    'dapr.log.level'               => LogLevel::WARNING,
+    'dapr.log.handler'             => [
         create(ErrorLogHandler::class)->constructor(
             level: get('dapr.log.level')
         ),
     ],
-    'dapr.log.processor'   => [create(PsrLogMessageProcessor::class)],
+    'dapr.log.processor'           => [create(PsrLogMessageProcessor::class)],
 
     // interface to implementation
-    LoggerInterface::class => create(Logger::class)->constructor(
+    LoggerInterface::class         => create(Logger::class)->constructor(
         'DAPR',
         get('dapr.log.handler'),
         get('dapr.log.processor')
     ),
-    IDeserializer::class   => autowire(Deserializer::class),
-    ISerializer::class     => autowire(Serializer::class),
-    IManageState::class    => autowire(StateManager::class),
+    IDeserializer::class           => autowire(Deserializer::class),
+    ISerializer::class             => autowire(Serializer::class),
+    IManageState::class            => autowire(StateManager::class),
+    ProxyFactory::class            => autowire(ProxyFactory::class)->constructorParameter(
+        'mode',
+        get('dapr.actors.proxy.generation')
+    ),
+    Subscriptions::class           => autowire(Subscriptions::class)->constructorParameter(
+        'subscriptions',
+        get('dapr.subscriptions')
+    ),
+    ActorConfig::class             => autowire()
+        ->constructorParameter('actor_name_to_type', get('dapr.actors'))
+        ->constructorParameter('idle_timeout', get('dapr.actors.idle_timeout'))
+        ->constructorParameter('scan_interval', get('dapr.actors.scan_interval'))
+        ->constructorParameter('drain_timeout', get('dapr.actors.drain_timeout'))
+        ->constructorParameter('drain_enabled', get('dapr.actors.drain_enabled')),
 
-    // application settings
+    // default application settings
+    'dapr.actors.proxy.generation' => ProxyFactory::GENERATED,
+    'dapr.subscriptions'           => [],
+    'dapr.actors'                  => [],
+    'dapr.actors.idle_timeout'     => null,
+    'dapr.actors.scan_interval'    => null,
+    'dapr.actors.drain_timeout'    => null,
+    'dapr.actors.drain_enabled'    => null,
+
 ];

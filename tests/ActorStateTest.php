@@ -44,7 +44,7 @@ class ActorStateTest extends DaprTests
         return new class($this->container) extends ActorState {
             #[Pure] public function __construct(Container $container)
             {
-                parent::__construct($container);
+                parent::__construct($container, $container);
             }
 
             public string $state = 'initial';

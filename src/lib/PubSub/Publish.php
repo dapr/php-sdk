@@ -2,8 +2,8 @@
 
 namespace Dapr\PubSub;
 
-use DI\Container;
 use DI\DependencyException;
+use DI\FactoryInterface;
 use DI\NotFoundException;
 
 class Publish
@@ -12,9 +12,9 @@ class Publish
      * Publish constructor.
      *
      * @param string $pubsub
-     * @param Container $container
+     * @param FactoryInterface $container
      */
-    public function __construct(private string $pubsub, private Container $container)
+    public function __construct(private string $pubsub, private FactoryInterface $container)
     {
     }
 

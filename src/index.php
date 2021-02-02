@@ -5,9 +5,7 @@ require_once __DIR__.'/../tests/Fixtures/SimpleActor.php';
 
 define('STORE', 'statestore');
 
-use Dapr\Actors\ActorConfig;
 use Dapr\Actors\ActorProxy;
-use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
@@ -22,15 +20,15 @@ use Dapr\Formats;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscription;
-use Dapr\PubSub\Subscriptions;
 use Dapr\State\Attributes\StateStore;
 use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
-use DI\Container;
 use DI\ContainerBuilder;
+use DI\FactoryInterface;
+use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
-use function DI\autowire;
+use function DI\factory;
 
 #[StateStore(STORE, StrongFirstWrite::class)]
 class TState extends TransactionalState
@@ -46,29 +44,19 @@ class TState extends TransactionalState
 $app = App::create(
     configure: fn(ContainerBuilder $builder) => $builder->addDefinitions(
     [
-        ActorConfig::class   => new class extends ActorConfig {
-            public function __construct()
-            {
-                $this->actor_name_to_type = ['SimpleActor' => SimpleActor::class];
-            }
-        },
-        Subscriptions::class => new class extends Subscriptions {
-            public function __construct()
-            {
-                $this->subscriptions = [new Subscription('pubsub', 'test', '/testsub')];
-            }
-        },
-        ProxyFactory::class  => autowire(ProxyFactory::class)->constructorParameter(
-            'mode',
-            ProxyFactory::GENERATED
+        'dapr.subscriptions' => factory(
+            fn(ContainerInterface $container) => [
+                new Subscription('pubsub', 'test', '/testsub'),
+            ]
         ),
+        'dapr.actors'        => [SimpleActor::class],
     ]
 )
 );
 
 $app->get(
     '/test/actors',
-    function (ActorProxy $actorProxy) {
+    function (ActorProxy $actorProxy, DaprClient $client, LoggerInterface $logger) {
         $id = uniqid(prefix: 'actor_');
 
         /**
@@ -77,9 +65,11 @@ $app->get(
         $actor = $actorProxy->get(ISimpleActor::class, $id);
         $body  = [];
 
+        $logger->critical('Created actor proxy');
         $body = assert_equals($body, 0, $actor->get_count(), 'Empty actor should have no data');
         $actor->increment();
         $body = assert_equals($body, 1, $actor->get_count(), 'Actor should have data');
+        $logger->critical('Incremented actor');
 
         $reminder = new Reminder(
             name: 'increment',
@@ -87,11 +77,13 @@ $app->get(
             data: ['amount' => 2],
             period: new DateInterval('PT10M')
         );
-        $actor->create_reminder(reminder: $reminder);
+        $actor->create_reminder($reminder, $client);
+        $logger->critical('Created reminder');
         sleep(2);
         $body          = assert_equals($body, 3, $actor->get_count(), 'Reminder should increment');
-        $read_reminder = $actor->get_reminder('increment');
-        $body          = assert_equals(
+        $read_reminder = $actor->get_reminder('increment', $client);
+        $logger->critical('Got reminder');
+        $body = assert_equals(
             $body,
             $reminder->due_time->format(Formats::FROM_INTERVAL),
             $read_reminder->due_time->format(Formats::FROM_INTERVAL),
@@ -105,14 +97,16 @@ $app->get(
             callback: 'increment',
             data: 2
         );
-        $actor->create_timer(timer: $timer);
+        $actor->create_timer($timer, $client);
+        $logger->critical('Created timer');
         sleep(2);
         $body = assert_equals($body, 5, $actor->get_count(), 'Timer should increment');
 
-        $actor->delete_timer('increment');
-        $actor->delete_reminder('increment');
-        $actor->delete_reminder('nope');
-        $actor->delete_timer('nope');
+        $actor->delete_timer('increment', $client);
+        $actor->delete_reminder('increment', $client);
+        $actor->delete_reminder('nope', $client);
+        $actor->delete_timer('nope', $client);
+        $logger->critical('Cleaned up');
 
         $object      = new SimpleObject();
         $object->bar = ['hello', 'world'];
@@ -196,10 +190,10 @@ $app->get(
 
 $app->get(
     '/test/state/transactions',
-    function (StateManager $stateManager, Container $container) {
-        $reset_state = new TState($container);
+    function (StateManager $stateManager, FactoryInterface $container) {
+        $reset_state = $container->make(TState::class);
         $stateManager->save_object($reset_state);
-        ($transaction = new TState($container))->begin();
+        ($transaction = $container->make(TState::class))->begin();
         $body                 = [];
         $body                 = assert_equals($body, 0, $transaction->counter, 'initial count = 0');
         $transaction->counter += 1;
@@ -210,7 +204,7 @@ $app->get(
             'counter was incremented in transaction'
         );
 
-        $committed_state = new TState($container);
+        $committed_state = $container->make(TState::class);
         $stateManager->load_object($committed_state);
         $body = assert_equals($body, 0, $committed_state->counter, 'counter not incremented outside transaction');
 
@@ -267,8 +261,8 @@ $app->get(
 
 $app->get(
     '/test/pubsub',
-    function (Container $container) {
-        $publisher = new Publish('pubsub', $container);
+    function (FactoryInterface $container) {
+        $publisher = $container->make(Publish::class, ['pubsub' => 'pubsub']);
         $topic     = $publisher->topic(topic: 'test');
         $body      = [];
 
@@ -404,7 +398,7 @@ $app->get(
         return $body;
     }
 );
-$app->get('/cron', fn() => 'hello world');
+$app->post('/cron', fn() => 'hello world');
 $app->post(
     '/testsub',
     function (

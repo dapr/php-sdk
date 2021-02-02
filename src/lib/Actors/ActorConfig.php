@@ -2,12 +2,15 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Actors\Attributes\DaprType;
 use Dapr\Formats;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializers\ISerialize;
 use DateInterval;
 use JetBrains\PhpStorm\ArrayShape;
-use JetBrains\PhpStorm\Pure;
+use LogicException;
+use ReflectionClass;
+use ReflectionException;
 
 /**
  * Class ActorConfig
@@ -34,23 +37,34 @@ class ActorConfig implements ISerialize
     }
 
     /**
-     * @return array An array of dapr types
-     */
-    #[Pure] public function get_supported_actors(): array
-    {
-        return array_keys($this->actor_name_to_type);
-    }
-
-    /**
      * Given a Dapr Type, returns the name of a concrete implementation
      *
      * @param string $dapr_type The dapr type
      *
      * @return string|null The concrete type, or null if not found
+     * @throws ReflectionException | LogicException
      */
     public function get_actor_type_from_dapr_type(string $dapr_type): string|null
     {
-        return $this->actor_name_to_type[$dapr_type] ?? null;
+        $actors = array_combine($this->get_supported_actors(), $this->actor_name_to_type);
+
+        return $actors[$dapr_type] ?? null;
+    }
+
+    /**
+     * @return array An array of dapr types
+     * @throws ReflectionException | LogicException
+     */
+    public function get_supported_actors(): array
+    {
+        $actors = array_map(
+            fn($type) => ((new ReflectionClass($type))->getAttributes(DaprType::class) ?: throw new LogicException(
+                "$type is missing DaprType attribute"
+            ))[0]->newInstance()->type,
+            $this->actor_name_to_type
+        );
+
+        return $actors;
     }
 
     /**

@@ -6,8 +6,8 @@ use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\exceptions\Http\NotFound;
 use Dapr\exceptions\SaveStateFailure;
-use DI\Container;
 use DI\DependencyException;
+use DI\FactoryInterface;
 use DI\NotFoundException;
 use Exception;
 use Psr\Log\LoggerInterface;
@@ -23,7 +23,7 @@ class ActorRuntime
     public function __construct(
         protected LoggerInterface $logger,
         protected ActorConfig $actor_config,
-        protected Container $container,
+        protected FactoryInterface $container,
         protected IDeserializer $deserializer,
     ) {
     }

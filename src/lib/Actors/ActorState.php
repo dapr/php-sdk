@@ -7,10 +7,11 @@ use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\State\Internal\Transaction;
-use DI\Container;
 use DI\DependencyException;
+use DI\FactoryInterface;
 use DI\NotFoundException;
 use InvalidArgumentException;
+use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionException;
@@ -30,7 +31,7 @@ abstract class ActorState
     private string $actor_id;
     private string $dapr_type;
 
-    public function __construct(private Container $container)
+    public function __construct(private ContainerInterface $container, private FactoryInterface $factory)
     {
     }
 
@@ -78,7 +79,7 @@ abstract class ActorState
         foreach ($this->reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             unset($this->{$property->name});
         }
-        $this->transaction = $this->container->make(Transaction::class);
+        $this->transaction = $this->factory->make(Transaction::class);
         $this->logger->debug(
             'Starting a new transaction for {t}||{i}',
             ['t' => $this->dapr_type, 'i' => $this->actor_id]
@@ -92,7 +93,7 @@ abstract class ActorState
     {
         $this->logger->debug('Rolled back transaction');
         try {
-            $this->transaction = $this->container->make(Transaction::class);
+            $this->transaction = $this->factory->make(Transaction::class);
         } catch (DependencyException | NotFoundException) {
         }
         $this->_internal_data = [];

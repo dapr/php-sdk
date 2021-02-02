@@ -7,10 +7,11 @@ use Dapr\exceptions\DaprException;
 use Dapr\exceptions\StateAlreadyCommitted;
 use Dapr\State\Internal\StateHelpers;
 use Dapr\State\Internal\Transaction;
-use DI\Container;
 use DI\DependencyException;
+use DI\FactoryInterface;
 use DI\NotFoundException;
 use InvalidArgumentException;
+use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionProperty;
@@ -32,18 +33,20 @@ abstract class TransactionalState
     /**
      * TransactionalState constructor.
      *
-     * @param Container $container
+     * @param ContainerInterface $container
+     * @param FactoryInterface $factory
      *
      * @throws DependencyException
      * @throws NotFoundException
      */
     public function __construct(
-        private Container $container
+        private ContainerInterface $container,
+        private FactoryInterface $factory
     ) {
         $this->logger      = $this->container->get(LoggerInterface::class);
         $this->client      = $this->container->get(DaprClient::class);
         $this->state       = $this->container->get(IManageState::class);
-        $this->transaction = $this->container->make(Transaction::class);
+        $this->transaction = $this->factory->make(Transaction::class);
         $this->reflection  = new ReflectionClass($this);
     }
 
@@ -60,7 +63,7 @@ abstract class TransactionalState
     public function begin(int $parallelism = 10, ?array $metadata = null, $prefix = ''): void
     {
         $this->logger->info('Beginning transaction');
-        $this->transaction = $this->container->make(Transaction::class);
+        $this->transaction = $this->factory->make(Transaction::class);
         $this->state->load_object(
             $this,
             prefix: $prefix,
