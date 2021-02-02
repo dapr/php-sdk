@@ -39,11 +39,31 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Class App
+ * @package Dapr
+ */
 class App
 {
+    /**
+     * @var ServerRequestCreator
+     */
     protected ServerRequestCreator $creator;
+
+    /**
+     * @var RouteCollector
+     */
     protected RouteCollector $routeCollector;
 
+    /**
+     * App constructor.
+     *
+     * @param ContainerInterface $container
+     * @param FactoryInterface $factory
+     * @param ISerializer $serializer
+     * @param Psr17Factory $psr17Factory
+     * @param LoggerInterface $logger
+     */
     #[Pure] public function __construct(
         protected ContainerInterface $container,
         protected FactoryInterface $factory,
@@ -110,31 +130,51 @@ class App
         return $app;
     }
 
+    /**
+     * @param string $route
+     * @param callable $callback
+     */
     public function post(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('POST', $route, $callback);
     }
 
+    /**
+     * @param string $route
+     * @param callable $callback
+     */
     public function options(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('OPTIONS', $route, $callback);
     }
 
+    /**
+     * @param string $route
+     * @param callable $callback
+     */
     public function patch(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('PATCH', $route, $callback);
     }
 
+    /**
+     * @param string $route
+     * @param callable $callback
+     */
     public function any(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute(['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], $route, $callback);
     }
 
+    /**
+     * Serve the request
+     */
     public function start(): void
     {
         $this->add_dapr_routes($this);
         try {
-            $response = $this->handleRequest();
+            $request = $this->creator->fromGlobals();
+            $response = $this->handleRequest($request);
         } catch (NotFound $exception) {
             $response = $this->psr17Factory->createResponse(404)->withBody(
                 $this->psr17Factory->createStream($this->serializer->as_json($exception))
@@ -227,11 +267,19 @@ class App
         $app->get('/dapr/subscribe', fn(Subscriptions $subscriptions) => $subscriptions);
     }
 
+    /**
+     * @param string $route
+     * @param callable $callback
+     */
     public function delete(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('DELETE', $route, $callback);
     }
 
+    /**
+     * @param string $route
+     * @param callable $callback
+     */
     public function put(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('PUT', $route, $callback);
@@ -255,16 +303,20 @@ class App
     /**
      * Creates and handles a request
      *
+     * @param RequestInterface $request
+     *
      * @return ResponseInterface
-     * @throws DependencyException
-     * @throws NotFoundException
      * @throws InvocationException
      * @throws NotCallableException
      * @throws NotEnoughParametersException
      */
-    private function handleRequest(): ResponseInterface
+    private function handleRequest(RequestInterface $request): ResponseInterface
     {
-        $request  = $this->creator->fromGlobals();
+        $this->logger->debug(
+            'Handling request: {method} {uri}',
+            ['method' => $request->getMethod(), 'uri' => $request->getUri()]
+        );
+
         $response = $this->psr17Factory->createResponse()->withHeader('Content-Type', 'application/json');
 
         $this->container->set(RequestInterface::class, $request);
@@ -287,18 +339,8 @@ class App
                 $parameters += $route_info[2];
                 $callback   = $route_info[1];
 
-                $resolvers = [
-                    $this->container->get(InvokerParameterResolver::class),
-                    new AssociativeArrayResolver(),
-                    new TypeHintResolver(),
-                    new DefaultValueResolver(),
-                    new TypeHintContainerResolver($this->container),
-                ];
-
-                $invoker         = new Invoker(new ResolverChain($resolvers), $this->container);
                 $actual_response = $response;
-
-                $response = $invoker->call($callback, $parameters);
+                $response        = $this->run($callback, $parameters);
 
                 if ($response instanceof ResponseInterface) {
                     return $response;
@@ -320,10 +362,38 @@ class App
                         $this->serialize_as_stream($response->data)
                     );
 
+                    foreach ($response->headers as $header => $value) {
+                        $actual_response = $actual_response->withHeader($header, $value);
+                    }
+
                     return $actual_response;
                 }
 
                 return $actual_response->withBody($this->serialize_as_stream($response));
         }
+    }
+
+    /**
+     * @param callable $callback
+     * @param array $parameters
+     *
+     * @return mixed
+     * @throws InvocationException
+     * @throws NotCallableException
+     * @throws NotEnoughParametersException
+     */
+    public function run(callable $callback, array $parameters): mixed
+    {
+        $resolvers = [
+            $this->container->get(InvokerParameterResolver::class),
+            new AssociativeArrayResolver(),
+            new TypeHintResolver(),
+            new DefaultValueResolver(),
+            new TypeHintContainerResolver($this->container),
+        ];
+
+        $invoker = new Invoker(new ResolverChain($resolvers), $this->container);
+
+        return $invoker->call($callback, $parameters);
     }
 }
