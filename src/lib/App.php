@@ -384,6 +384,8 @@ class App
      */
     public function run(callable $callback, array $parameters = []): mixed
     {
+        $request = $this->creator->fromGlobals();
+        $this->container->set(RequestInterface::class, $request);
         $resolvers = [
             $this->container->get(InvokerParameterResolver::class),
             new AssociativeArrayResolver(),
