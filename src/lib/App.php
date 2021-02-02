@@ -382,7 +382,7 @@ class App
      * @throws NotCallableException
      * @throws NotEnoughParametersException
      */
-    public function run(callable $callback, array $parameters): mixed
+    public function run(callable $callback, array $parameters = []): mixed
     {
         $resolvers = [
             $this->container->get(InvokerParameterResolver::class),
