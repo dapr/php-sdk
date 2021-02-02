@@ -22,7 +22,7 @@ class DaprClient
     public function __construct(
         protected LoggerInterface $logger,
         protected IDeserializer $deserializer,
-        protected int $port
+        protected string $port
     ) {
         self::$client = $this;
     }
