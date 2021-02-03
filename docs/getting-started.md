@@ -50,7 +50,7 @@ return [
     'dapr.actors.drain_enabled'    => null,
     
     // you shouldn't have to change this, but the setting is here if you need to
-    'dapr.port'                    => env('DAPR_HTTP_PORT', 3500),
+    'dapr.port'                    => env('DAPR_HTTP_PORT', '3500'),
     
     // add any custom serialization routines here
     'dapr.serializers.custom'      => [],

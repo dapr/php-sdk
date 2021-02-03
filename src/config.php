@@ -1,11 +1,14 @@
 <?php
 
 use Dapr\Actors\ActorConfig;
+use Dapr\Actors\ActorProxy;
+use Dapr\Actors\ActorRuntime;
 use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\DaprClient;
 use Dapr\Deserialization\DeserializationConfig;
 use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
+use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscriptions;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
@@ -62,8 +65,12 @@ return [
         'deserializers',
         get('dapr.deserializers.custom')
     ),
+    ActorProxy::class              => autowire(),
+    Publish::class                 => autowire()->constructorParameter('pubsub', get('dapr.pubsub.default')),
+    ActorRuntime::class            => autowire(),
 
     // default application settings
+    'dapr.pubsub.default'          => 'pubsub',
     'dapr.actors.proxy.generation' => ProxyFactory::GENERATED,
     'dapr.subscriptions'           => [],
     'dapr.actors'                  => [],
