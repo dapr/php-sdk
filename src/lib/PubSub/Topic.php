@@ -4,12 +4,16 @@ namespace Dapr\PubSub;
 
 use Dapr\DaprClient;
 use Dapr\exceptions\DaprException;
-use Dapr\Runtime;
+use Psr\Log\LoggerInterface;
 
 class Topic
 {
-    public function __construct(private string $pubsub, private string $topic)
-    {
+    public function __construct(
+        private string $pubsub,
+        private string $topic,
+        private DaprClient $client,
+        private LoggerInterface $logger
+    ) {
     }
 
     /**
@@ -22,9 +26,9 @@ class Topic
      */
     public function publish(mixed $event, ?array $metadata = null): bool
     {
-        Runtime::$logger?->debug('Sending {event} to {topic}', ['event' => $event, 'topic' => $this->topic]);
+        $this->logger->debug('Sending {event} to {topic}', ['event' => $event, 'topic' => $this->topic]);
         if ($event instanceof CloudEvent) {
-            DaprClient::$extra_headers = [
+            $this->client->extra_headers = [
                 'Content-Type: application/cloudevents+json',
             ];
 
@@ -32,15 +36,12 @@ class Topic
         }
 
         try {
-            $result = DaprClient::post(
-                DaprClient::get_api("/publish/{$this->pubsub}/{$this->topic}", $metadata),
-                $event
-            );
+            $this->client->post("/publish/{$this->pubsub}/{$this->topic}", $event, $metadata);
 
-            DaprClient::$extra_headers = [];
+            $this->client->extra_headers = [];
 
             return true;
-        } catch (DaprException $exception) {
+        } catch (DaprException) {
             return false;
         }
     }

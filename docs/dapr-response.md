@@ -1,6 +1,6 @@
 # Dapr Response
 
-A simple class that contains several properties.
+There are some things that return a `DaprResponse`, here are the properties and their description.
 
 ## code
 
@@ -12,4 +12,8 @@ The deserialized data from the remote service/component.
 
 ## etag
 
-**not currently supported**
+An etag if returned
+
+## Headers
+
+Headers from the response

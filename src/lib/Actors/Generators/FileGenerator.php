@@ -5,17 +5,80 @@ namespace Dapr\Actors\Generators;
 use Dapr\Actors\ActorTrait;
 use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\IActor;
-use Dapr\Runtime;
+use Dapr\DaprClient;
+use Dapr\Deserialization\IDeserializer;
+use Dapr\Serialization\ISerializer;
+use DI\DependencyException;
+use DI\FactoryInterface;
+use DI\NotFoundException;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\PhpFile;
 use Nette\PhpGenerator\Type;
+use Psr\Container\ContainerInterface;
 use ReflectionClass;
+use ReflectionException;
 
 class FileGenerator extends GenerateProxy
 {
+    #[Pure] public function __construct(
+        protected string $interface,
+        protected string $dapr_type,
+        FactoryInterface $factory,
+        ContainerInterface $container,
+        private array $usings = []
+    ) {
+        parent::__construct($interface, $dapr_type, $factory, $container);
+    }
+
+    /**
+     * Returns a string that can be saved as a file
+     *
+     * @param string $interface The interface to generate
+     * @param string|null $override_type Allows overriding the dapr type
+     *
+     * @return PhpFile
+     * @throws DependencyException
+     * @throws NotFoundException
+     * @throws ReflectionException
+     */
+    public static function generate(
+        string $interface,
+        FactoryInterface $factory,
+        string|null $override_type = null
+    ): PhpFile {
+        $reflected_interface = new ReflectionClass($interface);
+        $type                = $override_type ?? ($reflected_interface->getAttributes(
+                    DaprType::class
+                )[0] ?? null)?->newInstance()->type;
+
+        if (empty($type)) {
+            throw new LogicException("$interface must have a DaprType attribute");
+        }
+
+        $generator = $factory->make(FileGenerator::class, ['interface' => $interface, 'dapr_type' => $type]);
+
+        return $generator->generate_file();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function get_proxy(string $id): IActor
+    {
+        if ( ! class_exists($this->get_full_class_name())) {
+            foreach ($this->generate_file()->getNamespaces() as $namespace) {
+                eval($namespace);
+            }
+        }
+        $proxy = $this->factory->make($this->get_full_class_name());
+        $proxy->id = $id;
+
+        return $proxy;
+    }
+
     public function generate_file(): PhpFile
     {
         // configure class
@@ -27,21 +90,22 @@ class FileGenerator extends GenerateProxy
         $interface->addTrait(ActorTrait::class);
 
         // maybe implement IActor
-        $reflected_interface = new \ReflectionClass($interface);
-        if(!$reflected_interface->isSubclassOf(IActor::class)) {
+        $reflected_interface = new ReflectionClass($interface);
+        if ( ! $reflected_interface->isSubclassOf(IActor::class)) {
             $interface->addImplement(IActor::class);
         }
 
         $methods = $this->get_methods($interface);
-        foreach($methods as $method) {
-            if($interface->hasMethod($method->getName())) {
+        foreach ($methods as $method) {
+            if ($interface->hasMethod($method->getName())) {
                 $interface->removeMethod($method);
             }
             $method = $this->generate_method($method, '');
-            if($method) {
+            if ($method) {
                 $interface->addMember($method);
             }
         }
+        $interface->addMember($this->generate_constructor());
 
         // configure file
         $file = new PhpFile();
@@ -50,12 +114,11 @@ class FileGenerator extends GenerateProxy
 
         // configure namespace
         $namespace->add($interface);
-        $namespace->addUse('\Swytch\Actors\Devices\IDeviceActor');
         $namespace->addUse('\Dapr\Actors\IActor');
         $namespace->addUse('\Dapr\Actors\Attributes\DaprType');
         $namespace->addUse('\Dapr\Actors\ActorTrait');
-        foreach($this->usings as $using) {
-            if(class_exists($using)) {
+        foreach ($this->usings as $using) {
+            if (class_exists($using)) {
                 $namespace->addUse($using);
             }
         }
@@ -63,48 +126,19 @@ class FileGenerator extends GenerateProxy
         return $file;
     }
 
-    public function __construct(protected string $interface, protected string $dapr_type, private array $usings = [])
+    protected function generate_constructor(): Method
     {
-        parent::__construct($interface, $dapr_type);
-    }
+        $method = new Method('__construct');
+        $method->addPromotedParameter('client')->setType(DaprClient::class)->setPrivate();
+        $method->addPromotedParameter('serializer')->setType(ISerializer::class)->setPrivate();
+        $method->addPromotedParameter('deserializer')->setType(IDeserializer::class)->setPrivate();
+        $method->setPublic();
+        $this->usings[] = DaprClient::class;
+        $this->usings[] = ISerializer::class;
+        $this->usings[] = IDeserializer::class;
+        $method->setBody('');
 
-    /**
-     * Returns a string that can be saved as a file
-     *
-     * @param string $interface The interface to generate
-     * @param string|null $override_type Allows overriding the dapr type
-     *
-     * @return PhpFile
-     * @throws \ReflectionException
-     */
-    public static function generate(string $interface, string|null $override_type = null): PhpFile {
-        $reflected_interface = new ReflectionClass($interface);
-        $type                = $override_type ?? ($reflected_interface->getAttributes(
-                    DaprType::class
-                )[0] ?? null)?->newInstance()->type;
-
-        if (empty($type)) {
-            Runtime::$logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
-            throw new LogicException("$interface must have a DaprType attribute");
-        }
-
-        $generator = new FileGenerator($interface, $type);
-        return $generator->generate_file();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function get_proxy(string $id): IActor
-    {
-        if(!class_exists($this->get_full_class_name())) {
-            foreach($this->generate_file()->getNamespaces() as $namespace) {
-                eval($namespace);
-            }
-        }
-        $proxy = new ($this->get_full_class_name());
-        $proxy->id = $id;
-        return $proxy;
+        return $method;
     }
 
     /**
@@ -131,19 +165,19 @@ class FileGenerator extends GenerateProxy
         $method->addBody('$type = ?;', [$this->dapr_type]);
         $method->addBody('$id = $this->get_id();');
         $method->addBody('$current_method = ?;', [$method->getName()]);
-        $method->addBody('$result = \Dapr\DaprClient::post(');
-        $method->addBody('  \Dapr\DaprClient::get_api("/actors/$type/$id/method/$current_method"),');
+        $method->addBody('$result = $this->client->post(');
+        $method->addBody('  "/actors/$type/$id/method/$current_method",');
         if (empty($params)) {
             $method->addBody('  null);');
         } else {
-            $method->addBody('  \Dapr\Serialization\Serializer::as_array($data)');
+            $method->addBody('  $this->serializer->as_array($data)');
             $method->addBody(');');
         }
         $return_type = $method->getReturnType() ?? Type::VOID;
         if ($return_type !== Type::VOID) {
             $this->usings = array_merge($this->usings, self::get_types($return_type));
             $method->addBody(
-                '$result->data = \Dapr\Deserialization\Deserializer::detect_from_parameter((new \ReflectionClass($this))->getMethod(?), $result->data);',
+                '$result->data = $this->deserializer->detect_from_method((new \ReflectionClass($this))->getMethod(?), $result->data);',
                 [$method->getName()]
             );
             $method->addBody('return $result->data;');

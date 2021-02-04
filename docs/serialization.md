@@ -10,13 +10,17 @@ Not all builtin types are serializable due to how PHP works, if you find one, pl
 
 # Manual Serialization
 
-You can manually serialize any value by calling
+You can manually serialize any value by requesting an `ISerializer` type and serializing as json/array. It's important
+to note that if you return a serialized string from a controller, it will be double-serialized, return an array instead.
 
 ```php
-// return an array to be json encoded
-Dapr\Serialization\Serializer::as_array($value);
-// or return the raw json string
-Dapr\Serialization\Serializer::as_json($value, JSON_PRETTY_PRINT);
+$app->get('/serializer', function(
+    \Dapr\Serialization\ISerializer $serializer, 
+    \Dapr\Deserialization\IDeserializer $deserializer,
+    \Psr\Http\Message\RequestInterface $request) {
+        $obj = $deserializer->from_json(MyObj::class, $request->getBody()->getContents());
+        return $serializer->as_array($obj);
+});
 ```
 
 ## Attributes
@@ -29,7 +33,7 @@ when empty, use the `AlwaysObject` attribute.
 class MyEmptyObject {}
 ```
 
-The attribute can be on properties, classes, functions, and methods.
+The attribute can be on properties and classes. If on functions or methods, it applies to the return value.
 
 ## Registering custom serializers
 
@@ -37,30 +41,18 @@ The SDK allows overriding the default behavior as well as just overriding how sp
 
 ### Overriding a type
 
-For example, to override how `my_type` is serialized:
-
-```php
-\Dapr\Serialization\Serializer::register(fn($item) => serialize($item), ['my_type']);
-```
+You can either register the type in the config, or you can implement the `\Dapr\Serialization\Serializers\ISerialize`
+interface on the type. The serializer is passed an instance of the serializer and the object to be serialized which is
+also `$this`.
 
 The custom serializer should return an array that can be json encoded.
 
 ### Overriding all serialization
 
-If you need to completely override how serialization is done, just call `register()` without any types specified.
+If you need to override all serialization, you can implement the `ISerializer` interface and register it in the
+configuration.
 
 # Manual Deserialization
-
-You can manually deserialize any value:
-
-```php
-// deserialize from an array that represents the object
-\Dapr\Deserialization\Deserializer::from_array(MyObject::class, $array);
-// or from a raw json value
-\Dapr\Deserialization\Deserializer::from_json(MyClass::class, $json);
-// or from an array of items
-\Dapr\Deserialization\Deserializer::from_array_of(MyObject::class, $array_of_items);
-```
 
 ## Attributes
 
@@ -94,7 +86,8 @@ It can be put on properties and parameters.
 
 ### Dapr\Deserialization\Attributes\Union
 
-This attribute is required if you have union types:
+This attribute is required if you have union types and want to store various types in the same variable depending on its
+value.
 
 ```php
 class MyState {
@@ -119,13 +112,8 @@ The SDK allows overriding the default behavior as well as just overriding how sp
 
 ### Overriding a type
 
-For example, to override how `my_type` is deserialized:
-
-```php
-\Dapr\Deserialization\Deserializer::register(fn($item) => unserialize($item), ['my_type']);
-```
-
-The custom deserializer should return a type your service knows how to understand.
+To override how a type is deserialized, just register it in the config, or
+implement `\Dapr\Deserialization\Deserializers\IDeserialize` on the type you want to custom deserialize.
 
 ### Overriding all deserialization
 

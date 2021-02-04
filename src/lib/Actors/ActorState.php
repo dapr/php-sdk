@@ -4,71 +4,86 @@ namespace Dapr\Actors;
 
 use Dapr\Actors\Internal\KeyResponse;
 use Dapr\DaprClient;
-use Dapr\Deserialization\Deserializer;
+use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
-use Dapr\Runtime;
 use Dapr\State\Internal\Transaction;
+use DI\DependencyException;
+use DI\FactoryInterface;
+use DI\NotFoundException;
+use InvalidArgumentException;
+use Psr\Container\ContainerInterface;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
+use ReflectionException;
+use ReflectionProperty;
 
 abstract class ActorState
 {
     /**
-     * @var Transaction The transaction to commit
-     */
-    private Transaction $_internal_transaction;
-
-    /**
-     * @var ReflectionClass
-     */
-    private ReflectionClass $_internal_reflection;
-
-    /**
      * @var string[] Where values came from, to determine whether to load the value from the store.
      */
     private array $_internal_data = [];
+    private Transaction $transaction;
+    private LoggerInterface $logger;
+    private IDeserializer $deserializer;
+    private ReflectionClass $reflection;
+    private DaprClient $client;
+    private string $actor_id;
+    private string $dapr_type;
 
-    /**
-     * ActorState constructor.
-     *
-     * @param string $_internal_dapr_type The Dapr Type to load state for
-     * @param mixed $_internal_actor_id The ID of the actor to load state for
-     */
-    public function __construct(private string $_internal_dapr_type, private mixed $_internal_actor_id)
+    public function __construct(private ContainerInterface $container, private FactoryInterface $factory)
     {
-        $this->_internal_reflection  = new ReflectionClass($this);
-        $this->_internal_transaction = new Transaction();
-
-        foreach ($this->_internal_reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
-            unset($this->{$property->name});
-        }
-        Runtime::$logger?->debug(
-            'Starting transaction for {t}||{i}',
-            ['t' => $this->_internal_dapr_type, 'i' => $this->_internal_actor_id]
-        );
     }
 
     /**
      * Commits the current transaction
      *
      * @throws DaprException
+     * @throws DependencyException
+     * @throws NotFoundException
      */
     public function save_state(): void
     {
-        Runtime::$logger?->debug(
+        $this->logger->debug(
             'Committing transaction for {t}||{i}',
-            ['t' => $this->_internal_dapr_type, 'i' => $this->_internal_actor_id]
+            ['t' => $this->dapr_type, 'i' => $this->actor_id]
         );
-        $operations = $this->_internal_transaction->get_transaction();
+        $operations = $this->transaction->get_transaction();
         if (empty($operations)) {
             return;
         }
 
-        DaprClient::post(
-            DaprClient::get_api("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state"),
-            $operations
-        );
+        $this->client->post("/actors/{$this->dapr_type}/{$this->actor_id}/state", $operations);
 
-        $this->roll_back();
+        $this->begin_transaction($this->dapr_type, $this->actor_id);
+    }
+
+    /**
+     * Begins a transaction
+     *
+     * @param string $dapr_type
+     * @param string $actor_id
+     *
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    private function begin_transaction(string $dapr_type, string $actor_id)
+    {
+        $this->dapr_type    = $dapr_type;
+        $this->actor_id     = $actor_id;
+        $this->reflection   = new ReflectionClass($this);
+        $this->logger       = $this->container->get(LoggerInterface::class);
+        $this->deserializer = $this->container->get(IDeserializer::class);
+        $this->client       = $this->container->get(DaprClient::class);
+
+        foreach ($this->reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            unset($this->{$property->name});
+        }
+        $this->transaction = $this->factory->make(Transaction::class);
+        $this->logger->debug(
+            'Starting a new transaction for {t}||{i}',
+            ['t' => $this->dapr_type, 'i' => $this->actor_id]
+        );
     }
 
     /**
@@ -76,9 +91,34 @@ abstract class ActorState
      */
     public function roll_back(): void
     {
-        Runtime::$logger?->debug('Rolled back transaction');
-        $this->_internal_transaction = new Transaction();
-        $this->_internal_data        = [];
+        $this->logger->debug('Rolled back transaction');
+        try {
+            $this->transaction = $this->factory->make(Transaction::class);
+        } catch (DependencyException | NotFoundException) {
+        }
+        $this->_internal_data = [];
+    }
+
+    /**
+     * Get a key from the store
+     *
+     * @param string $key
+     *
+     * @return mixed
+     * @throws DaprException
+     * @throws ReflectionException
+     */
+    public function __get(string $key): mixed
+    {
+        if ($this->reflection->hasProperty($key)) {
+            if ( ! isset($this->_internal_data[$key])) {
+                $this->_load_key($key);
+            }
+
+            return $this->transaction->state[$key];
+        }
+
+        return null;
     }
 
     /**
@@ -89,15 +129,15 @@ abstract class ActorState
      */
     public function __set(string $key, mixed $value): void
     {
-        if ( ! $this->_internal_reflection->hasProperty($key)) {
-            throw new \InvalidArgumentException(
+        if ( ! $this->reflection->hasProperty($key)) {
+            throw new InvalidArgumentException(
                 "$key on ".get_class($this)." is not defined and thus will not be stored."
             );
         }
         if (empty($this->_internal_data[$key])) {
             $this->_internal_data[$key] = 'override'; // must be anything other than null
         }
-        $this->_internal_transaction->upsert($key, $value);
+        $this->transaction->upsert($key, $value);
     }
 
     /**
@@ -106,54 +146,28 @@ abstract class ActorState
      * @param string $key The key to load
      *
      * @throws DaprException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function _load_key(string $key): void
     {
-        $state = DaprClient::get(
-            DaprClient::get_api("/actors/{$this->_internal_dapr_type}/{$this->_internal_actor_id}/state/$key")
-        );
-        if(isset($state->data)) {
-            $property = $this->_internal_reflection->getProperty($key);
-            $state->data = Deserializer::detect_from_parameter($property, $state->data);
+        $state = $this->client->get("/actors/{$this->dapr_type}/{$this->actor_id}/state/$key");
+        if (isset($state->data)) {
+            $property    = $this->reflection->getProperty($key);
+            $state->data = $this->deserializer->detect_from_property($property, $state->data);
         }
         switch ($state?->code) {
             case KeyResponse::SUCCESS:
-                $this->_internal_data[$key]               = 'loaded';
-                $this->_internal_transaction->state[$key] = $state->data;
+                $this->_internal_data[$key]     = 'loaded';
+                $this->transaction->state[$key] = $state->data;
                 break;
             case KeyResponse::KEY_NOT_FOUND:
-                $this->_internal_data[$key]               = 'default';
-                $this->_internal_transaction->state[$key] = $this->_internal_reflection->getProperty(
-                    $key
-                )->getDefaultValue();
+                $this->_internal_data[$key]     = 'default';
+                $this->transaction->state[$key] = $this->reflection->getProperty($key)->getDefaultValue();
                 break;
             case KeyResponse::ACTOR_NOT_FOUND:
             default:
                 throw new DaprException('Actor not found!');
         }
-    }
-
-    /**
-     * Get a key from the store
-     *
-     * @param string $key
-     *
-     * @return mixed
-     * @throws DaprException
-     * @throws \ReflectionException
-     */
-    public function __get(string $key): mixed
-    {
-        if ($this->_internal_reflection->hasProperty($key)) {
-            if ( ! isset($this->_internal_data[$key])) {
-                $this->_load_key($key);
-            }
-
-            return $this->_internal_transaction->state[$key];
-        }
-
-        return null;
     }
 
     /**
@@ -163,7 +177,7 @@ abstract class ActorState
      *
      * @return bool
      * @throws DaprException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function __isset(string $key): bool
     {
@@ -171,7 +185,7 @@ abstract class ActorState
             $this->_load_key($key);
         }
 
-        return isset($this->_internal_transaction->state[$key]);
+        return isset($this->transaction?->state[$key]);
     }
 
     /**
@@ -184,6 +198,6 @@ abstract class ActorState
         if (empty($this->_internal_data[$key])) {
             $this->_internal_data[$key] = 'unset';
         }
-        $this->_internal_transaction->delete($key);
+        $this->transaction?->delete($key);
     }
 }

@@ -1,48 +1,64 @@
 <?php
 
 require_once __DIR__.'/Mocks/DaprClient.php';
+require_once __DIR__.'/../vendor/autoload.php';
 
-use Dapr\Actors\ActorRuntime;
-use Dapr\Serialization\Serializer;
+use Dapr\DaprClient;
+use Dapr\Mocks\TestClient;
+use DI\Container;
+use DI\ContainerBuilder;
+use DI\DependencyException;
+use DI\NotFoundException;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LogLevel;
+
+use function DI\autowire;
 
 abstract class DaprTests extends TestCase
 {
+    protected Container $container;
+
+    /**
+     * @throws Exception
+     */
     public function setUp(): void
     {
-        \Dapr\Runtime::set_logger(new \Psr\Log\NullLogger());
-        \Dapr\DaprClient::$responses = [];
-        // reset other static objects
-        $class = new ReflectionClass(\Dapr\PubSub\Subscribe::class);
-        $class->setStaticPropertyValue('subscribed_topics', []);
-        $class->setStaticPropertyValue('handlers', []);
-
-        $class = new ReflectionClass(ActorRuntime::class);
-        $class->setStaticPropertyValue('actors', []);
-        $class->setStaticPropertyValue('config', []);
-
-        $class = new ReflectionClass(\Dapr\Binding::class);
-        $class->setStaticPropertyValue('bindings', []);
+        $builder = new ContainerBuilder();
+        $builder->addDefinitions(__DIR__.'/../src/config.php');
+        $builder->addDefinitions(
+            [
+                'dapr.log.level'  => LogLevel::CRITICAL,
+                DaprClient::class => autowire(TestClient::class),
+            ]
+        );
+        $this->container = $builder->build();
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function tearDown(): void
     {
-        parent::tearDown();
-        foreach(\Dapr\DaprClient::$responses as $method => $response) {
-            if(!empty($response)) {
-                throw new LogicException('Never handled: ' . $method . ' ' . json_encode($response));
-            }
+        foreach ($this->get_client()->responses as $url => $response) {
+            $this->assertEmpty($response, "never called $url");
         }
+        $this->get_client()->responses = [];
+        parent::tearDown();
+    }
+
+    /**
+     * @return TestClient
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    protected function get_client(): TestClient
+    {
+        return $this->container->get(DaprClient::class);
     }
 
     protected function deserialize(string $json)
     {
         return json_decode($json, true);
-    }
-
-    protected function set_body($data)
-    {
-        ActorRuntime::$input = tempnam(sys_get_temp_dir(), uniqid());
-        file_put_contents(ActorRuntime::$input, Serializer::as_json($data));
     }
 }

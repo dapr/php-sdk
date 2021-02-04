@@ -1,10 +1,11 @@
 <?php
 
+use Dapr\Formats;
 use PHPUnit\Framework\TestCase;
 
 class FormatTest extends TestCase
 {
-    public function get_date_intervals()
+    public function get_date_intervals(): array
     {
         return [
             [new DateInterval('PT1S'), '0h0m1s0us'],
@@ -22,19 +23,19 @@ class FormatTest extends TestCase
      */
     public function testNormalizeInterval($actual, $expected)
     {
-        $this->assertSame($expected, \Dapr\Formats::normalize_interval($actual));
+        $this->assertSame($expected, Formats::normalize_interval($actual));
     }
 
     public function testYears()
     {
         $this->expectException(LogicException::class);
-        \Dapr\Formats::normalize_interval(new DateInterval('P1Y'));
+        Formats::normalize_interval(new DateInterval('P1Y'));
     }
 
     public function testMonths()
     {
         $this->expectException(LogicException::class);
-        \Dapr\Formats::normalize_interval(new DateInterval('P1M'));
+        Formats::normalize_interval(new DateInterval('P1M'));
     }
 
     /**
@@ -42,10 +43,11 @@ class FormatTest extends TestCase
      * @param $actual
      *
      * @dataProvider get_date_intervals
+     * @throws Exception
      */
     public function testFromDapr(?DateInterval $expected, $actual)
     {
-        $converted = \Dapr\Formats::from_dapr_interval($actual);
+        $converted = Formats::from_dapr_interval($actual);
         if ($expected && $converted->h === 72) {
             $this->assertSame(3, $expected->d);
         } else {

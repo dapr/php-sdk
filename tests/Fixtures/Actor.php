@@ -5,12 +5,18 @@ namespace Fixtures;
 use Dapr\Actors\Actor;
 use Dapr\Actors\ActorState;
 use Dapr\Actors\Attributes\DaprType;
-use Dapr\Actors\IActor;
+use Dapr\Deserialization\Attributes\ArrayOf;
+use Dapr\Deserialization\Attributes\AsClass;
+use JetBrains\PhpStorm\Pure;
+use SimpleObject;
 
 #[DaprType('TestActor')]
 interface ITestActor
 {
-    public function a_function($value): bool;
+    #[ArrayOf('string')]
+    public function a_function(
+        #[AsClass(SimpleObject::class)] $value
+    ): array;
 }
 
 class TestActorState extends ActorState
@@ -25,9 +31,9 @@ class ActorClass extends Actor
      * ActorClass constructor.
      *
      * @param string $id
-     * @param ActorState $state
+     * @param TestActorState $state
      */
-    public function __construct(protected string $id, private TestActorState $state)
+    #[Pure] public function __construct(protected string $id, private TestActorState $state)
     {
         parent::__construct($id);
     }
@@ -39,7 +45,7 @@ class ActorClass extends Actor
         return true;
     }
 
-    function get_id(): mixed
+    function get_id(): string
     {
         return $this->id;
     }

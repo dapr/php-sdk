@@ -2,15 +2,27 @@
 
 require_once __DIR__.'/Fixtures/TestState.php';
 
-use Dapr\State\State;
+use Dapr\consistency\StrongFirstWrite;
+use Dapr\consistency\StrongLastWrite;
+use Dapr\State\Attributes\StateStore;
+use Dapr\State\IManageState;
+use Dapr\State\StateItem;
+use DI\DependencyException;
+use DI\NotFoundException;
+use Fixtures\TestState;
 
 class StateTest extends DaprTests
 {
-    public function testLoadState()
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    public function testLoadObject()
     {
-        $state = new \Fixtures\TestState();
-        \Dapr\DaprClient::register_post(
-            '/state/store/bulk',
+        $state  = $this->container->get(TestState::class);
+        $client = $this->get_client();
+        $client->register_post(
+            '/state/store/bulk?test=meta',
             200,
             [
                 ['key' => 'with_initial'],
@@ -22,31 +34,58 @@ class StateTest extends DaprTests
                 'parallelism' => 10,
             ]
         );
-        State::load_state($state);
+        $state_manager = $this->container->get(IManageState::class);
+        $state_manager->load_object($state, metadata: ['test' => 'meta']);
         $this->assertSame('initial', $state->with_initial);
 
-        $state = new \Fixtures\TestState;
-        \Dapr\DaprClient::register_post(
+        $state = $this->container->get(TestState::class);
+        $client->register_post(
             '/state/store/bulk',
             code: 200,
             response_data: [
-            ['key' => 'with_initial', 'data' => 'hello world', 'etag' => 1],
-            ['key' => 'without_initial'],
-            ['key' => 'complex'],
+            ['key' => 'ok_with_initial', 'data' => 'hello world', 'etag' => 1],
+            ['key' => 'ok_without_initial'],
+            ['key' => 'ok_complex'],
         ],
             expected_request: [
-                'keys'        => ['with_initial', 'without_initial', 'complex'],
+                'keys'        => ['ok_with_initial', 'ok_without_initial', 'ok_complex'],
                 'parallelism' => 10,
             ]
         );
-        State::load_state($state);
+        $state_manager->load_object($state, 'ok_');
         $this->assertSame('hello world', $state->with_initial);
     }
 
-    public function testSaveState()
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    public function testLoadState()
     {
-        $state = new \Fixtures\TestState();
-        \Dapr\DaprClient::register_post(
+        $client        = $this->get_client();
+        $state_manager = $this->container->get(IManageState::class);
+        $client->register_get('/state/store/a-key?test=meta', 200, 'data');
+        $this->assertEquals(
+            new StateItem('a-key', 'data', new StrongLastWrite(), null, []),
+            $state_manager->load_state('store', 'a-key', default_value: 1, metadata: ['test' => 'meta'])
+        );
+        $client->register_get('/state/store/a-key?test=meta', 204, '');
+        $this->assertEquals(
+            new StateItem('a-key', 1, new StrongLastWrite(), null, []),
+            $state_manager->load_state('store', 'a-key', default_value: 1, metadata: ['test' => 'meta'])
+        );
+    }
+
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    public function testSaveObject()
+    {
+        $state         = $this->container->get(TestState::class);
+        $client        = $this->get_client();
+        $state_manager = $this->container->get(IManageState::class);
+        $client->register_post(
             '/state/store/bulk',
             code: 200,
             response_data: [
@@ -60,9 +99,9 @@ class StateTest extends DaprTests
             ]
         );
 
-        State::load_state($state);
+        $state_manager->load_object($state);
 
-        \Dapr\DaprClient::register_post(
+        $client->register_post(
             '/state/store',
             204,
             null,
@@ -86,28 +125,72 @@ class StateTest extends DaprTests
                 ],
             ]
         );
-        State::save_state($state);
+        $state_manager->save_object($state);
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    public function testSaveSate()
+    {
+        $client        = $this->get_client();
+        $state_manager = $this->container->get(IManageState::class);
+        $client->register_post(
+            '/state/store',
+            200,
+            null,
+            [
+                [
+                    'key'      => 'a-key',
+                    'value'    => 'a-value',
+                    'etag'     => '123',
+                    'options'  => [
+                        'consistency' => 'strong',
+                        'concurrency' => 'last-write',
+                    ],
+                    'metadata' => [
+                        'ok' => 'test',
+                    ],
+                ],
+            ]
+        );
+        $state_manager->save_state(
+            'store',
+            new StateItem('a-key', 'a-value', new StrongLastWrite(), '123', ['ok' => 'test'])
+        );
+    }
+
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testNotAbleToLoadState()
     {
-        $state = new class {
+        $state         = new class {
             public $never;
         };
+        $state_manager = $this->container->get(IManageState::class);
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('Tried to load state without a Dapr\State\Attributes\StateStore attribute');
 
-        State::load_state($state);
+        $state_manager->load_object($state);
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testSetToNull()
     {
-        $state = new #[\Dapr\State\Attributes\StateStore('store', \Dapr\consistency\StrongFirstWrite::class)] class {
+        $state         = new #[StateStore('store', StrongFirstWrite::class)] class {
             public $null = 1;
         };
+        $client        = $this->get_client();
+        $state_manager = $this->container->get(IManageState::class);
 
-        \Dapr\DaprClient::register_post(
+        $client->register_post(
             '/state/store/bulk',
             200,
             [
@@ -119,7 +202,16 @@ class StateTest extends DaprTests
             ]
         );
 
-        State::load_state($state, 12);
+        $state_manager->load_object($state, parallelism: 12);
+
         $this->assertNull($state->null);
+    }
+
+    public function testDeleteState()
+    {
+        $client        = $this->get_client();
+        $state_manager = $this->container->get(IManageState::class);
+        $client->register_delete('/state/store/key1', 204);
+        $state_manager->delete_keys('store', ['key1']);
     }
 }

@@ -2,6 +2,8 @@
 
 namespace Dapr\Actors;
 
+use Dapr\DaprClient;
+
 /**
  * Interface IActor
  * @package Dapr
@@ -18,9 +20,9 @@ interface IActor
      * Handle a reminder
      *
      * @param string $name The name of the reminder
-     * @param mixed $data The data from passed when the reminder was setup
+     * @param Reminder $data The data from passed when the reminder was setup
      */
-    function remind(string $name, $data): void;
+    function remind(string $name, Reminder $data): void;
 
     /**
      * Called when the actor is activated
@@ -39,7 +41,7 @@ interface IActor
      *
      * @return bool
      */
-    function delete_timer(string $name): bool;
+    function delete_timer(string $name, DaprClient $client): bool;
 
     /**
      * Creates a new timer, which lasts until the actor is deactivated.
@@ -48,9 +50,7 @@ interface IActor
      *
      * @return bool
      */
-    function create_timer(
-        Timer $timer
-    ): bool;
+    function create_timer(Timer $timer, DaprClient $client): bool;
 
     /**
      * Deletes a reminder
@@ -59,7 +59,7 @@ interface IActor
      *
      * @return bool Whether the deletion was successful
      */
-    function delete_reminder(string $name): bool;
+    function delete_reminder(string $name, DaprClient $client): bool;
 
     /**
      * Get a reminder by name
@@ -68,7 +68,7 @@ interface IActor
      *
      * @return Reminder|null Information about the reminder
      */
-    function get_reminder(string $name): Reminder|null;
+    function get_reminder(string $name, DaprClient $client): Reminder|null;
 
     /**
      * Create a new reminder that will wake up the actor.
@@ -77,7 +77,5 @@ interface IActor
      *
      * @return bool Whether the reminder was successfully created
      */
-    function create_reminder(
-        Reminder $reminder
-    ): bool;
+    function create_reminder(Reminder $reminder, DaprClient $client): bool;
 }

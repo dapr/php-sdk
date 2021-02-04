@@ -2,130 +2,64 @@
 
 namespace Dapr\Actors;
 
-use Dapr\Actors\Attributes\DaprType;
-use Dapr\Deserialization\Deserializer;
-use Dapr\Formats;
-use Dapr\Runtime;
-use Dapr\Serialization\Serializer;
-use JetBrains\PhpStorm\ArrayShape;
+use Dapr\Deserialization\IDeserializer;
+use Dapr\exceptions\DaprException;
+use Dapr\exceptions\Http\NotFound;
+use Dapr\exceptions\SaveStateFailure;
+use DI\DependencyException;
+use DI\FactoryInterface;
+use DI\NotFoundException;
+use Exception;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
+use ReflectionException;
+use ReflectionNamedType;
 
 /**
  * The Actor Runtime
  */
 class ActorRuntime
 {
-    public static $input = 'php://input';
-    public static $actors = [];
-    public static $config = [
-        'entities' => [],
-    ];
-
-    #[ArrayShape([
-        'type'          => 'string|null',
-        'dapr_type'     => 'string',
-        'id'            => 'string|int',
-        'function'      => 'string',
-        'method_name'   => 'string|null',
-        'reminder_name' => 'string|null',
-        'body'          => 'array',
-    ])]
-    public static function extract_parts_from_request(
-        string $http_method,
-        string $uri
-    ): ?array {
-        if ( ! str_starts_with(haystack: $uri, needle: '/actors')) {
-            return null;
-        }
-        $parts = array_values(array_filter(explode('/', $uri)));
-
-        $parts = [ // add try/catches
-            'type'          => self::$actors[$parts[1]] ?? null,
-            'dapr_type'     => $parts[1],
-            'id'            => $parts[2],
-            'function'      => match ($http_method) {
-                'DELETE' => 'delete',
-                default => $parts[3],
-            },
-            'method_name'   => $parts[4] ?? null,
-            'reminder_name' => $parts[5] ?? null,
-            'body'          => match ($http_method) {
-                'POST', 'PUT' => json_decode(self::get_input(), true),
-                default => null,
-            },
-        ];
-
-        Runtime::$logger?->debug('Extracted {parts}', ['parts' => $parts]);
-
-        return $parts;
+    public function __construct(
+        protected LoggerInterface $logger,
+        protected ActorConfig $actor_config,
+        protected FactoryInterface $container,
+        protected IDeserializer $deserializer,
+    ) {
     }
 
-    public static function get_input(): string
+    /**
+     * Call a method on the actor
+     *
+     * @param IActor $actor The actor to call the method on
+     * @param string $method The method to call
+     * @param mixed $arg The argument to pass to the method
+     *
+     * @return mixed The result from the actor
+     * @throws ReflectionException
+     */
+    public function do_method(IActor $actor, string $method, mixed $arg): mixed
     {
-        return file_get_contents(self::$input);
+        $reflection = new ReflectionClass($actor);
+        $method     = $reflection->getMethod($method);
+        if (empty($arg)) {
+            return $method->invoke($actor);
+        }
+
+        $parameter = $method->getParameters()[0] ?? null;
+        if (empty($parameter)) {
+            return $method->invokeArgs($actor, [$arg]);
+        }
+
+        return $method->invokeArgs(
+            $actor,
+            [$parameter->getName() => $this->deserializer->detect_from_parameter($parameter, $arg)]
+        );
     }
 
-    #[ArrayShape(['code' => 'int', 'body' => 'null|array'])]
-    public static function handle_invoke(
-        #[ArrayShape([
-            'type'          => 'string|null',
-            'dapr_type'     => 'string',
-            'id'            => 'string|int',
-            'function'      => 'string',
-            'method_name'   => 'string|null',
-            'reminder_name' => 'string|null',
-            'body'          => 'array',
-        ])] array $description
-    ): array {
-        if ($description['type'] === null || ! class_exists($description['type'])) {
-            Runtime::$logger?->critical('Unable to locate an actor for {t}', ['t' => $description['type']]);
-
-            return [
-                'code' => 404,
-                'body' =>
-                    Serializer::as_json(
-                        new \UnexpectedValueException("class ${description['type']} not found")
-                    ),
-            ];
-        }
-
-        try {
-            $reflection = new ReflectionClass($description['type']);
-
-            /**
-             * @var ActorState[] $states
-             */
-            $states   = self::get_state_types($description['type'], $description['dapr_type'], $description['id']);
-            $is_actor = $reflection->implementsInterface('Dapr\Actors\IActor')
-                        && $reflection->isInstantiable() && $reflection->isUserDefined();
-        } catch (\ReflectionException $ex) {
-            Runtime::$logger?->critical('{exception}', ['exception' => $ex]);
-
-            return [
-                'code' => 500,
-                'body' => Serializer::as_json($ex),
-            ];
-        }
-
-        if ( ! $is_actor) {
-            Runtime::$logger?->critical('Actor does not implement the IActor interface');
-
-            return [
-                'code' => 404,
-                'body' => Serializer::as_json(new \LogicException('Actor does not implement IActor interface.')),
-            ];
-        }
-
-        $state_config = null;
-        $params       = [$description['id']];
-
-        foreach ($states as $state) {
-            $params[] = $state;
-        }
-
-        $actor = new $description['type'](...$params);
-
-        $activation_tracker = hash('sha256', $description['dapr_type'].$description['id']);
+    public function deactivate_actor(IActor $actor, string $dapr_type, string $id): void
+    {
+        $activation_tracker = hash('sha256', $dapr_type.$id);
         $activation_tracker = rtrim(
                                   sys_get_temp_dir(),
                                   DIRECTORY_SEPARATOR
@@ -133,121 +67,109 @@ class ActorRuntime
 
         $is_activated = file_exists($activation_tracker);
 
-        if ( ! $is_activated) {
-            Runtime::$logger?->info(
-                'Activating {type}||{id}',
-                ['type' => $description['dapr_type'], 'id' => $description['id']]
-            );
-            touch($activation_tracker);
-            $actor->on_activation();
+        if ($is_activated) {
+            unlink($activation_tracker);
+            $actor->on_deactivation();
         }
-
-        $return = [
-            'code' => 200,
-        ];
-
-        switch ($description['function']) {
-            case 'method':
-                switch ($description['method_name']) {
-                    case 'remind':
-                        Runtime::$logger?->info(
-                            'Reminding {t}||{i}',
-                            ['t' => $description['dapr_type'], 'i' => $description['id']]
-                        );
-                        $data = $description['body'];
-                        $actor->remind(
-                            $description['reminder_name'],
-                            json_decode($data['data'], true)
-                        );
-                        break;
-                    case 'timer':
-                        Runtime::$logger?->info(
-                            'Timer callback {t}||{i}',
-                            ['t' => $description['dapr_type'], 'i' => $description['id']]
-                        );
-                        $data     = $description['body'];
-                        $callback = $data['callback'];
-                        $args     = $data['data'];
-                        self::call_method($reflection->getMethod($callback), $actor, $args[0] ?? null);
-                        break;
-                    default:
-                        Runtime::$logger?->info(
-                            'Calling {t}||{i}->{m}',
-                            [
-                                't' => $description['dapr_type'],
-                                'i' => $description['id'],
-                                'm' => $description['method_name'],
-                            ]
-                        );
-
-                        $method = $description['method_name'];
-                        $args   = $description['body'];
-                        $result = self::call_method($reflection->getMethod($method), $actor, $args);
-
-                        $return['body'] = Serializer::as_json($result);
-                        break;
-                }
-                break;
-            case 'delete':
-                Runtime::$logger?->info(
-                    'Deactivating {t}||{i}',
-                    ['t' => $description['dapr_type'], 'i' => $description['id']]
-                );
-                $actor->on_deactivation();
-                unlink($activation_tracker);
-                break;
-        }
-
-        foreach ($states as $state) {
-            $state->save_state();
-        }
-
-        return $return;
-    }
-
-    private static function call_method(\ReflectionMethod $method, object $actor, $args): mixed
-    {
-        if (empty($args)) {
-            return $method->invoke($actor);
-        }
-
-        Runtime::$logger?->debug('Preparing to call {method} with {args}', ['method' => $method->name, 'args' => $args]);
-
-        $params = [];
-        $reflected_param = $method->getParameters()[0] ?? null;
-
-        if(isset($reflected_param)) {
-            $p = $reflected_param->getName();
-            $params[$p] = Deserializer::detect_from_parameter($reflected_param, $args);
-        }
-
-        Runtime::$logger?->debug('Calling {method} with {args}', ['method' => $method->name, 'args' => $params]);
-
-        return $method->invokeArgs($actor, $params);
     }
 
     /**
-     * Read a state type from attributes
+     * Resolve an actor, then calls your callback with the actor before committing any state changes
      *
-     * @param string $type The type to read from.
+     * @param string $dapr_type The dapr type to resolve
+     * @param string $id The id of the actor to resolve
+     * @param callable $loan A callback that takes an IActor
      *
-     * @return ActorState[] The state type definition
-     * @throws \ReflectionException
+     * @return mixed The result of you callback
+     * @throws NotFound
+     * @throws SaveStateFailure
      */
-    private static function get_state_types(string $type, string $dapr_type, mixed $id): array
+    public function resolve_actor(string $dapr_type, string $id, callable $loan): mixed
     {
-        $reflection  = new ReflectionClass($type);
+        try {
+            $reflection = $this->locate_actor($dapr_type);
+            $this->validate_actor($reflection);
+            $states = $this->get_states($reflection, $dapr_type, $id);
+            $actor  = $this->get_actor($reflection, $dapr_type, $id, $states);
+        } catch (Exception $exception) {
+            throw new NotFound('Actor could not be located', previous: $exception);
+        }
+        $result = $loan($actor);
+
+        try {
+            $this->commit($states);
+        } catch (DependencyException | DaprException | NotFoundException $e) {
+            throw new SaveStateFailure('Failed to commit actor state', previous: $e);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Locates an actor implementation
+     *
+     * @param string $dapr_type The dapr type to locate
+     *
+     * @return ReflectionClass
+     * @throws NotFound
+     * @throws ReflectionException
+     */
+    protected function locate_actor(string $dapr_type): ReflectionClass
+    {
+        $type = $this->actor_config->get_actor_type_from_dapr_type($dapr_type);
+        if ( ! class_exists($type)) {
+            $this->logger->critical('Unable to locate an actor for {t}', ['t' => $type]);
+            throw new NotFound();
+        }
+
+        return new ReflectionClass($type);
+    }
+
+    /**
+     * @param ReflectionClass $reflection
+     *
+     * @return bool
+     * @throws NotFound
+     */
+    protected function validate_actor(ReflectionClass $reflection): bool
+    {
+        if ($reflection->implementsInterface('Dapr\Actors\IActor')
+            && $reflection->isInstantiable() && $reflection->isUserDefined()) {
+            return true;
+        }
+
+        $this->logger->critical('Actor does not implement the IActor interface');
+        throw new NotFound();
+    }
+
+    /**
+     * Retrieves an array of states for a located actor
+     *
+     * @param ReflectionClass $reflection The class we're loading states for
+     * @param string $dapr_type The dapr type
+     * @param string $id The id
+     *
+     * @return array
+     * @throws ReflectionException
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    protected function get_states(ReflectionClass $reflection, string $dapr_type, string $id): array
+    {
         $constructor = $reflection->getMethod('__construct');
         $states      = [];
         foreach ($constructor->getParameters() as $parameter) {
             $type = $parameter->getType();
-            if ($type instanceof \ReflectionNamedType) {
+            if ($type instanceof ReflectionNamedType) {
                 $type_name = $type->getName();
                 if (class_exists($type_name)) {
                     $reflected_type = new ReflectionClass($type_name);
                     if ($reflected_type->isSubclassOf(ActorState::class)) {
-                        $states[] = new $type_name($dapr_type, $id);
-                        Runtime::$logger?->debug('Found state {t}', ['t' => $type_name]);
+                        $state = $this->container->make($type_name);
+                        $this->begin_transaction($state, $reflected_type, $dapr_type, $id);
+
+                        $states[$parameter->name] = $state;
+                        $this->logger?->debug('Found state {t}', ['t' => $type_name]);
                     }
                 }
             }
@@ -257,78 +179,86 @@ class ActorRuntime
     }
 
     /**
-     * Register an actor that this app support.
+     * Begins an actor transaction
      *
-     * @param string $actor_type The actor to initialize when invoked
+     * @param ActorState $state The state to begin the transaction on
+     * @param ReflectionClass $reflected_type The reflected class
+     * @param string $dapr_type The dapr type
+     * @param string $actor_id The actor id
+     * @param ReflectionClass|null $original The child reflection
      *
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
-    public static function register_actor(string $actor_type): void
-    {
-        Runtime::$logger?->debug('Registering {t}', ['t' => $actor_type]);
-        $reflected_type             = new ReflectionClass($actor_type);
-        $attributes                 = $reflected_type->getAttributes(DaprType::class);
-        $dapr_type                  = ($attributes[0] ?? null)?->newInstance()->type ?? $reflected_type->getShortName();
-        self::$actors[$dapr_type]   = $actor_type;
-        self::$config['entities'][] = $dapr_type;
+    protected function begin_transaction(
+        ActorState $state,
+        ReflectionClass $reflected_type,
+        string $dapr_type,
+        string $actor_id,
+        ?ReflectionClass $original = null
+    ): void {
+        if ($reflected_type->name !== ActorState::class) {
+            $this->begin_transaction(
+                $state,
+                $reflected_type->getParentClass(),
+                $dapr_type,
+                $actor_id,
+                $original ?? $reflected_type
+            );
+
+            return;
+        }
+        $begin_transaction = $reflected_type->getMethod('begin_transaction');
+        $begin_transaction->setAccessible(true);
+        $begin_transaction->invoke($state, $dapr_type, $actor_id);
     }
 
     /**
-     * A duration which specifies how often to scan for actors to deactivate idle actors. Actors that have been idle
-     * longer than the actorIdleTimeout will be deactivated.
+     * Instantiates an actor implementation
      *
-     * @param \DateInterval $interval The scan interval
+     * @param ReflectionClass $reflection
+     * @param string $dapr_type
+     * @param string $id
+     * @param array $states
+     *
+     * @return IActor
+     * @throws DependencyException
+     * @throws NotFoundException
      */
-    public static function set_scan_interval(\DateInterval $interval): void
+    protected function get_actor(ReflectionClass $reflection, string $dapr_type, string $id, array $states): IActor
     {
-        $interval = Formats::normalize_interval($interval);
-        Runtime::$logger?->debug('Setting scan interval {i}', ['i' => $interval]);
-        self::$config['actorScanInterval'] = $interval;
+        $states['id']       = $id;
+        $actor              = $this->container->make($reflection->getName(), $states);
+        $activation_tracker = hash('sha256', $dapr_type.$id);
+        $activation_tracker = rtrim(
+                                  sys_get_temp_dir(),
+                                  DIRECTORY_SEPARATOR
+                              ).DIRECTORY_SEPARATOR.'dapr_'.$activation_tracker;
+
+        $is_activated = file_exists($activation_tracker);
+
+        if ( ! $is_activated) {
+            $this->logger?->info(
+                'Activating {type}||{id}',
+                ['type' => $dapr_type, 'id' => $id]
+            );
+            touch($activation_tracker);
+            $actor->on_activation();
+        }
+
+        return $actor;
     }
 
     /**
-     * Specifies how long to wait before deactivating an idle actor. An actor is idle if no actor method calls and no
-     * reminders have fired on it.
+     * @param ActorState[] $states
      *
-     * @param \DateInterval $timeout The timeout
+     * @throws DaprException
+     * @throws DependencyException
+     * @throws NotFoundException
      */
-    public static function set_idle_timeout(\DateInterval $timeout): void
+    protected function commit(array $states): void
     {
-        $timeout = Formats::normalize_interval($timeout);
-        Runtime::$logger?->debug('Setting idle timeout {t}', ['t' => $timeout]);
-        self::$config['actorIdleTimeout'] = $timeout;
-    }
-
-    /**
-     * A duration used when in the process of draining rebalanced actors. This specifies how long to wait for the
-     * current active actor method to finish. If there is no current actor method call, this is ignored.
-     *
-     * @param \DateInterval $timeout The timeout
-     */
-    public static function set_drain_timeout(\DateInterval $timeout): void
-    {
-        $timeout = Formats::normalize_interval($timeout);
-        Runtime::$logger?->debug('Setting drain timeout {t}', ['t' => $timeout]);
-        self::$config['drainOngoingCallTimeout'] = $timeout;
-    }
-
-    /**
-     * A bool. If true, Dapr will wait for drainOngoingCallTimeout to allow a current actor call to complete before
-     * trying to deactivate an actor. If false, do not wait.
-     *
-     * @param bool $drain Whether to drain active actors
-     */
-    public static function do_drain_actors(bool $drain): void
-    {
-        Runtime::$logger?->debug('Setting drain mode {m}', ['m' => $drain]);
-        self::$config['drainRebalancedActors'] = $drain;
-    }
-
-    public static function handle_config(): array
-    {
-        return [
-            'code' => 200,
-            'body' => json_encode(self::$config),
-        ];
+        foreach ($states as $state) {
+            $state->save_state();
+        }
     }
 }

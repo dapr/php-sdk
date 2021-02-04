@@ -2,9 +2,12 @@
 
 ## Retrieving Secrets
 
+Secrets are read via the SecretManager:
+
 ```php
-$secret_key = \Dapr\Secret::retrieve('secretstore', 'signing_key');
-echo $secret_key['signing_key'];
+$app->get('/secret', function(\Dapr\SecretManager $secretManager) {
+    $value = $secretManager->retrieve('secret-store', 'my-secret');
+});
 ```
 
 ## Secret::retrieve()

@@ -15,10 +15,14 @@ You can access secrets easily:
 ```php
 <?php
 
-use Dapr\Secret;
-
-echo Secret::retrieve('my_secret_store', 'secret_name');
-// output: my-secret
+$app = Dapr\App::create();
+$app->get('/a-secret/{name}', function(string $name, \Dapr\SecretManager $secretManager) {
+    return $secretManager->retrieve(secret_store: 'my-secret-store', name: $name);
+});
+$app->get('/a-secret', function(\Dapr\SecretManager $secretManager) {
+    return $secretManager->all(secret_store: 'my-secret-store');
+});
+$app->start();
 ```
 
 # Accessing State
@@ -27,14 +31,27 @@ State is just Plain Old PHP Objects (POPO's) with an attribute:
 
 ```php
 <?php
-
-use Dapr\State\State;
-
 #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualLastWrite::class)]
 class MyState {
+    /**
+     * @var string 
+     */
     public string $string_value;
-    #[\Dapr\Deserialization\Attributes\ArrayOf(ComplexType::class)] public array $complex_type;
+    
+    /**
+     * @var ComplexType[] 
+     */
+    #[\Dapr\Deserialization\Attributes\ArrayOf(ComplexType::class)] 
+    public array $complex_type;
+    
+    /**
+      * @var Exception 
+      */
     public Exception $object_type;
+    
+    /**
+     * @var int 
+     */
     public int $counter = 0;
 
     /**
@@ -46,22 +63,19 @@ class MyState {
     }
 }
 
-// use state objects
-$state = new MyState();
-State::load_state($state);
-echo $state->string_value;
-$state->string_value = 'hello world';
-State::save_state($state);
-
-// load individual state
-$single_state = new #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualLastWrite::class)] class extends State {
-    public string $string_value;
-};
-State::load_state($single_state);
-echo $single_state->string_value;
+$app = \Dapr\App::create();
+$app->post('/my-state/{key}', function (
+    string $key, 
+    #[\Dapr\Attributes\FromBody] string $body, 
+    \Dapr\State\StateManager $stateManager) {
+        $stateManager->save_state(store_name: 'store', item: new \Dapr\State\StateItem(key: $key, value: $body));
+        $stateManager->save_object(new MyState);
+});
+$app->get('/my-state/{key}', function(string $key, \Dapr\State\StateManager $stateManager) {
+    return $stateManager->load_state(store_name: 'store', key: $key);
+});
+$app->start();
 ```
-
-You may also put `State::load_state($this)` in your constructor, if you prefer.
 
 ## Transactional State
 
@@ -69,39 +83,23 @@ You can also use transactional state to interact with state objects by extending
 objects.
 
 ```php
-use Dapr\consistency\StrongFirstWrite;
-use Dapr\exceptions\StateAlreadyCommitted;
-use Dapr\State\TransactionalState;
-
-#[\Dapr\State\Attributes\StateStore('statestore', StrongFirstWrite::class)]
-class SomeState extends TransactionalState {
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\StrongFirstWrite::class)]
+class SomeState extends \Dapr\State\TransactionalState {
     public string $value;
     public function ok(): void {
         $this->value = 'ok';
     }
 }
-($state = new SomeState())->begin();
-echo $state->value;
 
-// we can change state
-$state->value = 'new value';
-
-// even via a helper function
-$state->ok();
-
-// delete a value from the store:
-unset($state->value);
-
-// once we're happy with our state, we can commit
-$state->commit();
-
-// once state is committed, state becomes read-only. The following would throw.
-try {
-    echo $state->value;
-    $state->value = 'failed';
-}  catch (StateAlreadyCommitted $ex) {
-    echo "Cannot alter already committed state!";
-}
+$app = Dapr\App::create();
+$app->get('/do-work', function(SomeState $state) {
+    $state->begin();
+    $state->value = 'not-ok';
+    $state->ok();
+    $state->commit();
+    return $state;
+});
+$app->start();
 ```
 
 # Actors
@@ -111,14 +109,11 @@ You'll likely want to put this in a separate library for easy calling from other
 
 ```php
 <?php
-
-use Dapr\Actors\DaprType;use Dapr\Actors\IActor;
-
 /**
  * Actor that keeps a count
  */
- #[DaprType('Counter')]
-interface ICounter extends IActor {
+ #[\Dapr\Actors\Attributes\DaprType('ExampleActor')]
+interface ICounter {
     /**
      * Increment a counter
      */
@@ -131,20 +126,17 @@ Once the interface is defined, you'll need to implement the behavior and registe
 ```php
 <?php
 
-use Dapr\Actors\{Actor,ActorRuntime,DaprType};
-
 class CountState extends \Dapr\Actors\ActorState {
     public int $count = 0;
 }
 
-#[DaprType('Counter')]
-class Counter implements ICounter {
-    use Actor;
-
+#[\Dapr\Actors\Attributes\DaprType('Counter')]
+class Counter extends \Dapr\Actors\Actor implements ICounter {
     /**
      * Initialize the class
      */
-    public function __construct(private int $id, private CountState $state) {
+    public function __construct(string $id, private CountState $state) {
+        parent::__construct($id);
     }
 
     /**
@@ -153,62 +145,21 @@ class Counter implements ICounter {
     public function increment(int $amount): void {
         $this->state->count += $amount;
     }
-
-    /**
-     * Handle a scheduled reminder from dapr
-     * @param string $name The name of the reminder
-     * @param mixed $data The data
-     */
-    public function remind($name, $data) {
-        switch($name) {
-            case 'increment':
-                $this->increment($data['amount'] ?? 1);
-                break;
-        }
-    }
-
-    /**
-     * Handle any special activation logic
-     */
-    public function on_activation() {}
-
-    /**
-     * Handle any special deactivation logic
-     */
-    public function on_deactivation() {}
 }
 
 // register the actor with the runtime
-ActorRuntime::register_actor(Counter::class);
+$app = \Dapr\App::create(configure: fn(\DI\ContainerBuilder $builder) => $builder->addDefinitions([
+    'dapr.actors' => [Counter::class]
+]));
+$app->start();
 ```
 
 The state to inject is read from the constructor arguments, the state must derive from `ActorState` to be injected. You
 may use as many state classes as you'd like. State is automatically saved for you if you make any changes to it during
 the method call using transactional state.
 
-The `Actor` trait gives you access to some helper functions and implements most of `IActor`:
-
-`function create_reminder(string $name, DateInterval $due_time, DateInterval $period, $data)`:
-
-This allows you to create a durable reminder which the runtime will call even if your actor is deactivated. You're
-required to implement the function `handle_reminder($name, $data)`, which is enforced via the `IActor` interface.
-
-`function get_reminder(string $name)`:
-
-Get information about a reminder.
-
-`function delete_reminder(string $name)`:
-
-Delete a reminder.
-
-`function create_timer(string $name, DateInterval $due_time, DateInterval $period, $callback_method, $data)`:
-
-Registers a non-durable callback (meaning if the actor deactivates, the timer is lost). You're responsible for setting
-up any timers you need on activation.
-
-`function delete_timer(string $name)`:
-
-Deletes a timer.
+The `Actor` base class gives you access to some helper functions and saves you from writing some boiler-plate. You may
+also implement `IActor` and use the `ActorTrait` as well.
 
 ## Calling an Actor
 
@@ -218,12 +169,13 @@ In order to call an actor, simply call the `ActorProxy` and get a proxy object:
 <?php
 use Dapr\Actors\ActorProxy;
 
-/**
- * @var ICounter $counter
- */
-$counter = ActorProxy::get(ICounter::class, $id);
-$counter->increment();
-$counter->create_reminder('increment', new DateInterval('PT10M'), new DateInterval('P1D'), ['amount' => 100]);
+ $app = \Dapr\App::create();
+ $app->get('/increment/{actorId}[/{amount:\d+}]', function(string $actorId, ActorProxy $actorProxy, int $amount = 1) {
+    $counter = $actorProxy->get(ICounter::class, $actorId);
+    $counter->increment($amount);
+    $counter->create_reminder('increment', new \Dapr\Actors\Reminder('increment', new DateInterval('PT10M'), data: 10 ));
+ });
+$app->start();
 ```
 
 ## Actor Limitations
@@ -241,49 +193,29 @@ implemented in this SDK.
 
 ## Publishing
 
-In order to publish an event, you need only to call the `Publish` class:
+In order to publish an event, you just instantiate the `Publish` object with the `FactoryInterface`:
 
 ```php
 <?php
-
-$publisher = new \Dapr\PubSub\Publish('my_pubsub');
-$result = $publisher->topic('my_topic')->publish([
-    'message' => 'arrive at dawn'
-]);
-if($result === false) {
-    // handle failure
-}
+$app = \Dapr\App::create();
+$app->get('/publish', function(\DI\FactoryInterface $factory) {
+    $publisher = $factory->make(\Dapr\PubSub\Publish::class, ['pubsub' => 'redis-pubsub']);
+    $publisher->topic('my-topic')->publish(['message' => 'arrive at dawn']);
+});
+$app->start();
 ```
 
 ## Subscribing
 
 ```php
-\Dapr\PubSub\Subscribe::to_topic('pubsub', 'my-topic', function(\Dapr\PubSub\CloudEvent $event) { /* do work */ });
+$app = \Dapr\App::create(configure: fn(\DI\ContainerBuilder $builder) => $builder->addDefinitions([
+    'dapr.subscriptions' => [new \Dapr\PubSub\Subscription('redis-pubsub', 'my-topic', '/receive-message')]
+]));
+$app->post('/receive-message', function(#[\Dapr\Attributes\FromBody] \Dapr\PubSub\CloudEvent $event) {
+ // do something
+});
+$app->start();
 ```
-
-### Ingesting Events
-
-There's a simple, non-exhaustive, `Dapr\CloudEvent` class that will take a raw json string and return a Cloud Event. You
-can also use any other library if you so choose.
-
-```php
-<?php
-
-// create an event
-$event = new \Dapr\PubSub\CloudEvent();
-$event->id = uniqid();
-$event->source = $_SERVER['HTTP_HOST'];
-$event->type = 'com.myservice.registered.user';
-$event->subject = 'user123';
-$event->time = new DateTime();
-$event->data = [
-    'prop' => 'value'
-];
-(new \Dapr\PubSub\Publish('pubsub'))->topic('user_registrations')->publish($event);
-```
-
-When sending an event already as a CloudEvent, Dapr will pass it along to your application unchanged, but will remove
-the time.
 
 # Serializing
 
@@ -291,47 +223,17 @@ If you need to register a custom serializer, you can completely override the bui
 even the default serializers:
 
 ```php
-<?php
+// register a custom type serializer
+$app = \Dapr\App::create(configure: fn(\DI\ContainerBuilder $builder) => $builder->addDefinitions([
+    'dapr.serializers.custom' => [MyType::class => [MyType::class, 'serialize']],
+    'dapr.deserializers.custom' => [MyType::class => [MyType::class, 'deserialize']],
+]));
 
-function do_serialize(MyType $obj): array {
-    // do serializing here
-}
-
-// ::register takes any callable
-\Dapr\Serialization\Serializer::register('do_serialize', MyType::class);
-\Dapr\Deserialization\Deserializer::register([MyDeserializer::class, 'deserialize'], MyType::class);
-```
-
-If you want to override serializing completely, just pass `null` as the types array.
-
-# Methods
-
-Registering a method is fairly straightforward. If you want to set a specific response code, return an array containing
-a `code` key and it will be returned to the handler.
-
-```php
-\Dapr\Runtime::register_method('my-method', function($name, $birthday) { /* do work */ });
-```
-
-We can invoke methods like:
-
-```php
-\Dapr\Runtime::invoke_method('app-id', 'my-method', ['name' => 'Rob', 'birthday' => '01-07']);
-```
-
-# Bindings
-
-You're probably starting to notice a pattern here, but registering an input binding is also pretty simple:
-
-```php
-\Dapr\Binding::register_input_binding('my-input-binding', function($data) {});
-```
-
-Invoking an output binding:
-
-```php
-$result = \Dapr\Binding::invoke_output('my-output-binding', 'operation', data: ['some' => 'data']);
-$success = $result->code === 200;
+// get the serializer to do manual serializations
+$app->get('/', function(\Dapr\Serialization\ISerializer $serializer) {
+    return $serializer->as_array('anything here');
+});
+$app->start();
 ```
 
 # Project setup
@@ -341,8 +243,8 @@ See [Getting Started](docs/getting-started.md)
 # Development
 
 Simply run `composer start` on a machine where `dapr init` has already been run. This will start the daprd service on
-the current open terminal. Then navigate to [http://localhost:9502/](http://localhost:9502/) to let the integration
-tests run.
+the current open terminal. Then navigate to [http://localhost:9502/do_tests](http://localhost:9502/do_tests) to let the
+integration tests run.
 
 # Tests
 

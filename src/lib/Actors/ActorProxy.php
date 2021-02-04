@@ -3,42 +3,39 @@
 namespace Dapr\Actors;
 
 use Dapr\Actors\Attributes\DaprType;
-use Dapr\Actors\Generators\ProxyModes;
-use Dapr\Actors\Internal\InternalProxy;
-use Dapr\DaprClient;
-use Dapr\Deserialization\Deserializer;
-use Dapr\Runtime;
-use Dapr\Serialization\Serializer;
+use Dapr\Actors\Generators\ProxyFactory;
+use DI\DependencyException;
+use DI\NotFoundException;
 use LogicException;
-use Nette\PhpGenerator\ClassType;
-use Nette\PhpGenerator\Method;
-use Nette\PhpGenerator\PhpFile;
-use Nette\PhpGenerator\PhpNamespace;
-use Nette\PhpGenerator\Type;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
-use ReflectionMethod;
+use ReflectionException;
 
 /**
  * Class ActorProxy
  * @package Dapr
  */
-abstract class ActorProxy
+class ActorProxy
 {
-    public static int $mode = ProxyModes::GENERATED;
+    public function __construct(protected ProxyFactory $proxyFactory, protected LoggerInterface $logger)
+    {
+    }
 
     /**
      * Returns an actor proxy
      *
-     * @param class-string<IActor> $interface
+     * @param string $interface
      * @param mixed $id The id to proxy for
      * @param string|null $override_type Allow overriding the Dapr type for a given interface
      *
      * @return object
-     * @throws \ReflectionException
+     * @throws ReflectionException
+     * @throws DependencyException
+     * @throws NotFoundException
      */
-    public static function get(string $interface, mixed $id, string|null $override_type = null): object
+    public function get(string $interface, mixed $id, string|null $override_type = null): object
     {
-        Runtime::$logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
+        $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
 
         $reflected_interface = new ReflectionClass($interface);
         $type                = $override_type ?? ($reflected_interface->getAttributes(
@@ -46,11 +43,12 @@ abstract class ActorProxy
                 )[0] ?? null)?->newInstance()->type;
 
         if (empty($type)) {
-            Runtime::$logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
+            $this->logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
             throw new LogicException("$interface must have a DaprType attribute");
         }
 
-        $generator = ProxyModes::get_generator(self::$mode, $interface, $type);
+        $generator = $this->proxyFactory->get_generator($interface, $type);
+
         return $generator->get_proxy($id);
     }
 }

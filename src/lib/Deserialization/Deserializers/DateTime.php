@@ -2,9 +2,18 @@
 
 namespace Dapr\Deserialization\Deserializers;
 
-class DateTime implements IDeserialize {
+use Dapr\Deserialization\IDeserializer;
 
-    public static function deserialize(mixed $value): mixed
+class DateTime implements IDeserialize
+{
+    /**
+     * @param mixed $value
+     * @param IDeserializer $deserializer
+     *
+     * @return \DateTime
+     * @throws \Exception
+     */
+    public static function deserialize(mixed $value, IDeserializer $deserializer): \DateTime
     {
         return new \DateTime($value);
     }

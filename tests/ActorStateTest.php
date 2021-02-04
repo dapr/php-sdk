@@ -2,68 +2,137 @@
 
 use Dapr\Actors\ActorState;
 use Dapr\Actors\Internal\KeyResponse;
+use Dapr\exceptions\DaprException;
+use DI\Container;
+use DI\DependencyException;
+use DI\NotFoundException;
+use JetBrains\PhpStorm\Pure;
 
 require_once __DIR__.'/DaprTests.php';
 
 class ActorStateTest extends DaprTests
 {
-    public function get_state(string $type, string $id)
-    {
-        return new class($type, $id) extends ActorState {
-            public string $state = 'initial';
-        };
-    }
-
+    /**
+     * @throws DaprException
+     * @throws DependencyException
+     * @throws NotFoundException|ReflectionException
+     */
     public function testSaveEmptyTransaction()
     {
-        $state = $this->get_state('type', uniqid());
+        $state = $this->get_started_state('type', uniqid());
         $state->save_state();
         $this->assertTrue(true); // no exception thrown
     }
 
-    public function testSave() {
-        $state= $this->get_state('actor', 'id');
+    /**
+     * @param string $type
+     * @param string $id
+     *
+     * @return ActorState
+     * @throws ReflectionException
+     */
+    private function get_started_state(string $type, string $id): ActorState
+    {
+        $state = $this->get_state();
+        $this->begin_transaction($state, $type, $id);
+
+        return $state;
+    }
+
+    private function get_state(): ActorState
+    {
+        return new class($this->container) extends ActorState {
+            #[Pure] public function __construct(Container $container)
+            {
+                parent::__construct($container, $container);
+            }
+
+            public string $state = 'initial';
+        };
+    }
+
+    /**
+     * @param ActorState $state
+     * @param string $type
+     * @param string $id
+     *
+     * @throws ReflectionException
+     */
+    private function begin_transaction(ActorState $state, string $type, string $id)
+    {
+        $reflection = new ReflectionClass($state);
+        $reflection = $reflection->getParentClass();
+        $method     = $reflection->getMethod('begin_transaction');
+        $method->setAccessible(true);
+        $method->invoke($state, $type, $id);
+    }
+
+    /**
+     * @throws DaprException
+     * @throws DependencyException
+     * @throws NotFoundException
+     * @throws ReflectionException
+     */
+    public function testSave()
+    {
+        $state        = $this->get_started_state('actor', 'id');
         $state->state = 'ok';
 
-        \Dapr\DaprClient::register_post("/actors/actor/id/state", 204, '', [
+        $this->get_client()->register_post(
+            "/actors/actor/id/state",
+            204,
+            '',
             [
-                'operation' => 'upsert',
-                'request' => [
-                    'key' => 'state',
-                    'value' => 'ok'
-                ]
+                [
+                    'operation' => 'upsert',
+                    'request'   => [
+                        'key'   => 'state',
+                        'value' => 'ok',
+                    ],
+                ],
             ]
-        ]);
+        );
 
         $state->save_state();
 
         unset($state->state);
 
-        \Dapr\DaprClient::register_post("/actors/actor/id/state", 204, '', [
+        $this->get_client()->register_post(
+            "/actors/actor/id/state",
+            204,
+            '',
             [
-                'operation' => 'delete',
-                'request' => [
-                    'key' => 'state',
-                ]
+                [
+                    'operation' => 'delete',
+                    'request'   => [
+                        'key' => 'state',
+                    ],
+                ],
             ]
-        ]);
+        );
 
         $state->save_state();
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testSaveInvalidProp()
     {
-        $state = $this->get_state('type', uniqid());
+        $state = $this->get_started_state('type', uniqid());
         $this->expectException(InvalidArgumentException::class);
         $state->no_prop = true;
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testLoadingValue()
     {
         $id    = uniqid();
-        $state = $this->get_state('type', $id);
+        $state = $this->get_started_state('type', $id);
 
-        \Dapr\DaprClient::register_get(
+        $this->get_client()->register_get(
             "/actors/type/$id/state/state",
             KeyResponse::SUCCESS,
             'hello world'
@@ -73,39 +142,51 @@ class ActorStateTest extends DaprTests
         $this->assertSame('hello world', $state->state);
     }
 
-    public function testLoadingNoValue() {
-        $id = uniqid();
-        $state = $this->get_state('type', $id);
+    /**
+     * @throws ReflectionException
+     */
+    public function testLoadingNoValue()
+    {
+        $id    = uniqid();
+        $state = $this->get_started_state('type', $id);
 
-        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::KEY_NOT_FOUND, '');
+        $this->get_client()->register_get("/actors/type/$id/state/state", KeyResponse::KEY_NOT_FOUND, '');
 
         $this->assertSame('initial', $state->state);
         $this->assertSame('initial', $state->state);
     }
 
-    public function testLoadingNoActor() {
-        $id = uniqid();
-        $state = $this->get_state('nope', $id);
+    /**
+     * @throws ReflectionException
+     */
+    public function testLoadingNoActor()
+    {
+        $id    = uniqid();
+        $state = $this->get_started_state('nope', $id);
 
-        \Dapr\DaprClient::register_get("/actors/nope/$id/state/state", KeyResponse::ACTOR_NOT_FOUND, '');
+        $this->get_client()->register_get("/actors/nope/$id/state/state", KeyResponse::ACTOR_NOT_FOUND, '');
 
-        $this->expectException(\Dapr\exceptions\DaprException::class);
+        $this->expectException(DaprException::class);
 
         $state->state;
     }
 
-    public function testIsSet() {
-        $id = uniqid();
-        $state = $this->get_state('type', $id);
+    /**
+     * @throws ReflectionException
+     */
+    public function testIsSet()
+    {
+        $id    = uniqid();
+        $state = $this->get_started_state('type', $id);
 
-        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, 'test');
+        $this->get_client()->register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, 'test');
 
         $this->assertTrue(isset($state->state));
         $this->assertTrue(isset($state->state));
 
         $state->roll_back();
 
-        \Dapr\DaprClient::register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, null);
+        $this->get_client()->register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, null);
 
         $this->assertFalse(isset($state->state));
     }

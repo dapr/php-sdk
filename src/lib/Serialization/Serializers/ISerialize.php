@@ -2,7 +2,9 @@
 
 namespace Dapr\Serialization\Serializers;
 
+use Dapr\Serialization\ISerializer;
+
 interface ISerialize
 {
-    public static function serialize(mixed $value): mixed;
+    public function serialize(mixed $value, ISerializer $serializer): mixed;
 }

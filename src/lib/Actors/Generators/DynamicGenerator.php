@@ -4,19 +4,38 @@ namespace Dapr\Actors\Generators;
 
 use Dapr\Actors\Internal\InternalProxy;
 use Dapr\DaprClient;
-use Dapr\Deserialization\Deserializer;
-use Dapr\Serialization\Serializer;
+use Dapr\Deserialization\IDeserializer;
+use Dapr\Serialization\ISerializer;
+use DI\FactoryInterface;
+use JetBrains\PhpStorm\Pure;
 use LogicException;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
+use Psr\Container\ContainerInterface;
 
 class DynamicGenerator extends GenerateProxy
 {
-    private InternalProxy $current_proxy;
 
-    public function __construct(protected string $interface, protected string $dapr_type)
+    #[Pure] public function __construct(
+        string $interface,
+        string $dapr_type,
+        FactoryInterface $factory,
+        ContainerInterface $container
+    ) {
+        parent::__construct($interface, $dapr_type, $factory, $container);
+    }
+
+    public function get_proxy(string $id): InternalProxy
     {
-        parent::__construct($this->interface, $this->dapr_type);
+        $current_proxy            = new InternalProxy();
+        $interface                = ClassType::from($this->interface);
+        $methods                  = $this->get_methods($interface);
+        $current_proxy->DAPR_TYPE = $this->dapr_type;
+        foreach ($methods as $method) {
+            $current_proxy->{$method->getName()} = $this->generate_method($method, $id);
+        }
+
+        return $current_proxy;
     }
 
     protected function generate_failure_method(Method $method): callable
@@ -29,16 +48,19 @@ class DynamicGenerator extends GenerateProxy
     protected function generate_proxy_method(Method $method, string $id): callable
     {
         return function (...$params) use ($method, $id) {
+            $serializer   = $this->container->get(ISerializer::class);
+            $client       = $this->container->get(DaprClient::class);
+            $deserializer = $this->container->get(IDeserializer::class);
             if ( ! empty($params)) {
-                $params = Serializer::as_array($params[0]);
+                $params = $serializer->as_array($params[0]);
             }
 
-            $result = DaprClient::post(
-                DaprClient::get_api("/actors/{$this->dapr_type}/$id/method/{$method->getName()}"),
-                Serializer::as_array($params)
+            $result = $client->post(
+                "/actors/{$this->dapr_type}/$id/method/{$method->getName()}",
+                $serializer->as_array($params)
             );
 
-            $result->data = Deserializer::detect_from_parameter(
+            $result->data = $deserializer->detect_from_generator_method(
                 $method,
                 $result->data
             );
@@ -52,18 +74,5 @@ class DynamicGenerator extends GenerateProxy
         return function () use ($id) {
             return $id;
         };
-    }
-
-    public function get_proxy(string $id): InternalProxy
-    {
-        $this->current_proxy = new InternalProxy();
-        $interface           = ClassType::from($this->interface);
-        $methods             = $this->get_methods($interface);
-        $this->current_proxy->DAPR_TYPE = $this->dapr_type;
-        foreach ($methods as $method) {
-            $this->current_proxy->{$method->getName()} = $this->generate_method($method, $id);
-        }
-
-        return $this->current_proxy;
     }
 }

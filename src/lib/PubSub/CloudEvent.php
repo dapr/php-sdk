@@ -2,9 +2,15 @@
 
 namespace Dapr\PubSub;
 
-use Dapr\Runtime;
+use Dapr\Deserialization\Deserializers\IDeserialize;
+use Dapr\Deserialization\IDeserializer;
+use DateTime;
+use Exception;
+use InvalidArgumentException;
+use JetBrains\PhpStorm\ArrayShape;
+use LogicException;
 
-class CloudEvent
+class CloudEvent implements IDeserialize
 {
     /**
      * Identifies the event. Producers MUST ensure that source + id is unique for each distinct event. If a duplicate
@@ -79,9 +85,9 @@ class CloudEvent
      * producers for the same source MUST be consistent in this respect. In other words, either they all use the
      * actual time of the occurrence or they all use the same algorithm to determine the value used.
      *
-     * @var \DateTime|null
+     * @var DateTime|null
      */
-    public ?\DateTime $time;
+    public ?DateTime $time;
 
     /**
      * The version of the CloudEvents specification which the event uses. This enables the interpretation of the
@@ -115,16 +121,31 @@ class CloudEvent
     {
     }
 
+    /**
+     * @param string $json
+     *
+     * @return CloudEvent
+     * @throws Exception
+     */
     public static function parse(string $json): CloudEvent
     {
-        Runtime::$logger?->debug('Parsing cloud event {json}', ['json' => $json]);
-        $event = new CloudEvent();
-        $raw   = json_decode($json, true);
+        $raw = json_decode($json, true);
 
+        return self::from_array($raw);
+    }
+
+    /**
+     * @param array $raw
+     *
+     * @return CloudEvent
+     * @throws Exception
+     */
+    private static function from_array(array $raw): CloudEvent
+    {
         if ($raw['specversion'] !== '1.0') {
-            throw new \InvalidArgumentException('Cloud Event must be spec version 1.0');
+            throw new InvalidArgumentException('Cloud Event must be spec version 1.0');
         }
-
+        $event                    = new CloudEvent();
         $event->spec_version      = $raw['specversion'];
         $event->id                = (string)$raw['id'];
         $event->source            = (string)$raw['source'];
@@ -136,7 +157,7 @@ class CloudEvent
         $event->trace_id          = $raw['traceid'] ?? null;
         $time                     = $raw['time'] ?? null;
         if ( ! empty($time)) {
-            $event->time = new \DateTime($time);
+            $event->time = new DateTime($time);
         }
         $event->data = $raw['data'] ?? null;
 
@@ -144,19 +165,39 @@ class CloudEvent
     }
 
     /**
+     * @param mixed $value
+     * @param IDeserializer $deserializer
+     *
+     * @return CloudEvent
+     * @throws Exception
+     */
+    public static function deserialize(mixed $value, IDeserializer $deserializer): CloudEvent
+    {
+        return self::from_array($value);
+    }
+
+    /**
      * @return false|string
      */
     public function to_json(): string|bool
     {
-        Runtime::$logger?->debug('Serializing cloud event');
-
         return json_encode($this->to_array());
     }
 
-    public function to_array(): array
+    #[ArrayShape([
+        'id'              => "string",
+        'source'          => "string",
+        'specversion'     => "string",
+        'type'            => "string",
+        'traceid'         => "null|string",
+        'data'            => "mixed",
+        'time'            => "string",
+        'subject'         => "null|string",
+        'datacontenttype' => "null|string",
+    ])] public function to_array(): array
     {
         if ( ! $this->validate()) {
-            throw new \LogicException('Cloud event is not valid!');
+            throw new LogicException('Cloud event is not valid!');
         }
         $json = [
             'id'          => $this->id,

@@ -1,20 +1,34 @@
 <?php
 
+use Dapr\exceptions\DaprException;
+use Dapr\exceptions\StateAlreadyCommitted;
+use DI\DependencyException;
+use DI\NotFoundException;
+use Fixtures\TestObj;
 use Fixtures\TestState;
 
 class TransactionalStateTest extends DaprTests
 {
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testBegin()
     {
         $this->register_simple_load();
-        $state = new TestState();
+        $state = $this->container->make(TestState::class);
         $state->begin();
         $this->assertSame('initial', $state->with_initial);
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     private function register_simple_load()
     {
-        \Dapr\DaprClient::register_post(
+        $client = $this->get_client();
+        $client->register_post(
             '/state/store/bulk',
             200,
             [
@@ -33,18 +47,28 @@ class TransactionalStateTest extends DaprTests
         );
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     * @throws StateAlreadyCommitted
+     * @throws DaprException
+     */
     public function testEmptyCommit()
     {
         $this->register_simple_load();
-        $state = new TestState();
+        $state = $this->container->get(TestState::class);
         $state->begin();
         $state->commit();
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testInvalidKey()
     {
         $this->register_simple_load();
-        $state = new TestState();
+        $state = $this->container->get(TestState::class);
         $state->begin();
 
         $this->expectException(InvalidArgumentException::class);
@@ -53,22 +77,32 @@ class TransactionalStateTest extends DaprTests
         $state->not_exist = true;
     }
 
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     public function testIsSet()
     {
         $this->register_simple_load();
-        $state = new TestState();
+        $state = $this->container->get(TestState::class);
         $state->begin();
 
         $this->assertFalse(isset($state->complex));
         $this->assertTrue(isset($state->with_initial));
 
-        $state->complex = new \Fixtures\TestObj();
+        $state->complex = new TestObj();
         $this->assertTrue(isset($state->complex));
     }
 
+    /**
+     * @throws DaprException
+     * @throws DependencyException
+     * @throws NotFoundException
+     * @throws StateAlreadyCommitted
+     */
     public function testCommit()
     {
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             '/state/store/bulk',
             200,
             [
@@ -86,16 +120,16 @@ class TransactionalStateTest extends DaprTests
             ]
         );
 
-        $state = new TestState();
+        $state = $this->container->get(TestState::class);
         $state->begin();
         $state->set_something();
         unset($state->with_initial);
-        $state->complex      = new \Fixtures\TestObj();
+        $state->complex      = new TestObj();
         $state->complex->foo = "bar";
-        $state->complex      = new \Fixtures\TestObj();
+        $state->complex      = new TestObj();
         $state->complex->foo = "baz";
 
-        \Dapr\DaprClient::register_post(
+        $this->get_client()->register_post(
             '/state/store/transaction',
             201,
             null,
@@ -106,7 +140,7 @@ class TransactionalStateTest extends DaprTests
                         'request'   => [
                             'key'     => 'without_initial',
                             'value'   => 'something',
-                            'etag'    => 1,
+                            'etag'    => '1',
                             'options' => [
                                 'consistency' => 'eventual',
                                 'concurrency' => 'last-write',
@@ -136,7 +170,7 @@ class TransactionalStateTest extends DaprTests
         );
         $state->commit(['test' => true]);
 
-        $this->expectException(\Dapr\exceptions\StateAlreadyCommitted::class);
+        $this->expectException(StateAlreadyCommitted::class);
         $state->commit();
     }
 }

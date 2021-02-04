@@ -3,10 +3,16 @@
 namespace Dapr\State;
 
 use Dapr\DaprClient;
+use Dapr\exceptions\DaprException;
 use Dapr\exceptions\StateAlreadyCommitted;
-use Dapr\Runtime;
 use Dapr\State\Internal\StateHelpers;
 use Dapr\State\Internal\Transaction;
+use DI\DependencyException;
+use DI\FactoryInterface;
+use DI\NotFoundException;
+use InvalidArgumentException;
+use Psr\Container\ContainerInterface;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionProperty;
 
@@ -18,22 +24,30 @@ abstract class TransactionalState
 {
     use StateHelpers;
 
-    /**
-     * @var Transaction The current transaction
-     */
-    private Transaction $_internal_transaction;
-
-    /**
-     * @var ReflectionClass
-     */
-    private ReflectionClass $_internal_reflection;
+    private LoggerInterface $logger;
+    private DaprClient $client;
+    private IManageState $state;
+    private Transaction $transaction;
+    private ReflectionClass $reflection;
 
     /**
      * TransactionalState constructor.
+     *
+     * @param ContainerInterface $container
+     * @param FactoryInterface $factory
+     *
+     * @throws DependencyException
+     * @throws NotFoundException
      */
-    public function __construct()
-    {
-        $this->_internal_reflection = new ReflectionClass($this);
+    public function __construct(
+        private ContainerInterface $container,
+        private FactoryInterface $factory
+    ) {
+        $this->logger      = $this->container->get(LoggerInterface::class);
+        $this->client      = $this->container->get(DaprClient::class);
+        $this->state       = $this->container->get(IManageState::class);
+        $this->transaction = $this->factory->make(Transaction::class);
+        $this->reflection  = new ReflectionClass($this);
     }
 
     /**
@@ -41,18 +55,34 @@ abstract class TransactionalState
      *
      * @param int $parallelism The amount of parallelism to use in loading the state
      * @param array|null $metadata Component specific metadata
+     * @param string $prefix
+     *
+     * @throws DependencyException
+     * @throws NotFoundException
      */
-    public function begin(int $parallelism = 10, ?array $metadata = null): void
+    public function begin(int $parallelism = 10, ?array $metadata = null, $prefix = ''): void
     {
-        Runtime::$logger?->info('Beginning transaction');
-        $this->_internal_transaction = new Transaction();
-        State::load_state($this, $parallelism, $metadata);
+        $this->logger->info('Beginning transaction');
+        $this->transaction = $this->factory->make(Transaction::class);
+        $this->state->load_object(
+            $this,
+            prefix: $prefix,
+            parallelism: $parallelism,
+            metadata: $metadata ?? []
+        );
 
-        foreach ($this->_internal_reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+        foreach ($this->reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             $value = $this->{$property->name};
             unset($this->{$property->name});
-            $this->_internal_transaction->state[$property->name] = $value;
+            $this->transaction->state[$property->name] = $value;
         }
+    }
+
+    public function __get(string $key): mixed
+    {
+        $this->logger->debug('Getting value from transaction with key: {key}', ['key' => $key]);
+
+        return $this->transaction->state[$key];
     }
 
     /**
@@ -65,39 +95,51 @@ abstract class TransactionalState
      */
     public function __set(string $key, mixed $value): void
     {
-        Runtime::$logger?->debug('Attempting to set {key} to {value}', ['key' => $key, 'value' => $value]);
+        $this->logger->debug('Attempting to set {key} to {value}', ['key' => $key, 'value' => $value]);
         $this->throw_if_committed();
-        if ( ! $this->_internal_reflection->hasProperty($key)) {
-            Runtime::$logger?->critical(
+        if ( ! $this->reflection->hasProperty($key)) {
+            $this->logger->critical(
                 '{key} is not defined on transactional class and is not stored',
                 ['key' => $key]
             );
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "$key does not_exist on ".get_class($this)." is not defined and thus will not be stored."
             );
         }
-        $this->_internal_transaction->upsert($key, $value);
+        $this->transaction->upsert($key, $value);
     }
 
-    public function __get(string $key): mixed
+    /**
+     * Throws an exception if this object has been committed.
+     *
+     * @return void
+     * @throws StateAlreadyCommitted
+     */
+    protected function throw_if_committed(): void
     {
-        Runtime::$logger?->debug('Getting value from transaction with key: {key}', ['key' => $key]);
-
-        return $this->_internal_transaction->state[$key];
+        if ($this->transaction->is_closed) {
+            $this->logger->critical('Attempted to modify state after transaction is committed!');
+            throw new StateAlreadyCommitted();
+        }
     }
 
     public function __isset(string $key): bool
     {
-        Runtime::$logger?->debug('Checking {key} is set', ['key' => $key]);
+        $this->logger->debug('Checking {key} is set', ['key' => $key]);
 
-        return isset($this->_internal_transaction->state[$key]);
+        return isset($this->transaction->state[$key]);
     }
 
+    /**
+     * @param string $key
+     *
+     * @throws StateAlreadyCommitted
+     */
     public function __unset(string $key): void
     {
-        Runtime::$logger?->debug('Deleting {key}', ['key' => $key]);
+        $this->logger->debug('Deleting {key}', ['key' => $key]);
         $this->throw_if_committed();
-        $this->_internal_transaction->delete($key);
+        $this->transaction->delete($key);
     }
 
     /**
@@ -106,22 +148,22 @@ abstract class TransactionalState
      * @param array|null $metadata Component specific metadata
      *
      * @throws StateAlreadyCommitted
-     * @throws \Dapr\exceptions\DaprException
+     * @throws DaprException
      */
     public function commit(?array $metadata = null): void
     {
-        Runtime::$logger?->debug('Committing transaction');
+        $this->logger->debug('Committing transaction');
         $this->throw_if_committed();
-        $state_store = self::get_description($this->_internal_reflection);
+        $state_store = self::get_description($this->reflection);
         $transaction = [
             'operations' => array_map(
-                fn($t) => State::get_etag($this, $t['request']['key']) ? array_merge(
+                fn($t) => $this->get_etag_for_key($t['request']['key']) ? array_merge(
                     $t,
                     [
                         'request' => array_merge(
                             $t['request'],
                             [
-                                'etag' => State::get_etag($this, $t['request']['key']),
+                                'etag'    => $this->get_etag_for_key($t['request']['key']),
                                 'options' => [
                                     'consistency' => (new $state_store->consistency)->get_consistency(),
                                     'concurrency' => (new $state_store->consistency)->get_concurrency(),
@@ -130,7 +172,7 @@ abstract class TransactionalState
                         ),
                     ]
                 ) : $t,
-                $this->_internal_transaction->get_transaction()
+                $this->transaction->get_transaction()
             ),
         ];
         if (isset($metadata)) {
@@ -138,21 +180,21 @@ abstract class TransactionalState
         }
 
         if ( ! empty($transaction['operations'])) {
-            DaprClient::post(DaprClient::get_api("/state/{$state_store->name}/transaction"), $transaction);
+            $this->client->post("/state/{$state_store->name}/transaction", $transaction);
         }
-        $this->_internal_transaction->is_closed = true;
+        $this->transaction->is_closed = true;
     }
 
-    /**
-     * Throws an exception if this object has been committed.
-     *
-     * @return void
-     */
-    protected function throw_if_committed(): void
+    private function get_etag_for_key(string $key): ?string
     {
-        if ($this->_internal_transaction->is_closed) {
-            Runtime::$logger?->critical('Attempted to modify state after transaction is committed!');
-            throw new StateAlreadyCommitted();
-        }
+        return (new class($key, $this) extends StateManager {
+            public ?string $etag = '';
+
+            public function __construct(string $key, $obj)
+            {
+                $etag       = self::$obj_meta[$obj][$key] ?? [];
+                $this->etag = $etag['etag'] ?? null;
+            }
+        })->etag;
     }
 }

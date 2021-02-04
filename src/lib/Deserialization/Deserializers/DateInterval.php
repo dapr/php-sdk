@@ -2,10 +2,21 @@
 
 namespace Dapr\Deserialization\Deserializers;
 
-class DateInterval implements IDeserialize {
+use Dapr\Deserialization\IDeserializer;
+use DateInterval as PhpDateInterval;
+use Exception;
 
-    public static function deserialize(mixed $value): mixed
+class DateInterval implements IDeserialize
+{
+    /**
+     * @param mixed $value
+     * @param IDeserializer $deserializer
+     *
+     * @return PhpDateInterval
+     * @throws Exception
+     */
+    public static function deserialize(mixed $value, IDeserializer $deserializer): PhpDateInterval
     {
-        return new \DateInterval($value);
+        return new PhpDateInterval($value);
     }
 }

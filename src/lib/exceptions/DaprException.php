@@ -2,13 +2,11 @@
 
 namespace Dapr\exceptions;
 
-class DaprException extends \Exception
-{
-    public $dapr_error_code;
+use Exception;
 
-    public function get_dapr_error_code(): string {
-        return $this->dapr_error_code;
-    }
+class DaprException extends Exception
+{
+    public string $dapr_error_code;
 
     public static function deserialize_from_array(array $array): DaprException
     {
@@ -17,7 +15,7 @@ class DaprException extends \Exception
         // todo: whitelist some exception types
         switch ($array['errorCode']) {
             default:
-                $original_exception = new DaprException(
+                $original_exception                  = new DaprException(
                     $array['message'],
                     E_ERROR,
                     isset($array['inner']) ? self::deserialize_from_array($array['inner']) : null
@@ -33,13 +31,13 @@ class DaprException extends \Exception
     }
 
     /**
-     * @param \Exception|null $exception
+     * @param Exception|null $exception
      *
      * @return array|null
      */
-    public static function serialize_to_array($exception): ?array
+    public static function serialize_to_array(?Exception $exception): ?array
     {
-        if ($exception === null || ! ($exception instanceof \Exception)) {
+        if ($exception === null || ! ($exception instanceof Exception)) {
             return null;
         }
 
@@ -50,5 +48,10 @@ class DaprException extends \Exception
             'line'      => $exception->getLine(),
             'inner'     => self::serialize_to_array($exception->getPrevious()),
         ];
+    }
+
+    public function get_dapr_error_code(): string
+    {
+        return $this->dapr_error_code;
     }
 }
