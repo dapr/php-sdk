@@ -3,18 +3,27 @@
 use Dapr\Actors\ActorConfig;
 use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorRuntime;
+use Dapr\Actors\ActorState;
+use Dapr\Actors\Generators\CachedGenerator;
+use Dapr\Actors\Generators\DynamicGenerator;
+use Dapr\Actors\Generators\ExistingOnly;
+use Dapr\Actors\Generators\FileGenerator;
 use Dapr\Actors\Generators\ProxyFactory;
+use Dapr\App;
 use Dapr\DaprClient;
 use Dapr\Deserialization\DeserializationConfig;
 use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscriptions;
+use Dapr\PubSub\Topic;
+use Dapr\SecretManager;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
 use Dapr\Serialization\Serializer;
 use Dapr\State\IManageState;
 use Dapr\State\StateManager;
+use Dapr\State\TransactionalState;
 use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
@@ -35,39 +44,57 @@ return [
         ),
     ],
     'dapr.log.processor'           => [create(PsrLogMessageProcessor::class)],
-
-    // interface to implementation
-    LoggerInterface::class         => create(Logger::class)->constructor(
+    'dapr.logger'                  => create(Logger::class)->constructor(
         'DAPR',
         get('dapr.log.handler'),
         get('dapr.log.processor')
     ),
-    IDeserializer::class           => autowire(Deserializer::class),
-    ISerializer::class             => autowire(Serializer::class),
-    IManageState::class            => autowire(StateManager::class),
-    ProxyFactory::class            => autowire()->constructorParameter(
-        'mode',
-        get('dapr.actors.proxy.generation')
+
+    // default logger to prevent breaking existing code
+    LoggerInterface::class         => create(Logger::class)->constructor(
+        'APP',
+        get('dapr.log.handler'),
+        get('dapr.log.processor')
     ),
-    Subscriptions::class           => autowire()->constructorParameter(
-        'subscriptions',
-        get('dapr.subscriptions')
-    ),
+
+    // SDK wiring
     ActorConfig::class             => autowire()
         ->constructorParameter('actor_name_to_type', get('dapr.actors'))
         ->constructorParameter('idle_timeout', get('dapr.actors.idle_timeout'))
         ->constructorParameter('scan_interval', get('dapr.actors.scan_interval'))
         ->constructorParameter('drain_timeout', get('dapr.actors.drain_timeout'))
         ->constructorParameter('drain_enabled', get('dapr.actors.drain_enabled')),
-    DaprClient::class              => autowire()->constructorParameter('port', get('dapr.port')),
-    SerializationConfig::class     => autowire()->constructorParameter('serializers', get('dapr.serializers.custom')),
+    ActorRuntime::class            => autowire()->constructorParameter('logger', get('dapr.logger')),
+    ActorState::class              => autowire()->constructorParameter('logger', get('dapr.logger')),
+    ActorProxy::class              => autowire()->constructorParameter('logger', get('dapr.logger')),
+    App::class                     => autowire()->constructorParameter('logger', get('dapr.logger')),
+    CachedGenerator::class         => autowire(),
+    DynamicGenerator::class        => autowire(),
+    DaprClient::class              => autowire()
+        ->constructorParameter('port', get('dapr.port'))
+        ->constructorParameter('logger', get('dapr.logger')),
     DeserializationConfig::class   => autowire()->constructorParameter(
         'deserializers',
         get('dapr.deserializers.custom')
     ),
-    ActorProxy::class              => autowire(),
+    ExistingOnly::class            => autowire(),
+    FileGenerator::class => autowire(),
+    IDeserializer::class           => autowire(Deserializer::class)->constructorParameter('logger', get('dapr.logger')),
+    IManageState::class            => autowire(StateManager::class)->constructorParameter('logger', get('dapr.logger')),
+    ISerializer::class             => autowire(Serializer::class)->constructorParameter('logger', get('dapr.logger')),
+    ProxyFactory::class            => autowire()->constructorParameter(
+        'mode',
+        get('dapr.actors.proxy.generation')
+    ),
     Publish::class                 => autowire()->constructorParameter('pubsub', get('dapr.pubsub.default')),
-    ActorRuntime::class            => autowire(),
+    SecretManager::class           => autowire()->constructorParameter('logger', get('dapr.logger')),
+    SerializationConfig::class     => autowire()->constructorParameter('serializers', get('dapr.serializers.custom')),
+    Subscriptions::class           => autowire()->constructorParameter(
+        'subscriptions',
+        get('dapr.subscriptions')
+    ),
+    Topic::class                   => autowire()->constructorParameter('logger', get('dapr.logger')),
+    TransactionalState::class      => autowire()->constructorParameter('logger', get('dapr.logger')),
 
     // default application settings
     'dapr.pubsub.default'          => 'pubsub',
