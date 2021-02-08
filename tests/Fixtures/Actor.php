@@ -17,6 +17,8 @@ interface ITestActor
     public function a_function(
         #[AsClass(SimpleObject::class)] $value
     ): array;
+
+    public function empty_func();
 }
 
 class TestActorState extends ActorState
@@ -25,7 +27,7 @@ class TestActorState extends ActorState
 }
 
 #[DaprType('TestActor')]
-class ActorClass extends Actor
+class ActorClass extends Actor implements ITestActor
 {
     /**
      * ActorClass constructor.
@@ -38,11 +40,11 @@ class ActorClass extends Actor
         parent::__construct($id);
     }
 
-    public function a_function($value): bool
+    public function a_function($value): array
     {
         $this->state->value = $value;
 
-        return true;
+        return [$value];
     }
 
     function get_id(): string
@@ -50,18 +52,8 @@ class ActorClass extends Actor
         return $this->id;
     }
 
-    function remind(string $name, $data): void
+    public function empty_func()
     {
-        // TODO: Implement remind() method.
-    }
-
-    function on_activation(): void
-    {
-        // TODO: Implement on_activation() method.
-    }
-
-    function on_deactivation(): void
-    {
-        // TODO: Implement on_deactivation() method.
+        return true;
     }
 }

@@ -17,6 +17,7 @@ class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 	use ActorTrait;
 
 	public string $id;
+	public $DAPR_TYPE = 'TestActor';
 
 
 	#[\Dapr\Deserialization\Attributes\ArrayOf('string')]
@@ -31,6 +32,19 @@ class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 		  $this->serializer->as_array($data)
 		);
 		$result->data = $this->deserializer->detect_from_method((new \ReflectionClass($this))->getMethod('a_function'), $result->data);
+		return $result->data;
+	}
+
+
+	public function empty_func()
+	{
+		$type = 'TestActor';
+		$id = $this->get_id();
+		$current_method = 'empty_func';
+		$result = $this->client->post(
+		  "/actors/$type/$id/method/$current_method",
+		  null);
+		$result->data = $this->deserializer->detect_from_method((new \ReflectionClass($this))->getMethod('empty_func'), $result->data);
 		return $result->data;
 	}
 

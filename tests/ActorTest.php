@@ -3,6 +3,7 @@
 use Dapr\Actors\ActorConfig;
 use Dapr\Actors\ActorRuntime;
 use Dapr\Actors\Attributes\DaprType;
+use Dapr\Actors\Generators\CachedGenerator;
 use Dapr\Actors\Generators\FileGenerator;
 use Dapr\Actors\Generators\IGenerateProxy;
 use Dapr\Actors\Generators\ProxyFactory;
@@ -19,11 +20,16 @@ use Fixtures\ITestActor;
 use JetBrains\PhpStorm\ArrayShape;
 use JetBrains\PhpStorm\Pure;
 
+use function DI\autowire;
+
 require_once __DIR__.'/DaprTests.php';
 require_once __DIR__.'/Fixtures/Actor.php';
 require_once __DIR__.'/Fixtures/BrokenActor.php';
 require_once __DIR__.'/Fixtures/GeneratedProxy.php';
 
+/**
+ * Class ActorTest
+ */
 class ActorTest extends DaprTests
 {
     /**
@@ -49,7 +55,7 @@ class ActorTest extends DaprTests
             $id,
             fn($actor) => $runtime->do_method($actor, 'a_function', 'new value')
         );
-        $this->assertTrue($result);
+        $this->assertSame(['new value'], $result);
     }
 
     /**
@@ -79,6 +85,13 @@ class ActorTest extends DaprTests
         );
     }
 
+    /**
+     * @param $transactions
+     * @param $id
+     *
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
     private function assertState($transactions, $id)
     {
         $return = [];
@@ -120,7 +133,7 @@ class ActorTest extends DaprTests
             $id,
             fn($actor) => $runtime->do_method($actor, 'a_function', 'new value')
         );
-        $this->assertTrue($result);
+        $this->assertSame(['new value'], $result);
     }
 
     #[ArrayShape([
@@ -151,14 +164,23 @@ class ActorTest extends DaprTests
     {
         $id = uniqid();
 
+        $cache_dir = sys_get_temp_dir().DIRECTORY_SEPARATOR.uniqid('dapr_test_cache_').DIRECTORY_SEPARATOR;
+        $this->createBuilder([CachedGenerator::class => autowire()->method('set_cache_dir', $cache_dir)]);
+        $type = uniqid('TestActor_');
+
+        if($mode === ProxyFactory::ONLY_EXISTING) {
+            // make sure the actor has been loaded
+            $this->get_actor_generator(ProxyFactory::GENERATED_CACHED, ITestActor::class, $type)->get_proxy($id);
+        }
+
         /**
          * @var ITestActor|IActor $proxy
          */
-        $proxy = $this->get_actor_generator($mode, ITestActor::class, 'TestActor')->get_proxy($id);
+        $proxy = $this->get_actor_generator($mode, ITestActor::class, $type)->get_proxy($id);
 
         $this->assertSame($id, $proxy->get_id());
         $this->get_client()->register_get(
-            "/actors/TestActor/$id/reminders/reminder",
+            "/actors/$type/$id/reminders/reminder",
             200,
             [
                 "dueTime" => '1s',
@@ -172,7 +194,7 @@ class ActorTest extends DaprTests
         $this->assertSame([0], $reminder->data);
 
         $this->get_client()->register_post(
-            "/actors/TestActor/$id/timers/timer",
+            "/actors/$type/$id/timers/timer",
             200,
             [],
             [
@@ -188,7 +210,7 @@ class ActorTest extends DaprTests
         );
 
         $this->get_client()->register_post(
-            "/actors/TestActor/$id/reminders/reminder",
+            "/actors/$type/$id/reminders/reminder",
             200,
             [],
             [
@@ -204,14 +226,14 @@ class ActorTest extends DaprTests
             $this->get_client()
         );
 
-        $this->get_client()->register_delete("/actors/TestActor/$id/timers/timer", 204);
+        $this->get_client()->register_delete("/actors/$type/$id/timers/timer", 204);
         $proxy->delete_timer('timer', $this->get_client());
 
-        $this->get_client()->register_delete("/actors/TestActor/$id/reminders/reminder", 204);
+        $this->get_client()->register_delete("/actors/$type/$id/reminders/reminder", 204);
         $proxy->delete_reminder('reminder', $this->get_client());
 
         $this->get_client()->register_post(
-            path: "/actors/TestActor/$id/method/a_function",
+            path: "/actors/$type/$id/method/a_function",
             code: 200,
             response_data: ['true'],
             expected_request: null
@@ -219,7 +241,7 @@ class ActorTest extends DaprTests
         $proxy->a_function(null);
 
         $this->get_client()->register_post(
-            path: "/actors/TestActor/$id/method/a_function",
+            path: "/actors/$type/$id/method/a_function",
             code: 200,
             response_data: ['true'],
             expected_request: "ok"
@@ -307,15 +329,19 @@ class ActorTest extends DaprTests
      */
     public function testCachedGeneratorGenerates()
     {
-        $cache = sys_get_temp_dir().'/dapr-proxy-cache/dapr_proxy_GCached';
+        $cache_dir = sys_get_temp_dir().DIRECTORY_SEPARATOR.uniqid().DIRECTORY_SEPARATOR;
+        $this->createBuilder([CachedGenerator::class => autowire()->method('set_cache_dir', $cache_dir)]);
+        $cache = $cache_dir.'/dapr_proxy_GCached';
         if (file_exists($cache)) {
             unlink($cache);
+            rmdir($cache_dir);
         }
-        $this->assertFalse(file_exists($cache));
+        $this->assertFalse(file_exists($cache), 'cache should be deleted');
         $proxy = $this->get_actor_generator(ProxyFactory::GENERATED_CACHED, ITestActor::class, 'GCached');
         $proxy->get_proxy('hi');
-        $this->assertTrue(file_exists($cache));
+        $this->assertTrue(file_exists($cache), 'cache should exist');
         unlink($cache);
+        rmdir($cache_dir);
     }
 
     /**
