@@ -46,16 +46,6 @@ use Psr\Log\LoggerInterface;
 class App
 {
     /**
-     * @var ServerRequestCreator
-     */
-    protected ServerRequestCreator $creator;
-
-    /**
-     * @var RouteCollector
-     */
-    protected RouteCollector $routeCollector;
-
-    /**
      * App constructor.
      *
      * @param ContainerInterface $container
@@ -63,6 +53,8 @@ class App
      * @param ISerializer $serializer
      * @param Psr17Factory $psr17Factory
      * @param LoggerInterface $logger
+     * @param RouteCollector $routeCollector
+     * @param ServerRequestCreator $creator
      */
     #[Pure] public function __construct(
         protected ContainerInterface $container,
@@ -70,18 +62,9 @@ class App
         protected ISerializer $serializer,
         protected Psr17Factory $psr17Factory,
         protected LoggerInterface $logger,
+        protected RouteCollector $routeCollector,
+        protected ServerRequestCreator $creator
     ) {
-        $this->routeCollector = new RouteCollector(
-            new Std,
-            new GroupCountBased
-        );
-
-        $this->creator = new ServerRequestCreator(
-            $this->psr17Factory, // ServerRequestFactory
-            $this->psr17Factory, // UriFactory
-            $this->psr17Factory, // UploadedFileFactory
-            $this->psr17Factory  // StreamFactory
-        );
     }
 
     /**
@@ -105,7 +88,7 @@ class App
             }
             $container = $builder->build();
         }
-        $app = $container->make(App::class, ['routeCollector' => null]);
+        $app = $container->get(App::class);
         $container->set(App::class, $app);
 
         error_reporting(E_ERROR | E_USER_ERROR);
