@@ -54,9 +54,11 @@ class FileGenerator extends GenerateProxy
                     DaprType::class
                 )[0] ?? null)?->newInstance()->type;
 
+        // @codeCoverageIgnoreStart
         if (empty($type)) {
             throw new LogicException("$interface must have a DaprType attribute");
         }
+        // @codeCoverageIgnoreEnd
 
         $generator = $factory->make(FileGenerator::class, ['interface' => $interface, 'dapr_type' => $type]);
 
