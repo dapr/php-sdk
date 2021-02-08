@@ -38,6 +38,7 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 
 /**
  * Class App
@@ -90,8 +91,13 @@ class App
         }
         $app = $container->get(App::class);
         $container->set(App::class, $app);
+        $error_level = match($container->get('dapr.log.level')) {
+            LogLevel::DEBUG, LogLevel::INFO, LogLevel::NOTICE => E_ALL,
+            LogLevel::WARNING => E_ALL ^ E_NOTICE ^ E_USER_NOTICE,
+            default => E_ERROR | E_USER_ERROR,
+        };
 
-        error_reporting(E_ERROR | E_USER_ERROR);
+        error_reporting($error_level);
         ini_set("display_errors", 0);
         set_error_handler(
             function ($err_no, $err_str, $err_file, $err_line) {
@@ -107,7 +113,7 @@ class App
                 );
                 die();
             },
-            E_ALL
+            $error_level
         );
 
         return $app;
