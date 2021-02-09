@@ -17,7 +17,7 @@ class CachedGenerator extends ExistingOnly
 {
     protected string $cache_dir;
 
-    #[Pure] public function __construct(
+    public function __construct(
         string $interface,
         string $dapr_type,
         FactoryInterface $factory,

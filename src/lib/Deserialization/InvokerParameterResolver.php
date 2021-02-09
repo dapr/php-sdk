@@ -23,23 +23,23 @@ class InvokerParameterResolver implements ParameterResolver
 
     public function getParameters(
         ReflectionFunctionAbstract $reflection,
-        array $provided_parameters,
-        array $resolved_parameters
+        array $providedParameters,
+        array $resolvedParameters
     ): array {
         $parameters = $reflection->getParameters();
 
-        if ( ! empty($resolved_parameters)) {
-            $parameters = array_diff_key($parameters, $resolved_parameters);
+        if ( ! empty($resolvedParameters)) {
+            $parameters = array_diff_key($parameters, $resolvedParameters);
         }
 
         foreach ($parameters as $index => $parameter) {
             if ( ! empty($parameter->getAttributes(FromBody::class))) {
                 $body = json_decode($this->request->getBody()->getContents(), true);
 
-                $resolved_parameters[$index] = $this->deserializer->detect_from_parameter($parameter, $body);
+                $resolvedParameters[$index] = $this->deserializer->detect_from_parameter($parameter, $body);
             }
         }
 
-        return $resolved_parameters;
+        return $resolvedParameters;
     }
 }
