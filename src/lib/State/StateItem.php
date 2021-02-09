@@ -6,6 +6,10 @@ use Dapr\consistency\Consistency;
 use Dapr\consistency\StrongLastWrite;
 use JetBrains\PhpStorm\Pure;
 
+/**
+ * Class StateItem
+ * @package Dapr\State
+ */
 class StateItem
 {
     #[Pure] public function __construct(

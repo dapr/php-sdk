@@ -6,6 +6,9 @@ use Fixtures\ITestActor;
 
 require_once __DIR__.'/DaprTests.php';
 
+/**
+ * Class ActorConfigTest
+ */
 class ActorConfigTest extends DaprTests
 {
     public function testSerialization()

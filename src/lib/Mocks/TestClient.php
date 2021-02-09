@@ -8,6 +8,14 @@ use Exception;
 use JetBrains\PhpStorm\Pure;
 use PHPUnit\Framework\Assert;
 
+/**
+ * Class TestClient
+ *
+ * An implementation of DaprClient that provides mocking abilities
+ *
+ * @package Dapr\Mocks
+ * @codeCoverageIgnore not desired
+ */
 class TestClient extends DaprClient
 {
     public array $responses = [];

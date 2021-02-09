@@ -11,6 +11,10 @@ use ReflectionClass;
 use ReflectionException;
 use stdClass;
 
+/**
+ * Class Serializer
+ * @package Dapr\Serialization
+ */
 class Serializer implements ISerializer
 {
     public function __construct(protected SerializationConfig $config, protected LoggerInterface $logger)

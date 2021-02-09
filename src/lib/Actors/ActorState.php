@@ -17,6 +17,13 @@ use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
 
+/**
+ * Class ActorState
+ *
+ * Handles actor state transactions.
+ *
+ * @package Dapr\Actors
+ */
 abstract class ActorState
 {
     /**

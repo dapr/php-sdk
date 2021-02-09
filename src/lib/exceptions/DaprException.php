@@ -4,6 +4,14 @@ namespace Dapr\exceptions;
 
 use Exception;
 
+/**
+ * Class DaprException
+ *
+ * A generic exception
+ *
+ * @package Dapr\exceptions
+ * @codeCoverageIgnore via integration tests
+ */
 class DaprException extends Exception
 {
     public string $dapr_error_code;

@@ -4,6 +4,10 @@ namespace Dapr\Serialization\Serializers;
 
 use Dapr\Serialization\ISerializer;
 
+/**
+ * Class StateItem
+ * @package Dapr\Serialization\Serializers
+ */
 class StateItem implements ISerialize
 {
     public function serialize(mixed $value, ISerializer $serializer): mixed

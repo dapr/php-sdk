@@ -4,6 +4,10 @@ namespace Dapr\Deserialization\Deserializers;
 
 use Dapr\Deserialization\IDeserializer;
 
+/**
+ * Class DateTime
+ * @package Dapr\Deserialization\Deserializers
+ */
 class DateTime implements IDeserialize
 {
     /**

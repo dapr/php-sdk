@@ -6,6 +6,10 @@ use Dapr\Deserialization\IDeserializer;
 use DateInterval as PhpDateInterval;
 use Exception;
 
+/**
+ * Class DateInterval
+ * @package Dapr\Deserialization\Deserializers
+ */
 class DateInterval implements IDeserialize
 {
     /**

@@ -16,10 +16,8 @@ use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
 use Exception;
-use FastRoute\DataGenerator\GroupCountBased;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
-use FastRoute\RouteParser\Std;
 use Invoker\Exception\InvocationException;
 use Invoker\Exception\NotCallableException;
 use Invoker\Exception\NotEnoughParametersException;
@@ -36,8 +34,10 @@ use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 
 /**
  * Class App
@@ -46,16 +46,6 @@ use Psr\Log\LoggerInterface;
 class App
 {
     /**
-     * @var ServerRequestCreator
-     */
-    protected ServerRequestCreator $creator;
-
-    /**
-     * @var RouteCollector
-     */
-    protected RouteCollector $routeCollector;
-
-    /**
      * App constructor.
      *
      * @param ContainerInterface $container
@@ -63,6 +53,9 @@ class App
      * @param ISerializer $serializer
      * @param Psr17Factory $psr17Factory
      * @param LoggerInterface $logger
+     * @param RouteCollector $routeCollector
+     * @param ServerRequestCreator $creator
+     * @param SapiEmitter $emitter
      */
     #[Pure] public function __construct(
         protected ContainerInterface $container,
@@ -70,18 +63,10 @@ class App
         protected ISerializer $serializer,
         protected Psr17Factory $psr17Factory,
         protected LoggerInterface $logger,
+        protected RouteCollector $routeCollector,
+        protected ServerRequestCreator $creator,
+        protected SapiEmitter $emitter
     ) {
-        $this->routeCollector = new RouteCollector(
-            new Std,
-            new GroupCountBased
-        );
-
-        $this->creator = new ServerRequestCreator(
-            $this->psr17Factory, // ServerRequestFactory
-            $this->psr17Factory, // UriFactory
-            $this->psr17Factory, // UploadedFileFactory
-            $this->psr17Factory  // StreamFactory
-        );
     }
 
     /**
@@ -94,6 +79,7 @@ class App
      * @throws DependencyException
      * @throws NotFoundException
      * @throws Exception
+     * @codeCoverageIgnore Not testable
      */
     public static function create(ContainerInterface $container = null, callable $configure = null): App
     {
@@ -105,10 +91,14 @@ class App
             }
             $container = $builder->build();
         }
-        $app = $container->make(App::class, ['routeCollector' => null]);
-        $container->set(App::class, $app);
+        $app         = $container->get(App::class);
+        $error_level = match ($container->get('dapr.log.level')) {
+            LogLevel::DEBUG, LogLevel::INFO, LogLevel::NOTICE => E_ALL,
+            LogLevel::WARNING => E_ALL ^ E_NOTICE ^ E_USER_NOTICE,
+            default => E_ERROR | E_USER_ERROR,
+        };
 
-        error_reporting(E_ERROR | E_USER_ERROR);
+        error_reporting($error_level);
         ini_set("display_errors", 0);
         set_error_handler(
             function ($err_no, $err_str, $err_file, $err_line) {
@@ -124,7 +114,7 @@ class App
                 );
                 die();
             },
-            E_ALL
+            $error_level
         );
 
         return $app;
@@ -168,17 +158,17 @@ class App
 
     /**
      * Serve the request
+     *
+     * @param ServerRequestInterface|null $request
      */
-    public function start(): void
+    public function start(?ServerRequestInterface $request = null): void
     {
         $this->add_dapr_routes($this);
         try {
-            $request = $this->creator->fromGlobals();
+            $request  ??= $this->creator->fromGlobals();
             $response = $this->handleRequest($request);
         } catch (NotFound $exception) {
-            $response = $this->psr17Factory->createResponse(404)->withBody(
-                $this->psr17Factory->createStream($this->serializer->as_json($exception))
-            )->withAddedHeader('Content-Type', 'application/json');
+            $response = $this->psr17Factory->createResponse(404)->withAddedHeader('Content-Type', 'application/json');
             $this->logger->info('Route threw a NotFound exception, returning 404.', ['exception' => $exception]);
         } catch (Exception $exception) {
             $response = $this->psr17Factory->createResponse(500)->withBody(
@@ -186,8 +176,7 @@ class App
             )->withHeader('Content-Type', 'application/json');
             $this->logger->critical('Failed due to {exception}', ['exception' => $exception]);
         }
-        $emitter = new SapiEmitter();
-        $emitter->emit($response);
+        $this->emitter->emit($response);
     }
 
     /**
@@ -209,7 +198,7 @@ class App
                 $runtime->resolve_actor(
                     $actor_type,
                     $actor_id,
-                    fn(IActor $actor) => $runtime->deactivate_actor($actor, $actor_type, $actor_id)
+                    fn(IActor $actor) => $runtime->deactivate_actor($actor, $actor_type)
                 );
             }
         );
@@ -237,7 +226,7 @@ class App
                         $actor_type,
                         $actor_id,
                         fn(IActor $actor) => $response->withBody(
-                            $this->serialize_as_stream($runtime->do_method($actor, $reminder_name, $arg['data']))
+                            $this->serialize_as_stream($runtime->do_method($actor, $arg['callback'], $arg['data']))
                         )
                     );
                 } else {
@@ -381,6 +370,7 @@ class App
      * @throws InvocationException
      * @throws NotCallableException
      * @throws NotEnoughParametersException
+     *
      */
     public function run(callable $callback, array $parameters = []): mixed
     {

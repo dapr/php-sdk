@@ -2,6 +2,14 @@
 
 namespace Dapr\Actors;
 
+/**
+ * Class Actor
+ *
+ * A base class to simplify user implementations.
+ *
+ * @package Dapr\Actors
+ * @codeCoverageIgnore Not important
+ */
 abstract class Actor implements IActor
 {
     use ActorTrait;

@@ -21,6 +21,13 @@ use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionException;
 
+/**
+ * Class FileGenerator
+ *
+ * Generates an executable PHP file and evals it to create a proxy.
+ *
+ * @package Dapr\Actors\Generators
+ */
 class FileGenerator extends GenerateProxy
 {
     #[Pure] public function __construct(
@@ -54,9 +61,11 @@ class FileGenerator extends GenerateProxy
                     DaprType::class
                 )[0] ?? null)?->newInstance()->type;
 
+        // @codeCoverageIgnoreStart
         if (empty($type)) {
             throw new LogicException("$interface must have a DaprType attribute");
         }
+        // @codeCoverageIgnoreEnd
 
         $generator = $factory->make(FileGenerator::class, ['interface' => $interface, 'dapr_type' => $type]);
 
@@ -88,6 +97,7 @@ class FileGenerator extends GenerateProxy
         $interface->setClass();
         $interface->setName($this->get_short_class_name());
         $interface->addTrait(ActorTrait::class);
+        $interface->addProperty('DAPR_TYPE', $this->dapr_type);
 
         // maybe implement IActor
         $reflected_interface = new ReflectionClass($interface);
@@ -149,6 +159,7 @@ class FileGenerator extends GenerateProxy
         $params = array_values($method->getParameters());
         $method->setPublic();
         if ( ! empty($params)) {
+            // @codeCoverageIgnoreStart
             if (isset($params[1])) {
                 throw new LogicException(
                     "Cannot have more than one parameter on a method.\nMethod: {$method->getName()}"
@@ -159,6 +170,7 @@ class FileGenerator extends GenerateProxy
                     "Cannot pass references between actors/methods.\nMethod: {$method->getName()}"
                 );
             }
+            // @codeCoverageIgnoreEnd
             $this->usings = array_merge($this->usings, self::get_types($params[0]->getType()));
             $method->addBody('$data = $?;', [array_values($method->getParameters())[0]->getName()]);
         }
@@ -173,7 +185,7 @@ class FileGenerator extends GenerateProxy
             $method->addBody('  $this->serializer->as_array($data)');
             $method->addBody(');');
         }
-        $return_type = $method->getReturnType() ?? Type::VOID;
+        $return_type = $method->getReturnType() ?? Type::MIXED;
         if ($return_type !== Type::VOID) {
             $this->usings = array_merge($this->usings, self::get_types($return_type));
             $method->addBody(

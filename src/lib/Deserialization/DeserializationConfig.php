@@ -6,6 +6,13 @@ use Dapr\Deserialization\Deserializers\DateInterval;
 use Dapr\Deserialization\Deserializers\DateTime;
 use Dapr\Deserialization\Deserializers\IDeserialize;
 
+/**
+ * Class DeserializationConfig
+ *
+ * Handles default deserialization
+ *
+ * @package Dapr\Deserialization
+ */
 class DeserializationConfig
 {
     /**
@@ -23,6 +30,12 @@ class DeserializationConfig
         }
     }
 
+    /**
+     * Adds a deserializer for a given type
+     *
+     * @param string $type
+     * @param IDeserialize $deserializer
+     */
     public function add(string $type, IDeserialize $deserializer)
     {
         $this->deserializers[$type] = $deserializer;

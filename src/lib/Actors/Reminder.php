@@ -6,6 +6,13 @@ use Dapr\Formats;
 use DateInterval;
 use JetBrains\PhpStorm\ArrayShape;
 
+/**
+ * Class Reminder
+ *
+ * Abstracts actor reminders
+ *
+ * @package Dapr\Actors
+ */
 class Reminder
 {
     /**
@@ -42,7 +49,7 @@ class Reminder
             $name,
             Formats::from_dapr_interval($api['dueTime']),
             json_decode($api['data'], true) ?? [],
-            Formats::from_dapr_interval($api['period'])
+            Formats::from_dapr_interval($api['period'] ?? '')
         );
     }
 

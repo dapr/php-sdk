@@ -7,6 +7,14 @@ use Invoker\ParameterResolver\ParameterResolver;
 use Psr\Http\Message\RequestInterface;
 use ReflectionFunctionAbstract;
 
+/**
+ * Class InvokerParameterResolver
+ *
+ * Injects FromBody attributes into parameters
+ *
+ * @package Dapr\Deserialization
+ * @codeCoverageIgnore Via integration tests
+ */
 class InvokerParameterResolver implements ParameterResolver
 {
     public function __construct(private IDeserializer $deserializer, private RequestInterface $request)

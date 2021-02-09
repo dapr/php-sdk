@@ -10,6 +10,10 @@ use InvalidArgumentException;
 use JetBrains\PhpStorm\ArrayShape;
 use LogicException;
 
+/**
+ * Class CloudEvent
+ * @package Dapr\PubSub
+ */
 class CloudEvent implements IDeserialize
 {
     /**

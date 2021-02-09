@@ -4,6 +4,10 @@ namespace Dapr\Serialization\Serializers;
 
 use Dapr\Serialization\ISerializer;
 
+/**
+ * Class DateInterval
+ * @package Dapr\Serialization\Serializers
+ */
 class DateInterval implements ISerialize
 {
     private const REM_DT = ['S0F', 'M0S', 'H0M', 'DT0H', 'M0D', 'P0Y', 'Y0M', 'P0M'];

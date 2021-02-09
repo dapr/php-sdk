@@ -6,6 +6,10 @@ use Dapr\State\Attributes\StateStore;
 use LogicException;
 use ReflectionClass;
 
+/**
+ * Trait StateHelpers
+ * @package Dapr\State\Internal
+ */
 trait StateHelpers
 {
     /**

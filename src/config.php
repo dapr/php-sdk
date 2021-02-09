@@ -24,9 +24,14 @@ use Dapr\Serialization\Serializer;
 use Dapr\State\IManageState;
 use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
+use FastRoute\DataGenerator\GroupCountBased;
+use FastRoute\RouteCollector;
+use FastRoute\RouteParser\Std;
 use Monolog\Handler\ErrorLogHandler;
 use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
@@ -78,7 +83,7 @@ return [
         get('dapr.deserializers.custom')
     ),
     ExistingOnly::class            => autowire(),
-    FileGenerator::class => autowire(),
+    FileGenerator::class           => autowire(),
     IDeserializer::class           => autowire(Deserializer::class)->constructorParameter('logger', get('dapr.logger')),
     IManageState::class            => autowire(StateManager::class)->constructorParameter('logger', get('dapr.logger')),
     ISerializer::class             => autowire(Serializer::class)->constructorParameter('logger', get('dapr.logger')),
@@ -86,9 +91,19 @@ return [
         'mode',
         get('dapr.actors.proxy.generation')
     ),
+    Psr17Factory::class            => autowire(),
     Publish::class                 => autowire()->constructorParameter('pubsub', get('dapr.pubsub.default')),
+    RouteCollector::class          => autowire()
+        ->constructorParameter('routeParser', create(Std::class))
+        ->constructorParameter('dataGenerator', create(GroupCountBased::class)),
     SecretManager::class           => autowire()->constructorParameter('logger', get('dapr.logger')),
     SerializationConfig::class     => autowire()->constructorParameter('serializers', get('dapr.serializers.custom')),
+    ServerRequestCreator::class    => create()->constructor(
+        get(Psr17Factory::class),
+        get(Psr17Factory::class),
+        get(Psr17Factory::class),
+        get(Psr17Factory::class)
+    ),
     Subscriptions::class           => autowire()->constructorParameter(
         'subscriptions',
         get('dapr.subscriptions')

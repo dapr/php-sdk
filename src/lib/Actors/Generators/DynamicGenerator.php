@@ -13,6 +13,13 @@ use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Psr\Container\ContainerInterface;
 
+/**
+ * Class DynamicGenerator
+ *
+ * Uses some quirks of PHP magic functions to provide a proxy
+ *
+ * @package Dapr\Actors\Generators
+ */
 class DynamicGenerator extends GenerateProxy
 {
 

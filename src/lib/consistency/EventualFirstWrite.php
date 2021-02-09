@@ -6,6 +6,7 @@ namespace Dapr\consistency;
  * Class EventualFirstWrite
  *
  * @package Dapr\consistency
+ * @codeCoverageIgnore Trivial
  */
 class EventualFirstWrite extends Consistency
 {

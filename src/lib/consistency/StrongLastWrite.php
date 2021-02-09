@@ -5,6 +5,7 @@ namespace Dapr\consistency;
 /**
  * Class StrongLastWrite
  * @package Dapr\consistency
+ * @codeCoverageIgnore Trivial
  */
 class StrongLastWrite extends Consistency
 {
