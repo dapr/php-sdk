@@ -14,6 +14,9 @@ use ReflectionException;
 
 /**
  * Class ActorConfig
+ *
+ * Handles configuration which is called on /dapr/config
+ *
  * @package Dapr\Actors
  */
 class ActorConfig implements ISerialize
@@ -46,6 +49,8 @@ class ActorConfig implements ISerialize
      */
     public function get_actor_type_from_dapr_type(string $dapr_type): string|null
     {
+        if($this->actor_name_to_type[$dapr_type]) return $this->actor_name_to_type[$dapr_type];
+
         $actors = array_combine($this->get_supported_actors(), $this->actor_name_to_type);
 
         return $actors[$dapr_type] ?? null;
@@ -54,6 +59,7 @@ class ActorConfig implements ISerialize
     /**
      * @return array An array of dapr types
      * @throws ReflectionException | LogicException
+     * @codeCoverageIgnore
      */
     public function get_supported_actors(): array
     {

@@ -6,6 +6,13 @@ use Dapr\Formats;
 use DateInterval;
 use JetBrains\PhpStorm\ArrayShape;
 
+/**
+ * Class Reminder
+ *
+ * Abstracts actor reminders
+ *
+ * @package Dapr\Actors
+ */
 class Reminder
 {
     /**

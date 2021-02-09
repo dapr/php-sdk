@@ -13,6 +13,10 @@ use ReflectionException;
 
 /**
  * Class ActorProxy
+ *
+ * Used by the DynamicGenerator proxy
+ *
+ * @codeCoverageIgnore
  * @package Dapr
  */
 class ActorProxy

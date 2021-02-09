@@ -8,6 +8,13 @@ use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Psr\Container\ContainerInterface;
 
+/**
+ * Class GenerateProxy
+ *
+ * Base class that provides some basic functionality.
+ *
+ * @package Dapr\Actors\Generators
+ */
 abstract class GenerateProxy implements IGenerateProxy
 {
 

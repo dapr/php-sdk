@@ -16,7 +16,11 @@ use ReflectionException;
 use ReflectionNamedType;
 
 /**
- * The Actor Runtime
+ * Class ActorRuntime
+ *
+ * Handles activating, method calls, and deactivating actors.
+ *
+ * @package Dapr\Actors
  */
 class ActorRuntime
 {
@@ -57,8 +61,10 @@ class ActorRuntime
         );
     }
 
-    public function deactivate_actor(IActor $actor, string $dapr_type, string $id): void
+    public function deactivate_actor(IActor $actor, string $dapr_type): void
     {
+        $id = $actor->get_id();
+
         $activation_tracker = hash('sha256', $dapr_type.$id);
         $activation_tracker = rtrim(
                                   sys_get_temp_dir(),
@@ -91,16 +97,20 @@ class ActorRuntime
             $this->validate_actor($reflection);
             $states = $this->get_states($reflection, $dapr_type, $id);
             $actor  = $this->get_actor($reflection, $dapr_type, $id, $states);
+            // @codeCoverageIgnoreStart
         } catch (Exception $exception) {
             throw new NotFound('Actor could not be located', previous: $exception);
         }
+        // @codeCoverageIgnoreEnd
         $result = $loan($actor);
 
         try {
             $this->commit($states);
+            // @codeCoverageIgnoreStart
         } catch (DependencyException | DaprException | NotFoundException $e) {
             throw new SaveStateFailure('Failed to commit actor state', previous: $e);
         }
+        // @codeCoverageIgnoreEnd
 
         return $result;
     }
@@ -118,8 +128,10 @@ class ActorRuntime
     {
         $type = $this->actor_config->get_actor_type_from_dapr_type($dapr_type);
         if ( ! class_exists($type)) {
+            // @codeCoverageIgnoreStart
             $this->logger->critical('Unable to locate an actor for {t}', ['t' => $type]);
             throw new NotFound();
+            // @codeCoverageIgnoreEnd
         }
 
         return new ReflectionClass($type);
@@ -138,8 +150,10 @@ class ActorRuntime
             return true;
         }
 
+        // @codeCoverageIgnoreStart
         $this->logger->critical('Actor does not implement the IActor interface');
         throw new NotFound();
+        // @codeCoverageIgnoreEnd
     }
 
     /**

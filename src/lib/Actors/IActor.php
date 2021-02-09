@@ -6,6 +6,9 @@ use Dapr\DaprClient;
 
 /**
  * Interface IActor
+ *
+ * All actors must implement this interface.
+ *
  * @package Dapr
  */
 interface IActor

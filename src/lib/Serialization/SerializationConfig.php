@@ -7,6 +7,10 @@ use Dapr\Serialization\Serializers\DateTime;
 use Dapr\Serialization\Serializers\ISerialize;
 use Dapr\State\StateItem;
 
+/**
+ * Class SerializationConfig
+ * @package Dapr\Serialization
+ */
 class SerializationConfig
 {
     /**

@@ -7,6 +7,13 @@ use DI\FactoryInterface;
 use DI\NotFoundException;
 use InvalidArgumentException;
 
+/**
+ * Class ProxyFactory
+ *
+ * Factory for creating an actor proxy.
+ *
+ * @package Dapr\Actors\Generators
+ */
 class ProxyFactory
 {
     public const GENERATED = 0;

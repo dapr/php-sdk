@@ -8,6 +8,13 @@ use ReflectionMethod;
 use ReflectionParameter;
 use ReflectionProperty;
 
+/**
+ * Interface IDeserializer
+ *
+ * Provides a simple deserialization interface
+ *
+ * @package Dapr\Deserialization
+ */
 interface IDeserializer
 {
     /**

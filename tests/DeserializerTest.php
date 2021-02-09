@@ -2,13 +2,22 @@
 
 require_once __DIR__.'/Fixtures/Serialization.php';
 
+use Dapr\Deserialization\Attributes\ArrayOf;
 use Dapr\Deserialization\Attributes\AsClass;
+use Dapr\Deserialization\Attributes\Union;
 use Dapr\Deserialization\Deserializer;
+use Dapr\Deserialization\Deserializers\IDeserialize;
+use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use DI\DependencyException;
 use DI\NotFoundException;
 use JetBrains\PhpStorm\ArrayShape;
 
+/**
+ * @param $obj
+ *
+ * @return mixed
+ */
 function deserialize_special_type($obj)
 {
     return $obj['hello'];
@@ -128,5 +137,71 @@ final class DeserializerTest extends DaprTests
         $this->assertTrue($deserializer->is_exception($obj));
         $exception = $deserializer->get_exception($obj);
         $this->assertInstanceOf(DaprException::class, $exception->getPrevious());
+    }
+
+    function testDetectFromParameter()
+    {
+        $is_array_of   = fn(#[ArrayOf(DateTime::class)] $a = []) => $a;
+        $is_class      = fn(#[AsClass(DateTime::class)] $a) => $a;
+        $get_parameter = fn(callable $callback, int $idx = 0) => (new ReflectionFunction($callback))
+            ->getParameters()[$idx];
+        $check_date    = '2020-01-01';
+        $expected      = new DateTime($check_date);
+        $deserializer  = $this->container->get(Deserializer::class);
+        $value         = $deserializer->detect_from_parameter($get_parameter($is_array_of), [$check_date]);
+        $this->assertEquals([$expected], $value);
+        $value = $deserializer->detect_from_parameter($get_parameter($is_class), $check_date);
+        $this->assertEquals($expected, $value);
+    }
+
+    function testImplementIDeserialize()
+    {
+        $deserializer = $this->container->get(Deserializer::class);
+        $type         = new class implements IDeserialize {
+            public static function deserialize(mixed $value, IDeserializer $deserializer): mixed
+            {
+                return new class($value) {
+                    public function __construct(public string $value)
+                    {
+                    }
+                };
+            }
+        };
+
+        $value = $deserializer->from_value($type::class, 'test');
+        $this->assertSame('test', $value->value);
+    }
+
+    function testSimpleClass() {
+        $deserializer = $this->container->get(Deserializer::class);
+        $type = new class {
+            public string $value;
+        };
+        $value = $deserializer->from_value($type::class, ['value' => 'test', 'unexpected' => 'hi']);
+        $this->assertSame('test', $value->value);
+        $this->assertSame('hi', $value->unexpected);
+    }
+
+    function testMethod() {
+        $deserializer = $this->container->get(Deserializer::class);
+        $test_class = new class {
+            #[ArrayOf(DateTime::class)]
+            public function test_array($value): array {
+                return $value;
+            }
+            #[AsClass(DateTime::class)]
+            public function test_value($value) {
+                return $value;
+            }
+            public function test_reg($value): DateTime {
+                return $value;
+            }
+        };
+        $get_method = fn($method) => (new ReflectionClass($test_class))->getMethod($method);
+        $date = '2020-01-01';
+        $expected = new DateTime($date);
+        $this->assertEquals([$expected], $deserializer->detect_from_method($get_method('test_array'), [$date]));
+        $this->assertEquals($expected, $deserializer->detect_from_method($get_method('test_value'), $date));
+        $this->assertEquals($expected, $deserializer->detect_from_method($get_method('test_reg'), $date));
     }
 }

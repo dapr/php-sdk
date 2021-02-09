@@ -4,6 +4,10 @@ namespace Dapr\State;
 
 use Dapr\consistency\Consistency;
 
+/**
+ * Interface IManageState
+ * @package Dapr\State
+ */
 interface IManageState
 {
     /**

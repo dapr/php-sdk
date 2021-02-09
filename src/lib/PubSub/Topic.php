@@ -6,6 +6,10 @@ use Dapr\DaprClient;
 use Dapr\exceptions\DaprException;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Class Topic
+ * @package Dapr\PubSub
+ */
 class Topic
 {
     public function __construct(
@@ -41,8 +45,8 @@ class Topic
             $this->client->extra_headers = [];
 
             return true;
-        } catch (DaprException) {
+        } catch (DaprException) { // @codeCoverageIgnoreStart
             return false;
-        }
+        } // @codeCoverageIgnoreEnd
     }
 }

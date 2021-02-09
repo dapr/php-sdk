@@ -7,6 +7,10 @@ use DateTime;
 use Exception;
 use LogicException;
 
+/**
+ * Class Formats
+ * @package Dapr
+ */
 abstract class Formats
 {
     public const FROM_INTERVAL = '%hh%im%ss%fus';

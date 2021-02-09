@@ -13,6 +13,9 @@ use Psr\Container\ContainerInterface;
 
 /**
  * Class ExistingOnly
+ *
+ * Only allows existing proxies to be used. Does not generate a proxy.
+ *
  * @package Dapr\Actors\Generators
  */
 class ExistingOnly extends GenerateProxy

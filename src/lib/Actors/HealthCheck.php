@@ -5,6 +5,7 @@ namespace Dapr\Actors;
 /**
  * Class HealthCheck
  * @package Dapr\Actors
+ * @codeCoverageIgnore Overridden by user code.
  */
 class HealthCheck
 {

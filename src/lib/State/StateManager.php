@@ -16,6 +16,10 @@ use ReflectionException;
 use ReflectionProperty;
 use WeakMap;
 
+/**
+ * Class StateManager
+ * @package Dapr\State
+ */
 class StateManager implements IManageState
 {
     use StateHelpers;

@@ -6,6 +6,10 @@ use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
 
+/**
+ * Class Publish
+ * @package Dapr\PubSub
+ */
 class Publish
 {
     /**

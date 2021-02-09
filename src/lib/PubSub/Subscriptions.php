@@ -20,6 +20,13 @@ class Subscriptions implements ISerialize
     {
     }
 
+    /**
+     * @param mixed $value
+     * @param ISerializer $serializer
+     *
+     * @return mixed
+     * @codeCoverageIgnore via integration tests
+     */
     public function serialize(mixed $value, ISerializer $serializer): mixed
     {
         return $serializer->as_array($this->subscriptions);

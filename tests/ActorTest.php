@@ -134,6 +134,7 @@ class ActorTest extends DaprTests
             fn($actor) => $runtime->do_method($actor, 'a_function', 'new value')
         );
         $this->assertSame(['new value'], $result);
+        $runtime->resolve_actor('TestActor', $id, fn($actor) => $runtime->deactivate_actor($actor, 'TestActor', $id));
     }
 
     #[ArrayShape([

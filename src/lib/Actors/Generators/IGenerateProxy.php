@@ -6,6 +6,13 @@ use Dapr\Actors\IActor;
 use DI\FactoryInterface;
 use Psr\Container\ContainerInterface;
 
+/**
+ * Interface IGenerateProxy
+ *
+ * All generators implement this interface.
+ *
+ * @package Dapr\Actors\Generators
+ */
 interface IGenerateProxy
 {
     public function __construct(

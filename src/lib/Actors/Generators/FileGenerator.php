@@ -21,6 +21,13 @@ use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionException;
 
+/**
+ * Class FileGenerator
+ *
+ * Generates an executable PHP file and evals it to create a proxy.
+ *
+ * @package Dapr\Actors\Generators
+ */
 class FileGenerator extends GenerateProxy
 {
     #[Pure] public function __construct(

@@ -6,6 +6,13 @@ use Dapr\Formats;
 use DateInterval;
 use JetBrains\PhpStorm\ArrayShape;
 
+/**
+ * Class Timer
+ *
+ * Abstracts actor timers.
+ *
+ * @package Dapr\Actors
+ */
 class Timer
 {
     public function __construct(

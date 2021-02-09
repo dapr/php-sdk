@@ -4,7 +4,6 @@ namespace Dapr\Deserialization;
 
 use Dapr\Deserialization\Attributes\ArrayOf;
 use Dapr\Deserialization\Attributes\AsClass;
-use Dapr\Deserialization\Attributes\Union;
 use Dapr\Deserialization\Deserializers\IDeserialize;
 use Dapr\exceptions\DaprException;
 use Exception;
@@ -19,6 +18,13 @@ use ReflectionParameter;
 use ReflectionProperty;
 use ReflectionType;
 
+/**
+ * Class Deserializer
+ *
+ * The default deserializer
+ *
+ * @package Dapr\Deserialization
+ */
 class Deserializer implements IDeserializer
 {
     public function __construct(protected DeserializationConfig $config, protected LoggerInterface $logger)
@@ -52,10 +58,6 @@ class Deserializer implements IDeserializer
 
         if ($class_name = $this->is_class($parameter)) {
             return $this->from_value($class_name, $data);
-        }
-
-        if ($union_type = $this->get_union_type($parameter, $data)) {
-            return $this->from_value($union_type, $data);
         }
 
         $type = $this->get_type_from_type($parameter->getType());
@@ -100,11 +102,13 @@ class Deserializer implements IDeserializer
 
         try {
             $reflection = new ReflectionClass($as);
-            if($reflection->implementsInterface(IDeserialize::class)) {
-                $callback =  [$as, 'deserialize'];
+            if ($reflection->implementsInterface(IDeserialize::class)) {
+                $callback = [$as, 'deserialize'];
+
                 return $callback($value, $this);
             }
-            $obj        = $reflection->newInstanceWithoutConstructor();
+            $obj = $reflection->newInstanceWithoutConstructor();
+            // @codeCoverageIgnoreStart
         } catch (ReflectionException $exception) {
             $this->logger->warning(
                 'Failure trying to deserialize to {as}: {exception}',
@@ -113,6 +117,8 @@ class Deserializer implements IDeserializer
 
             return $value;
         }
+        // @codeCoverageIgnoreEnd
+
         foreach ($value as $prop_name => $prop_value) {
             if ($reflection->hasProperty($prop_name)) {
                 $obj->$prop_name = $this->detect_from_property($reflection->getProperty($prop_name), $prop_value);
@@ -149,10 +155,6 @@ class Deserializer implements IDeserializer
             return $this->from_value($class_name, $data);
         }
 
-        if ($union_type = $this->get_union_type($property, $data)) {
-            return $this->from_value($union_type, $data);
-        }
-
         $type = $this->get_type_from_type($property->getType());
 
         return $this->from_value($type, $data);
@@ -167,21 +169,6 @@ class Deserializer implements IDeserializer
         }
 
         return isset($attr[0]) ? $attr[0]->newInstance()->type : false;
-    }
-
-    private function get_union_type(
-        ReflectionParameter|ReflectionMethod|ReflectionProperty|Method $reflection,
-        mixed $data
-    ): string|false {
-        $attr = $reflection->getAttributes(Union::class);
-
-        if (isset($attr[0])) {
-            $discriminator = $attr[0]->newInstance()->discriminator;
-
-            return $discriminator($data);
-        }
-
-        return false;
     }
 
     private function get_type_from_type(ReflectionType|null|string $type): string
@@ -206,10 +193,6 @@ class Deserializer implements IDeserializer
             return $this->from_value($class_name, $data);
         }
 
-        if ($union_type = $this->get_union_type($method, $data)) {
-            return $this->from_value($union_type, $data);
-        }
-
         $type = $this->get_type_from_type($method->getReturnType());
 
         return $this->from_value($type, $data);
@@ -217,12 +200,20 @@ class Deserializer implements IDeserializer
 
     /**
      * @inheritDoc
+     * @codeCoverageIgnore
      */
     public function from_json(string $as, string $json): mixed
     {
         return $this->from_value($as, json_decode($json, true));
     }
 
+    /**
+     * @param Method $method
+     * @param mixed $data
+     *
+     * @return mixed
+     * @codeCoverageIgnore Same implementation
+     */
     public function detect_from_generator_method(Method $method, mixed $data): mixed
     {
         if ($array_of = $this->is_array_of($method)) {
@@ -231,10 +222,6 @@ class Deserializer implements IDeserializer
 
         if ($class_name = $this->is_class($method)) {
             return $this->from_value($class_name, $data);
-        }
-
-        if ($union_type = $this->get_union_type($method, $data)) {
-            return $this->from_value($union_type, $data);
         }
 
         $type = $this->get_type_from_type($method->getReturnType());

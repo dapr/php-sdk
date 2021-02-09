@@ -2,6 +2,10 @@
 
 namespace Dapr\Serialization;
 
+/**
+ * Interface ISerializer
+ * @package Dapr\Serialization
+ */
 interface ISerializer
 {
     /**

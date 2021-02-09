@@ -8,6 +8,9 @@ use Psr\Container\ContainerInterface;
 
 /**
  * Class CachedGenerator
+ *
+ * Caches the generated file.
+ *
  * @package Dapr\Actors\Generators
  */
 class CachedGenerator extends ExistingOnly
