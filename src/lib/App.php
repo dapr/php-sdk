@@ -168,9 +168,7 @@ class App
             $request  ??= $this->creator->fromGlobals();
             $response = $this->handleRequest($request);
         } catch (NotFound $exception) {
-            $response = $this->psr17Factory->createResponse(404)->withBody(
-                $this->psr17Factory->createStream($this->serializer->as_json($exception))
-            )->withAddedHeader('Content-Type', 'application/json');
+            $response = $this->psr17Factory->createResponse(404)->withAddedHeader('Content-Type', 'application/json');
             $this->logger->info('Route threw a NotFound exception, returning 404.', ['exception' => $exception]);
         } catch (Exception $exception) {
             $response = $this->psr17Factory->createResponse(500)->withBody(
@@ -228,7 +226,7 @@ class App
                         $actor_type,
                         $actor_id,
                         fn(IActor $actor) => $response->withBody(
-                            $this->serialize_as_stream($runtime->do_method($actor, $reminder_name, $arg['data']))
+                            $this->serialize_as_stream($runtime->do_method($actor, $arg['callback'], $arg['data']))
                         )
                     );
                 } else {
