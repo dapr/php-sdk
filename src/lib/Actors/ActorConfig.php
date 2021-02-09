@@ -49,7 +49,7 @@ class ActorConfig implements ISerialize
      */
     public function get_actor_type_from_dapr_type(string $dapr_type): string|null
     {
-        if($this->actor_name_to_type[$dapr_type]) return $this->actor_name_to_type[$dapr_type];
+        if($this->actor_name_to_type[$dapr_type] ?? false) return $this->actor_name_to_type[$dapr_type];
 
         $actors = array_combine($this->get_supported_actors(), $this->actor_name_to_type);
 
