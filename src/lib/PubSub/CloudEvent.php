@@ -163,7 +163,11 @@ class CloudEvent implements IDeserialize
         if ( ! empty($time)) {
             $event->time = new DateTime($time);
         }
-        $event->data = $raw['data'] ?? null;
+        if (isset($raw['data_base64'])) {
+            $event->data = base64_decode($raw['data_base64']);
+        } else {
+            $event->data = $raw['data'] ?? null;
+        }
 
         return $event;
     }
