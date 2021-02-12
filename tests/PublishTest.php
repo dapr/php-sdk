@@ -1,5 +1,6 @@
 <?php
 
+use Dapr\DaprClient;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Publish;
 use DI\DependencyException;
@@ -25,6 +26,15 @@ class PublishTest extends DaprTests
             ]
         );
         $publisher->topic('topic')->publish(['my' => 'event']);
+    }
+
+    public function testBinaryPublish()
+    {
+        $publisher = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
+        $this->get_client()->register_post('/publish/pubsub/topic', 200, null, 'data');
+        $publisher->topic('topic')->publish('data', content_type: 'application/octet-stream');
+        $client = $this->container->get(DaprClient::class);
+        $this->assertSame(['Content-Type: application/octet-stream'], $client->extra_headers);
     }
 
     /**
@@ -82,5 +92,25 @@ JSON;
         $event     = CloudEvent::parse($eventjson);
         $this->assertTrue($event->validate());
         $this->assertSame('https://example.com/message', $event->source);
+    }
+
+    public function testParsingBinaryEvent()
+    {
+        $eventjson = <<<JSON
+{
+    "specversion" : "1.0",
+    "type" : "xml.message",
+    "source" : "https://example.com/message",
+    "subject" : "Test binary Message",
+    "id" : "id-1234-5678-9101",
+    "time" : "2020-09-23T06:23:21Z",
+    "datacontenttype" : "application/octet-stream",
+    "data" : "ZGF0YQ==",
+    "data_base64": "ZGF0YQ=="
+}
+JSON;
+        $event     = CloudEvent::parse($eventjson);
+        $this->assertTrue($event->validate());
+        $this->assertSame('data', $event->data);
     }
 }

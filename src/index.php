@@ -20,6 +20,7 @@ use Dapr\Formats;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscription;
+use Dapr\PubSub\Topic;
 use Dapr\State\Attributes\StateStore;
 use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
@@ -263,8 +264,11 @@ $app->get(
     '/test/pubsub',
     function (FactoryInterface $container) {
         $publisher = $container->make(Publish::class, ['pubsub' => 'pubsub']);
-        $topic     = $publisher->topic(topic: 'test');
-        $body      = [];
+        /**
+         * @var Topic $topic
+         */
+        $topic = $publisher->topic(topic: 'test');
+        $body  = [];
 
         $topic->publish(['test_event']);
         sleep(5);
@@ -350,6 +354,17 @@ RAW
         $body["Received this data"] = json_decode($raw_event = file_get_contents('/tmp/sub-received'));
         unlink('/tmp/sub-received');
         $return['Publishing raw event'] = $body;
+
+        $topic->publish('raw data', content_type: 'application/octet-stream');
+        sleep(2);
+        $return['Binary response'] = ['raw' => json_decode($raw_event = file_get_contents('/tmp/sub-received'), true)];
+        unlink('/tmp/sub-received');
+        $return['Binary response'] = assert_equals(
+            $return['Binary response'],
+            'raw data',
+            $return['Binary response']['raw']['data'],
+            'Data properly decoded'
+        );
 
         return $return;
     }
