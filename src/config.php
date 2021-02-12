@@ -14,6 +14,7 @@ use Dapr\DaprClient;
 use Dapr\Deserialization\DeserializationConfig;
 use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
+use Dapr\DistributedTracing\ActiveTrace;
 use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscriptions;
 use Dapr\PubSub\Topic;
@@ -24,6 +25,7 @@ use Dapr\Serialization\Serializer;
 use Dapr\State\IManageState;
 use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
+use DI\Container;
 use FastRoute\DataGenerator\GroupCountBased;
 use FastRoute\RouteCollector;
 use FastRoute\RouteParser\Std;
@@ -32,12 +34,14 @@ use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
+use Psr\Http\Message\RequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
 use function DI\autowire;
 use function DI\create;
 use function DI\env;
+use function DI\factory;
 use function DI\get;
 
 return [
@@ -63,6 +67,13 @@ return [
     ),
 
     // SDK wiring
+    ActiveTrace::class             => factory(
+        fn(Container $container) => ActiveTrace::get_from_request(
+            $container->get(
+                RequestInterface::class
+            )
+        )
+    ),
     ActorConfig::class             => autowire()
         ->constructorParameter('actor_name_to_type', get('dapr.actors'))
         ->constructorParameter('idle_timeout', get('dapr.actors.idle_timeout'))
