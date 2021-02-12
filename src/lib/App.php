@@ -8,6 +8,7 @@ use Dapr\Actors\HealthCheck;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Deserialization\InvokerParameterResolver;
+use Dapr\DistributedTracing\ActiveTrace;
 use Dapr\exceptions\Http\NotFound;
 use Dapr\PubSub\Subscriptions;
 use Dapr\Serialization\ISerializer;
@@ -176,7 +177,7 @@ class App
             )->withHeader('Content-Type', 'application/json');
             $this->logger->critical('Failed due to {exception}', ['exception' => $exception]);
         }
-        $this->emitter->emit($response);
+        $this->emitter->emit(ActiveTrace::decorate_response($this->container->get(ActiveTrace::class), $response));
     }
 
     /**

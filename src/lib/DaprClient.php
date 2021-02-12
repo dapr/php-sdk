@@ -3,6 +3,7 @@
 namespace Dapr;
 
 use Dapr\Deserialization\IDeserializer;
+use Dapr\DistributedTracing\ActiveTrace;
 use Dapr\exceptions\DaprException;
 use JetBrains\PhpStorm\Pure;
 use Psr\Log\LoggerInterface;
@@ -13,8 +14,6 @@ use Psr\Log\LoggerInterface;
  */
 class DaprClient
 {
-    private static array $trace;
-    private static bool $added_trace = false;
     // temp hack to allow custom headers
     private static DaprClient $client;
     public array $extra_headers = [];
@@ -22,6 +21,7 @@ class DaprClient
     public function __construct(
         protected LoggerInterface $logger,
         protected IDeserializer $deserializer,
+        protected ActiveTrace|null $trace,
         protected string $port
     ) {
         self::$client = $this;
@@ -63,7 +63,6 @@ class DaprClient
             $return->headers,
             fn($carry, $item) => str_starts_with($item, 'etag:') ? str_replace('etag: ', '', $item) : $carry
         );
-        self::detect_trace_from_response($return);
 
         $this->logger->debug('Got response: {response}', ['response' => $return]);
 
@@ -106,48 +105,12 @@ class DaprClient
 
     private function get_headers(): array
     {
-        return array_merge(["Accept: application/json"], self::detect_trace(), $this->extra_headers);
-    }
+        $trace = $this->trace ? [
+            'tracestate: '.$this->trace->trace_state,
+            'traceparent: '.$this->trace->trace_parent,
+        ] : [];
 
-    private function detect_trace(): array
-    {
-        if (isset(self::$trace)) {
-            return self::$trace;
-        }
-
-        $existing_headers = getallheaders();
-        self::$trace      = isset($existing_headers['Traceparent']) ? ['Traceparent: '.$existing_headers['Traceparent']] : [];
-
-        if ( ! self::$added_trace && isset($existing_headers['Traceparent'])) {
-            header('Traceparent: '.$existing_headers['Traceparent']);
-            self::$added_trace = true;
-        }
-
-        return self::$trace;
-    }
-
-    /**
-     * @param DaprResponse $response
-     */
-    private function detect_trace_from_response(DaprResponse $response): void
-    {
-        if (isset(self::$trace)) {
-            return;
-        }
-
-        $header = array_filter(
-            $response->headers,
-            function ($ii) {
-                return str_starts_with($ii, 'Traceparent:');
-            }
-        );
-        if ( ! empty($header)) {
-            self::$trace = $header;
-            if ( ! self::$added_trace) {
-                header('Traceparent: '.$header[0]);
-                self::$added_trace = true;
-            }
-        }
+        return array_merge(["Accept: application/json"], $trace, $this->extra_headers);
     }
 
     /**
@@ -180,7 +143,6 @@ class DaprClient
         $response->data    = json_decode($response->data, true);
         $response->code    = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $response->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
-        self::detect_trace_from_response($response);
         $this->logger->debug('Got response: {r}', ['r' => $response]);
 
         if ($this->deserializer->is_exception($response->data)) {
@@ -226,7 +188,6 @@ class DaprClient
         $response->data    = json_decode(curl_exec($curl), true);
         $response->code    = curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $response->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
-        self::detect_trace_from_response($response);
 
         $this->logger->debug('Got response: {r}', ['r' => $response]);
 
