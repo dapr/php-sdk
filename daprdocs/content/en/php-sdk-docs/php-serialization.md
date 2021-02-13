@@ -30,7 +30,7 @@ class MyId implements \Dapr\Serialization\Serializers\ISerialize
 }
 ```
 
-This works for any time that we have full ownership over, however, it doesn't work for classes from libraries or PHP itself.
+This works for any type that we have full ownership over, however, it doesn't work for classes from libraries or PHP itself.
 For that, you need to register a custom serializer with the DI container:
 
 ```php
