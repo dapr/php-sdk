@@ -1,0 +1,12 @@
+:80
+
+root * /tests/src
+php_fastcgi localhost:9000
+file_server
+encode gzip
+
+handle_errors {
+    rewrite * /{http.error.status_code}
+    file_server
+    encode gzip
+}

@@ -80,33 +80,14 @@ jobs:
           php-version: 8.0
       - name: Validate composer.json and composer.lock
         run: composer validate
-
-      - name: Cache Composer packages
-        id: composer-cache-dist
-        uses: actions/cache@v2
-        with:
-          path: vendor
-          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-php-
-
-      - name: Install composer dependencies
-        if: steps.composer-cache-dist.outputs.cache-hit != 'true'
-        run: composer install --prefer-dist --no-progress --no-suggest --no-dev
-      - name: Install logger
-        run: composer require monolog/monolog
-      - name: Install Dapr
-        run: wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.0.0-rc.6
-      - name: Initialize Integration Environment
-        run: composer run-script dapr-init
-      - name: Integration Environment Logs
-        run: |
-          composer run-script start &
-      - name: Wait for environment
+      - name: Integration Environment Startup
+        run: composer run-script start
+      - name: Wait for environment stabilization
         run: sleep 10
       - name: Execute Tests
         run: |
           STATUSCODE=$(curl --silent --output /dev/stderr --write-out "%{http_code}" http://localhost:9502/do_tests)
           if test $STATUSCODE -ne 200; then
+            docker-compose logs dev
             exit 1
           fi

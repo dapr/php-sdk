@@ -38,19 +38,18 @@
   "scripts": {
     "test": "./vendor/bin/phpunit --testdox tests --coverage-clover coverage.xml tests --whitelist src",
     "start": [
-      "PHP_CLI_SERVER_WORKERS=100 dapr run --components-path components -a dev -p 9502 -- php -S 0.0.0.0:9502 -t src"
+      "COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose build --pull",
+      "docker-compose up -d"
     ],
     "dapr-init": [
       "dapr init --runtime-version 1.0.0-rc.4"
     ],
     "clean": [
-      "dapr uninstall",
-      "docker rm -f dapr_zipkin",
-      "docker rm -f dapr_redis"
+      "docker-compose stop",
+      "docker-compose rm -fv"
     ],
     "integration-tests": [
-      "sleep 10",
-      "curl localhost:4902/do_tests; @composer clean"
+      "curl localhost:4902/do_tests"
     ],
     "lint": "./vendor/bin/psalm"
   }

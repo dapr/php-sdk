@@ -1,0 +1,31 @@
+# A Docker Compose file for spinning up integration tests in CI
+version: "3"
+services:
+  placement:
+    image: daprio/dapr:1.0.0-rc.4
+    command: [ "./placement","-port","50006" ]
+  dev:
+    build:
+      dockerfile: images/tests.Dockerfile
+      context: .
+    depends_on:
+      - placement
+    ports:
+    - 9502:80
+  dev-caddy:
+    build:
+      dockerfile: images/caddy.Dockerfile
+      context: .
+    depends_on:
+      - dev
+    network_mode: service:dev
+  dev-daprd:
+    image: daprio/daprd:1.0.0-rc.4
+    command: [ "./daprd","-app-id","dev","-app-port","80","-placement-host-address","placement:50006","-components-path","/components" ]
+    volumes:
+      - ./components:/components
+    depends_on:
+      - dev
+    network_mode: service:dev
+  redis:
+    image: redis:latest
