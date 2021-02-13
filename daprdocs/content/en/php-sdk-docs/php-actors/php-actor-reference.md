@@ -1,9 +1,9 @@
 ---
 type: docs
-title: "Actor Reference"
-linkTitle: "Reference"
+title: "Production Reference: Actors"
+linkTitle: "Production Reference"
 weight: 1000
-description: PHP Actor Reference 
+description: Running PHP actors in production
 no_list: true
 ---
 
@@ -37,22 +37,12 @@ but is offered for when manually generating the files isn't possible.
 {{% /codetab %}}
 {{% codetab %}}
 
-In this mode, an exception is thrown if the proxy class doesn't exist. This is useful for when you don't want to use any
-generation of code in production. You'll have to make sure the class is generated and pre/autoloaded.
-
-{{% /codetab %}}
-{{% codetab %}}
-
-In this mode, the proxy satisfies the interface contract, however, it does not actually implement the interface itself
-(meaning `instanceof` will be `false`). This mode takes advantage of a few quirks in PHP to work and exists for cases
-where code cannot be `eval`'d or generated.
-
-{{% /codetab %}}
-{{< /tabs >}}
+In this mode, an exception is thrown if the proxy class doesn't exist. This is useful for when you don't want to 
+generate code in production. You'll have to make sure the class is generated and pre-/autoloaded.
 
 ### Generating proxies
 
-You can create a composer script to generate proxies on demand to take advantage of the `ONLY_EXISTING` mode. 
+You can create a composer script to generate proxies on demand to take advantage of the `ONLY_EXISTING` mode.
 
 Create a `ProxyCompiler.php`
 
@@ -113,6 +103,16 @@ return [
 ];
 ```
 
+{{% /codetab %}}
+{{% codetab %}}
+
+In this mode, the proxy satisfies the interface contract, however, it does not actually implement the interface itself
+(meaning `instanceof` will be `false`). This mode takes advantage of a few quirks in PHP to work and exists for cases
+where code cannot be `eval`'d or generated.
+
+{{% /codetab %}}
+{{< /tabs >}}
+
 ### Requests
 
 Creating an actor proxy is very inexpensive for any mode. There are no requests made when creating an actor proxy object.
@@ -128,16 +128,18 @@ if you need to override the default behavior, you can do so by implementing the 
 
 ## Activation and deactivation
 
-When an actor activates, a token file is written to a temporary directory (`'/tmp/dapr_' + sha256(concat(Dapr type, id))` by default).
+When an actor activates, a token file is written to a temporary directory (by default this is in 
+`'/tmp/dapr_' + sha256(concat(Dapr type, id))` in linux and `'%temp%/dapr_' + sha256(concat(Dapr type, id))` on Windows).
 This is persisted until the actor deactivates, or the host shuts down. This allows for `on_activation` to be called once
 and only once when Dapr activates the actor on the host.
 
 ## Performance
 
-Actor method invocation is very fast on a production setup with `php-fpm` and `nginx`. Even though the actor is constructed on
-every request, actor state keys are only loaded on-demand and not during each request. However, there is some overhead
-in loading each key individually. This can be mitigated by storing an array of data in state, trading some usability for speed. It
-is not recommended doing this from the start, but as an optimization when needed.
+Actor method invocation is very fast on a production setup with `php-fpm` and `nginx`, or IIS on Windows. Even though 
+the actor is constructed on every request, actor state keys are only loaded on-demand and not during each request. 
+However, there is some overhead in loading each key individually. This can be mitigated by storing an array of data in 
+state, trading some usability for speed. It is not recommended doing this from the start, but as an optimization when 
+needed.
 
 ## Versioning state
 
