@@ -131,7 +131,7 @@ return [
     'dapr.actors.scan_interval'    => null,
     'dapr.actors.drain_timeout'    => null,
     'dapr.actors.drain_enabled'    => null,
-    'dapr.port'                    => env('DAPR_HTTP_PORT', 3500),
+    'dapr.port'                    => env('DAPR_HTTP_PORT', "3500"),
     'dapr.serializers.custom'      => [],
     'dapr.deserializers.custom'    => [],
 ];
