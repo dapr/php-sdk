@@ -7,7 +7,7 @@ description: Unit Testing
 no_list: true
 ---
 
-Unit, functional, and integration tests are first-class citizens with the PHP SDK. Using the DI container, mocks, stubs,
+Unit and integration tests are first-class citizens with the PHP SDK. Using the DI container, mocks, stubs,
 and the provided `\Dapr\Mocks\TestClient` allows you to have very fine-grained tests.
 
 ## Testing Actors
@@ -166,3 +166,119 @@ class TheTest extends \PHPUnit\Framework\TestCase
 
 {{< /tabs >}}
 
+## Testing Transactions
+
+When building on transactions, you'll likely want to test how a failed transaction is handled. In order to do that, you
+need to inject failures and ensure the transaction matches what you expect.
+
+{{< tabs "integration test with TestClient" "unit test" >}}
+
+{{% codetab %}}
+
+```php
+<?php
+
+// MyState.php
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
+class MyState extends \Dapr\State\TransactionalState {
+    public string $value = '';
+}
+
+// SomeService.php
+class SomeService {
+    public function __construct(private MyState $state) {}
+
+    public function doWork() {
+        $this->state->begin();
+        $this->state->value = "hello world";
+        $this->state->commit();
+    }
+}
+
+// TheTest.php
+class TheTest extends \PHPUnit\Framework\TestCase {
+    private \DI\Container $container;
+
+    public function setUp(): void
+    {
+        parent::setUp();
+        $app = \Dapr\App::create(configure: fn(\DI\ContainerBuilder $builder)
+            => $builder->addDefinitions([\Dapr\DaprClient::class => \DI\autowire(\Dapr\Mocks\TestClient::class)]));
+        $this->container = $app->run(fn(\DI\Container $container) => $container);
+    }
+
+    private function getClient(): \Dapr\Mocks\TestClient {
+        return $this->container->get(\Dapr\DaprClient::class);
+    }
+
+    public function testTransactionFailure() {
+        $client = $this->getClient();
+
+        // create a response from {{< ref state_api >}}
+        $client->register_post('/state/statestore/bulk', code: 200, response_data: [
+            [
+                'key' => 'value',
+                // no previous value
+            ],
+        ], expected_request: [
+            'keys' => ['value'],
+            'parallelism' => 10
+        ]);
+        $client->register_post('/state/statestore/transaction',
+            code: 200,
+            response_data: null,
+            expected_request: [
+                'operations' => [
+                    [
+                        'operation' => 'upsert',
+                        'request' => [
+                            'key' => 'value',
+                            'value' => 'hello world'
+                        ]
+                    ]
+                ]
+            ]
+        );
+        $state = new MyState($this->container, $this->container);
+        $service = new SomeService($state);
+        $service->doWork();
+        $this->assertSame('hello world', $state->value);
+    }
+}
+```
+
+{{% /codetab %}}
+{{% codetab %}}
+
+```php
+// MyState.php
+#[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
+class MyState extends \Dapr\State\TransactionalState {
+    public string $value = '';
+}
+
+// SomeService.php
+class SomeService {
+    public function __construct(private MyState $state) {}
+
+    public function doWork() {
+        $this->state->begin();
+        $this->state->value = "hello world";
+        $this->state->commit();
+    }
+}
+
+// TheTest.php
+class TheTest extends \PHPUnit\Framework\TestCase {
+    public function testTransactionFailure() {
+        $state = $this->createStub(MyState::class);
+        $service = new SomeService($state);
+        $service->doWork();
+        $this->assertSame('hello world', $state->value);
+    }
+}
+```
+
+{{% /codetab %}}
+
+{{< /tabs >}}
