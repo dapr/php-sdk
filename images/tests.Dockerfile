@@ -12,7 +12,7 @@ COPY composer.json composer.json
 COPY composer.lock composer.lock
 RUN composer install --no-dev -o -n
 
-FROM base AS config
+FROM withinboredom/php-base-min AS config
 COPY --from=vendor /tests/vendor vendor
 COPY . /tests
 
