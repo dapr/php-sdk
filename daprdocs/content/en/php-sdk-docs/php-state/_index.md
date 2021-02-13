@@ -46,3 +46,46 @@ store should handle conflicts.
 When doing a bulk read or beginning a transaction, you can specify the amount of parallelism. Dapr will read "at most"
 that many keys at a time from the underlying store if it has to read one key at a time. This can be helpful to control
 the load on the state store at the expense of performance. The default is `10`.
+
+## Prefix
+
+Hardcoded key names are useful, but why not make state objects more reusable? When committing a transaction or saving
+an object to state, you can pass a prefix that is applied to every key in the object.
+
+{{< tabs "Transaction prefix" "StateManager prefix" >}}
+
+{{% codetab %}}
+
+```php
+class TransactionObject extends \Dapr\State\TransactionalState {
+    public string $key;
+}
+
+$app->run(function (TransactionObject $object ) {
+    $object->begin(prefix: 'my-prefix-');
+    $object->key = 'value';
+    // commit to key `my-prefix-key`
+    $object->commit();
+});
+```
+
+{{% /codetab %}}
+{{% codetab %}}
+
+```php
+class StateObject {
+    public string $key;
+}
+
+$app->run(function(\Dapr\State\StateManager $stateManager) {
+    $stateManager->load_object($obj = new StateObject(), prefix: 'my-prefix-');
+    // original value is from `my-prefix-key`
+    $obj->key = 'value';
+    // save to `my-prefix-key`
+    $stateManager->save_object($obj, prefix: 'my-prefix-');
+});
+```
+
+{{% /codetab %}}
+
+{{< /tabs >}}
