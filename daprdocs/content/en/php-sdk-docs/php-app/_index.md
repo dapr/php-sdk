@@ -32,6 +32,24 @@ $app->get('/test/{id}', fn(string $id) => $id);
 $app->start();
 ```
 
+## Returning from a controller
+
+You can return anything from a controller, and it will be serialized into a json object. You can also request the
+Psr Response object and return that instead, allowing you to customize headers, and have control over the entire response:
+
+```php
+$app = \Dapr\App::create(configure: fn(\DI\ContainerBuilder $builder) => $builder->addDefinitions('config.php'));
+
+// add a controller for GET /test/{id} that returns the id
+$app->get('/test/{id}', 
+    fn(
+        string $id, 
+        \Psr\Http\Message\ResponseInterface $response, 
+        \Nyholm\Psr7\Factory\Psr17Factory $factory) => $response->withBody($factory->createStream($id)));
+
+$app->start();
+```
+
 ## Using the app as a client
 
 When you just want to use Dapr as a client, such as in existing code, you can call `$app->run()`. In these cases, there's
