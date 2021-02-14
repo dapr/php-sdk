@@ -3,8 +3,8 @@
 namespace Dapr;
 
 use Dapr\Deserialization\IDeserializer;
-use Dapr\DistributedTracing\ActiveTrace;
 use Dapr\exceptions\DaprException;
+use Dapr\Middleware\Defaults\Tracing;
 use JetBrains\PhpStorm\Pure;
 use Psr\Log\LoggerInterface;
 
@@ -21,7 +21,7 @@ class DaprClient
     public function __construct(
         protected LoggerInterface $logger,
         protected IDeserializer $deserializer,
-        protected ActiveTrace|null $trace,
+        protected Tracing $trace,
         protected string $port
     ) {
         self::$client = $this;
