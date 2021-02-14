@@ -8,8 +8,9 @@ use Dapr\Actors\HealthCheck;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Deserialization\InvokerParameterResolver;
-use Dapr\DistributedTracing\ActiveTrace;
 use Dapr\exceptions\Http\NotFound;
+use Dapr\Middleware\IRequestMiddleware;
+use Dapr\Middleware\IResponseMiddleware;
 use Dapr\PubSub\Subscriptions;
 use Dapr\Serialization\ISerializer;
 use DI\ContainerBuilder;
@@ -102,23 +103,50 @@ class App
         error_reporting($error_level);
         ini_set("display_errors", 0);
         set_error_handler(
-            function ($err_no, $err_str, $err_file, $err_line) {
-                http_response_code(500);
-                header('Content-Type: application/json');
-                echo json_encode(
-                    [
-                        'errorCode' => 'Exception',
-                        'message'   => (E_WARNING & $err_no ? 'WARNING' : (E_NOTICE & $err_no ? 'NOTICE' : (E_ERROR & $err_no ? 'ERROR' : 'OTHER'))).': '.$err_str,
-                        'file'      => $err_file,
-                        'line'      => $err_line,
-                    ]
-                );
+            function ($err_no, $err_str, $err_file, $err_line) use ($app) {
+                $response = $app->psr17Factory
+                    ->createResponse(500)
+                    ->withBody(
+                        $app->serialize_as_stream(
+                            [
+                                'errorCode' => 'Exception',
+                                'message'   => (E_WARNING & $err_no ? 'WARNING' : (E_NOTICE & $err_no ? 'NOTICE' : (E_ERROR & $err_no ? 'ERROR' : 'OTHER'))).': '.$err_str,
+                                'file'      => $err_file,
+                                'line'      => $err_line,
+                            ]
+                        )
+                    );
+                $app->emitter->emit($app->apply_response_middleware($response));
                 die();
             },
             $error_level
         );
 
         return $app;
+    }
+
+    /**
+     * @param mixed $data
+     *
+     * @return StreamInterface
+     */
+    private function serialize_as_stream(mixed $data): StreamInterface
+    {
+        return $this->psr17Factory->createStream($this->serializer->as_json($data));
+    }
+
+    protected function apply_response_middleware(ResponseInterface $response): ResponseInterface
+    {
+        $middlewares = $this->container->get('dapr.http.middleware.response');
+        foreach ($middlewares as $middleware) {
+            if ($middleware instanceof IResponseMiddleware) {
+                $response = $middleware->response($response);
+            } else {
+                throw new \LogicException('Response middleware must implement \Dapr\Middleware\IResponseMiddleware');
+            }
+        }
+
+        return $response;
     }
 
     /**
@@ -167,7 +195,7 @@ class App
         $this->add_dapr_routes($this);
         try {
             $request  ??= $this->creator->fromGlobals();
-            $response = $this->handleRequest($request);
+            $response = $this->handleRequest($this->apply_request_middleware($request));
         } catch (NotFound $exception) {
             $response = $this->psr17Factory->createResponse(404)->withAddedHeader('Content-Type', 'application/json');
             $this->logger->info('Route threw a NotFound exception, returning 404.', ['exception' => $exception]);
@@ -177,7 +205,7 @@ class App
             )->withHeader('Content-Type', 'application/json');
             $this->logger->critical('Failed due to {exception}', ['exception' => $exception]);
         }
-        $this->emitter->emit(ActiveTrace::decorate_response($this->container->get(ActiveTrace::class), $response));
+        $this->emitter->emit($this->apply_response_middleware($response));
     }
 
     /**
@@ -275,16 +303,6 @@ class App
         $this->routeCollector->addRoute('PUT', $route, $callback);
     }
 
-    /**
-     * @param mixed $data
-     *
-     * @return StreamInterface
-     */
-    private function serialize_as_stream(mixed $data): StreamInterface
-    {
-        return $this->psr17Factory->createStream($this->serializer->as_json($data));
-    }
-
     public function get(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('GET', $route, $callback);
@@ -307,7 +325,7 @@ class App
             ['method' => $request->getMethod(), 'uri' => $request->getUri()]
         );
 
-        $response = $this->psr17Factory->createResponse()->withHeader('Content-Type', 'application/json');
+        $response = $this->psr17Factory->createResponse();
 
         $this->container->set(RequestInterface::class, $request);
         $this->container->set(ResponseInterface::class, $response);
@@ -388,5 +406,19 @@ class App
         $invoker = new Invoker(new ResolverChain($resolvers), $this->container);
 
         return $invoker->call($callback, $parameters);
+    }
+
+    protected function apply_request_middleware(RequestInterface $request): RequestInterface
+    {
+        $middlewares = $this->container->get('dapr.http.middleware.request');
+        foreach ($middlewares as $middleware) {
+            if ($middleware instanceof IRequestMiddleware) {
+                $request = $middleware->request($request);
+            } else {
+                throw new \LogicException('Request middleware must implement \Dapr\Middleware\IRequestMiddleware');
+            }
+        }
+
+        return $request;
     }
 }
