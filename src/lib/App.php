@@ -103,11 +103,11 @@ class App
         error_reporting($error_level);
         ini_set("display_errors", 0);
         set_error_handler(
-            function ($err_no, $err_str, $err_file, $err_line) {
-                $response = $this->psr17Factory
+            function ($err_no, $err_str, $err_file, $err_line) use ($app) {
+                $response = $app->psr17Factory
                     ->createResponse(500)
                     ->withBody(
-                        $this->serialize_as_stream(
+                        $app->serialize_as_stream(
                             [
                                 'errorCode' => 'Exception',
                                 'message'   => (E_WARNING & $err_no ? 'WARNING' : (E_NOTICE & $err_no ? 'NOTICE' : (E_ERROR & $err_no ? 'ERROR' : 'OTHER'))).': '.$err_str,
@@ -116,7 +116,7 @@ class App
                             ]
                         )
                     );
-                $this->emitter->emit($this->apply_response_middleware($response));
+                $app->emitter->emit($app->apply_response_middleware($response));
                 die();
             },
             $error_level
