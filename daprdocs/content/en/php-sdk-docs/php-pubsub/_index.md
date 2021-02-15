@@ -11,6 +11,7 @@ With Dapr, you can publish anything, including cloud events. The SDK contains a 
 you can also just pass an array that conforms to the cloud event spec or use another library.
 
 ```php
+<?php
 $app->post('/publish', function(\DI\FactoryInterface $factory) {
     // create a new publisher that publishes to my-pub-sub component
     $publisher = $factory->make(\Dapr\PubSub\Publish::class, ['pubsub' => 'my-pubsub']);
@@ -32,6 +33,7 @@ data.
 {{% codetab %}}
 
 ```php
+<?php
 $event = new \Dapr\PubSub\CloudEvent();
 $event->data = $xml;
 $event->data_content_type = 'application/xml';
@@ -41,6 +43,7 @@ $event->data_content_type = 'application/xml';
 {{% codetab %}}
 
 ```php
+<?php
 /**
  * @var \Dapr\PubSub\Publish $publisher 
  */

@@ -251,6 +251,7 @@ class TheTest extends \PHPUnit\Framework\TestCase {
 {{% codetab %}}
 
 ```php
+<?php
 // MyState.php
 #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\EventualFirstWrite::class)]
 class MyState extends \Dapr\State\TransactionalState {

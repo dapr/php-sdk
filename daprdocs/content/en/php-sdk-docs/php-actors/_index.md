@@ -28,6 +28,7 @@ For example, if you want to communicate with a counting actor that solely keeps 
 interface as follows:
 
 ```php
+<?php
 #[\Dapr\Actors\Attributes\DaprType('Counter')]
 interface ICount {
     function increment(int $amount = 1): void;
@@ -40,6 +41,7 @@ attribute tells the DaprClient the name of the actor to send to. It should match
 you can override the type if needed.
 
 ```php
+<?php
 $app->run(function(\Dapr\Actors\ActorProxy $actorProxy) {
     $actor = $actorProxy->get(ICount::class, 'actor-id');
     $actor->increment(10);
@@ -55,6 +57,7 @@ implementation much simpler.
 Here's the counter actor:
 
 ```php
+<?php
 #[\Dapr\Actors\Attributes\DaprType('Count')]
 class Counter extends \Dapr\Actors\Actor implements ICount {
     function __construct(string $id, private CountState $state) {
@@ -96,6 +99,7 @@ Actor state is a "Plain Old PHP Object" (POPO) that extends `ActorState`. The `A
 of useful methods. Here's an example implementation:
 
 ```php
+<?php
 class CountState extends \Dapr\Actors\ActorState {
     public int $count = 0;
 }

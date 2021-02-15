@@ -16,6 +16,7 @@ Many state components allow you to pass metadata to the component to control spe
 behavior. The PHP SDK allows you to pass that metadata through:
 
 ```php
+<?php
 $app->run(
     fn(\Dapr\State\StateManager $stateManager) => 
         $stateManager->save_state('statestore', new \Dapr\State\StateItem('key', 'value', metadata: ['port' => '112'])));
@@ -30,6 +31,7 @@ Every state operation allows passing metadata.
 In the PHP SDK, there are four classes that represent the four different types of consistency and concurrency in Dapr:
 
 ```php
+<?php
 [
     \Dapr\consistency\StrongLastWrite::class, 
     \Dapr\consistency\StrongFirstWrite::class,
@@ -57,6 +59,7 @@ an object to state, you can pass a prefix that is applied to every key in the ob
 {{% codetab %}}
 
 ```php
+<?php
 class TransactionObject extends \Dapr\State\TransactionalState {
     public string $key;
 }
@@ -73,6 +76,7 @@ $app->run(function (TransactionObject $object ) {
 {{% codetab %}}
 
 ```php
+<?php
 class StateObject {
     public string $key;
 }

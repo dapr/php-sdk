@@ -38,6 +38,7 @@ You can return anything from a controller, and it will be serialized into a json
 Psr Response object and return that instead, allowing you to customize headers, and have control over the entire response:
 
 ```php
+<?php
 $app = \Dapr\App::create(configure: fn(\DI\ContainerBuilder $builder) => $builder->addDefinitions('config.php'));
 
 // add a controller for GET /test/{id} that returns the id
