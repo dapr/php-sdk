@@ -13,6 +13,7 @@ There are four different modes actor proxies are handled. Each mode presents dif
 weigh during development and in production.
 
 ```php
+<?php
 \Dapr\Actors\Generators\ProxyFactory::GENERATED;
 \Dapr\Actors\Generators\ProxyFactory::GENERATED_CACHED;
 \Dapr\Actors\Generators\ProxyFactory::ONLY_EXISTING;

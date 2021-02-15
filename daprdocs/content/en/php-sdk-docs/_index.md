@@ -34,9 +34,14 @@ Create a config.php, copying the contents below:
 <?php
 
 use Dapr\Actors\Generators\ProxyFactory;
-use function DI\env;
+use Dapr\Middleware\Defaults\{Response\ApplicationJson,Tracing};
+use Psr\Log\LogLevel;
+use function DI\{env,get};
 
 return [
+    // set the log level
+    'dapr.log.level'               => LogLevel::WARNING,
+
     // Generate a new proxy on each request - recommended for development
     'dapr.actors.proxy.generation' => ProxyFactory::GENERATED,
     
@@ -66,6 +71,10 @@ return [
     
     // add any custom deserialization routines here
     'dapr.deserializers.custom'    => [],
+    
+    // the following has no effect, as it is the default middlewares and processed in order specified
+    'dapr.http.middleware.request'  => [get(Tracing::class)],
+    'dapr.http.middleware.response' => [get(ApplicationJson::class), get(Tracing::class)],
 ];
 ```
 

@@ -34,6 +34,7 @@ This works for any type that we have full ownership over, however, it doesn't wo
 For that, you need to register a custom serializer with the DI container:
 
 ```php
+<?php
 // in config.php
 
 class SerializeSomeClass implements \Dapr\Serialization\Serializers\ISerialize 
