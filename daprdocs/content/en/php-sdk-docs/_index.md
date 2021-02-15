@@ -37,6 +37,9 @@ use Dapr\Actors\Generators\ProxyFactory;
 use function DI\env;
 
 return [
+    // set the log level
+    'dapr.log.level'               => LogLevel::WARNING,
+
     // Generate a new proxy on each request - recommended for development
     'dapr.actors.proxy.generation' => ProxyFactory::GENERATED,
     
