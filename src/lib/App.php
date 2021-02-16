@@ -40,6 +40,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use Throwable;
 
 /**
  * Class App
@@ -199,7 +200,7 @@ class App
         } catch (NotFound $exception) {
             $response = $this->psr17Factory->createResponse(404)->withAddedHeader('Content-Type', 'application/json');
             $this->logger->info('Route threw a NotFound exception, returning 404.', ['exception' => $exception]);
-        } catch (Exception $exception) {
+        } catch (Throwable $exception) {
             $response = $this->psr17Factory->createResponse(500)->withBody(
                 $this->psr17Factory->createStream($this->serializer->as_json($exception))
             )->withHeader('Content-Type', 'application/json');
