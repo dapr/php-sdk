@@ -413,7 +413,7 @@ $app->get(
         return $body;
     }
 );
-$app->post('/cron', fn() => 'hello world');
+$app->post('/cron', fn() => touch(sys_get_temp_dir().'/cron'));
 $app->post(
     '/testsub',
     function (

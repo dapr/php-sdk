@@ -49,7 +49,7 @@
       "docker-compose rm -fv"
     ],
     "integration-tests": [
-      "curl localhost:4902/do_tests"
+      "curl localhost:9502/do_tests"
     ],
     "lint": "./vendor/bin/psalm"
   }
