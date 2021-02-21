@@ -86,7 +86,8 @@ jobs:
         run: sleep 10
       - name: Execute Tests
         run: |
-          STATUSCODE=$(curl --silent --output /dev/stderr --write-out "%{http_code}" http://localhost:9502/do_tests)
+          STATUSCODE=$(curl --silent --output /tmp/test-results.json --write-out "%{http_code}" http://localhost:9502/do_tests)
+          cat /tmp/test-results.json | jq .
           if test $STATUSCODE -ne 200; then
             docker-compose logs dev
             exit 1

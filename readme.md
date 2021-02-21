@@ -248,4 +248,178 @@ integration tests run.
 
 # Tests
 
-Simply run `composer test` to run the unit tests. You can lint using `composer lint`
+Simply run `composer test` to run the unit tests. You can lint using `composer lint`.
+
+## Integration tests
+
+You need [`docker-compose`](https://docs.docker.com/compose/gettingstarted/) and [`jq`](https://stedolan.github.io/jq/)
+
+Build and start the environment, then run the integration tests and clean up.
+
+```bash
+# clean up any existing environment
+docker-compose down -v
+# build and deploy the containers
+composer start
+# run and display the test rusults
+composer integration-tests | jq .
+```
+
+You should see output like:
+```json
+{
+  "/test/actors": {
+    "status": {
+      "test completed successfully: ": "✔"
+    },
+    "results": {
+      "Empty actor should have no data: ": "✔",
+      "Actor should have data: ": "✔",
+      "Reminder should increment: ": "✔",
+      "time formats are delivered ok: ": "✔",
+      "Timer should increment: ": "✔",
+      "[object] saved array should match: ": "✔",
+      "[object] saved string should match: ": "✔",
+      "actor can return a simple value: ": "✔"
+    }
+  },
+  "/test/binding": {
+    "status": {
+      "test completed successfully: ": "✔"
+    },
+    "results": {
+      "we should have received at least one cron: ": "✔"
+    }
+  },
+  "/test/invoke": {
+    "status": {
+      "test completed successfully: ": "✔"
+    },
+    "results": {
+      "Should receive a 200 response: ": "✔",
+      "Static function should receive json string: ": "✔"
+    }
+  },
+  "/test/pubsub": {
+    "status": {
+      "test completed successfully: ": "✔"
+    },
+    "results": {
+      "simple-test": {
+        "sub received message: ": "✔",
+        "Received this data": {
+          "id": "57b4a889-3cbb-4d5d-a6fe-7574b097c34c",
+          "source": "dev",
+          "specversion": "1.0",
+          "type": "com.dapr.event.sent",
+          "datacontenttype": "application/json",
+          "data": [
+            "test_event"
+          ],
+          "traceid": "00-222a0988ecf9d53a006a35f961229788-6706c11d588c6da2-00"
+        },
+        "should be valid cloud event: ": "✔"
+      },
+      "Testing custom cloud event": {
+        "sub received message: ": "✔",
+        "Received this raw data": {
+          "id": "123",
+          "source": "http://example.com",
+          "specversion": "1.0",
+          "type": "com.example.test",
+          "datacontenttype": "application/json",
+          "subject": "yolo",
+          "time": "2021-02-21T09:32:35+00:00Z",
+          "data": [
+            "yolo"
+          ],
+          "traceid": "00-222a0988ecf9d53a006a35f961229788-a0880db7ab9a97d3-00"
+        },
+        "Expecting this data": {
+          "id": "123",
+          "source": "http://example.com",
+          "specversion": "1.0",
+          "type": "com.example.test",
+          "datacontenttype": "application/json",
+          "subject": "yolo",
+          "time": "2021-02-21T09:32:35+00:00Z",
+          "data": [
+            "yolo"
+          ]
+        },
+        "Received this decoded data": {
+          "id": "123",
+          "source": "http://example.com",
+          "specversion": "1.0",
+          "type": "com.example.test",
+          "datacontenttype": "application/json",
+          "subject": "yolo",
+          "time": "2021-02-21T09:32:35+00:00Z",
+          "data": [
+            "yolo"
+          ]
+        },
+        "Event should be the same event we sent, minus the trace id.: ": "✔"
+      },
+      "Publishing raw event": {
+        "sub received message: ": "✔",
+        "Received this data": {
+          "id": "01e9fef4-7774-4684-9249-cdce032a2713",
+          "source": "dev",
+          "specversion": "1.0",
+          "type": "com.dapr.event.sent",
+          "datacontenttype": "application/json",
+          "data": {
+            "datacontenttype": "text/xml",
+            "data": "<note><to>User1</to><from>user2</from><message>hi</message></note>",
+            "specversion": "1.0",
+            "type": "xml.message",
+            "source": "https://example.com/message",
+            "subject": "Test XML Message",
+            "id": "id-1234-5678-9101",
+            "time": "2020-09-23T06:23:21Z"
+          },
+          "traceid": "00-222a0988ecf9d53a006a35f961229788-d90a5a50ffa8c104-00"
+        }
+      },
+      "Binary response": {
+        "raw": {
+          "id": "3a5936e4-9bce-41e5-b344-f7e9bfb186f5",
+          "source": "dev",
+          "specversion": "1.0",
+          "type": "com.dapr.event.sent",
+          "datacontenttype": "application/json",
+          "data": "raw data",
+          "traceid": "00-222a0988ecf9d53a006a35f961229788-d579f3a753fa6b45-00"
+        },
+        "Data properly decoded: ": "✔"
+      }
+    }
+  },
+  "/test/state/concurrency": {
+    "status": {
+      "test completed successfully: ": "✔"
+    },
+    "results": {
+      "initial value correct: ": "✔",
+      "Starting from 0: ": "✔",
+      "last-write update succeeds: ": "✔",
+      "first-write update fails": "✔"
+    }
+  },
+  "/test/state": {
+    "status": {
+      "test completed successfully: ": "✔"
+    },
+    "results": {
+      "state is empty: ": "✔",
+      "initial state is correct: ": "✔",
+      "saved correct state: ": "✔",
+      "properly loaded saved state: ": "✔",
+      "prefix should work: ": "✔",
+      "single key read with default: ": "✔",
+      "single key write: ": "✔"
+    }
+  }
+}
+```
