@@ -242,6 +242,12 @@ Simply run `composer start` on a machine where `dapr init` has already been run.
 the current open terminal. Then navigate to [http://localhost:9502/do_tests](http://localhost:9502/do_tests) to let the
 integration tests run.
 
+## Updating GRPC models
+
+```bash
+DOCKER_BUILDKIT=1 composer update-protos
+```
+
 # Tests
 
 Simply run `composer test` to run the unit tests. You can lint using `composer lint`.

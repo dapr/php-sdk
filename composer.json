@@ -51,6 +51,7 @@
     "integration-tests": [
       "curl localhost:9502/do_tests"
     ],
-    "lint": "./vendor/bin/psalm"
+    "lint": "./vendor/bin/psalm",
+    "update-protos": "docker build --target=php-protos --output type=local,dest=./src -f images/grpc.Dockerfile ."
   }
 }
