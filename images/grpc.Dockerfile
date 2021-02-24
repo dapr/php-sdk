@@ -26,6 +26,7 @@ RUN protoc \
     --proto_path=./../.. \
     --proto_path=./../../../grpc/third_party/protobuf/src \
     --php_out=/php \
+    --grpc_out=/php \
     --plugin=protoc-gen-grpc=./../../../../../grpc/bazel-bin/src/compiler/grpc_php_plugin \
     runtime/v1/dapr.proto
 FROM scratch AS php-protos
