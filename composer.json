@@ -62,6 +62,12 @@
       "curl localhost:9502/do_tests"
     ],
     "lint": "./vendor/bin/psalm",
-    "update-protos": "docker build --target=php-protos --output type=local,dest=./src -f images/grpc.Dockerfile ."
+    "update-protos": [
+      "rm -rf src/grpc-generated",
+      "docker build --target=php-protos --output ./src -f images/grpc.Dockerfile ."
+    ],
+    "build-grpc": [
+      "@update-protos"
+    ]
   }
 }
