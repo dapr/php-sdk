@@ -9,6 +9,8 @@ RUN git submodule update --init
 FROM grpc-sources AS grpc-builder
 RUN apt-get install -y cmake
 RUN mkdir -p cmake/build
+WORKDIR /grpc/third_party/protobuf/php/ext/google/protobuf
+RUN git checkout v3.15.2
 WORKDIR /grpc/cmake/build
 RUN cmake ../.. -DBUILD_SHARED_LIBS=ON -DgRPC_INSTALL=ON -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc)

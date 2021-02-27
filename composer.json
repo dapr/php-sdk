@@ -42,7 +42,8 @@
       "Dapr\\": "src/lib",
       "Dapr\\TestActors\\": "test/actors",
       "Dapr\\Proto\\": "src/grpc-generated/Dapr/Proto",
-      "GPBMetadata\\": "src/grpc-generated/GPBMetadata"
+      "GPBMetadata\\": "src/grpc-generated/GPBMetadata",
+      "Dapr\\Dev\\": "dev-src"
     }
   },
   "scripts": {
@@ -67,7 +68,11 @@
       "docker build --target=php-protos --output ./src -f images/grpc.Dockerfile ."
     ],
     "build-grpc": [
-      "@update-protos"
+      "@update-protos",
+      "Dapr\\Dev\\GrpcUpgrader::upgrade"
+    ],
+    "generate-interfaces": [
+      "Dapr\\Dev\\InterfaceBuilder::build_interfaces"
     ]
   }
 }

@@ -7,13 +7,19 @@ use Dapr\Actors\Internal\Caches\KeyNotFound;
 use Dapr\Actors\Internal\Caches\MemoryCache;
 use Dapr\Actors\Internal\Caches\NoCache;
 use Dapr\Actors\Internal\KeyResponse;
+use Dapr\Client\Interfaces\IClientV1;
 use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
+use Dapr\Proto\Runtime\V1\ExecuteActorStateTransactionRequest;
+use Dapr\Proto\Runtime\V1\TransactionalActorStateOperation;
 use Dapr\State\Internal\Transaction;
 use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
+use Google\Protobuf\Any;
+use Google\Protobuf\NullValue;
+use GPBMetadata\Google\Protobuf\Duration;
 use InvalidArgumentException;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
@@ -38,6 +44,7 @@ abstract class ActorState
     private IDeserializer $deserializer;
     private ReflectionClass $reflection;
     private DaprClient $client;
+    private \Dapr\Proto\Runtime\V1\DaprClient $nclient;
     private string $actor_id;
     private string $dapr_type;
     private CacheInterface $cache;
@@ -66,6 +73,16 @@ abstract class ActorState
 
         $this->client->post("/actors/{$this->dapr_type}/{$this->actor_id}/state", $operations);
         $this->cache->flush_cache();
+        $request = new ExecuteActorStateTransactionRequest();
+        $operations = array_map(fn($operation) => (new TransactionalActorStateOperation())
+            ->setKey($operation['key'])
+            ->setValue( (new Any()))
+            ->setOperationType($operation['type']), $operations);
+        $request
+            ->setActorId($this->actor_id)
+            ->setActorType($this->dapr_type)
+            ->setOperations($operations);
+        $this->nclient->ExecuteActorStateTransaction($request);
 
         $this->begin_transaction($this->dapr_type, $this->actor_id);
     }
@@ -87,6 +104,7 @@ abstract class ActorState
         $this->logger       = $this->container->get(LoggerInterface::class);
         $this->deserializer = $this->container->get(IDeserializer::class);
         $this->client       = $this->container->get(DaprClient::class);
+        $this->nclient = $this->container->get(IClientV1::class);
 
         foreach ($this->reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             unset($this->{$property->name});
