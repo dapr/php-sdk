@@ -93,7 +93,7 @@ class GrpcUpgrader
                         $parameter->getName()
                     );
                 if($method->getName() === '__construct' && $parameter->getName() === 'opts') {
-                    $type .= '|null';
+                    $type = 'mixed';
                 }
                 $parameter->setType($this->sanitize_type($type));
                 if ($type && $parameter->hasDefaultValue() && $parameter->getDefaultValue() === null) {
