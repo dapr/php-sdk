@@ -94,6 +94,9 @@ return [
     DaprClient::class               => autowire()
         ->constructorParameter('port', get('dapr.port'))
         ->constructorParameter('logger', get('dapr.logger')),
+    \Dapr\Proto\Runtime\V1\DaprClient::class => autowire()
+        ->constructorParameter('hostname', 'localhost:' . env('DAPR_GRPC_PORT'))
+        ->constructorParameter('opts', null),
     DeserializationConfig::class    => autowire()->constructorParameter(
         'deserializers',
         get('dapr.deserializers.custom')

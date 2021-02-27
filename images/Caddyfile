@@ -1,6 +1,6 @@
 :80
 
-root * /tests/src
+root * /tests
 php_fastcgi localhost:9000
 file_server
 encode gzip

@@ -126,12 +126,30 @@ $app->get(
 
 $app->get(
     '/test/state',
-    function (StateManager $stateManager) {
-        $body  = [];
-        $state = new SimpleState();
+    function (StateManager $stateManager, LoggerInterface $logger) {
+        $dapr_client = new Dapr\Client\V1\GrpcClient(
+            new \Dapr\Proto\Runtime\V1\DaprClient(
+                'localhost:37395',
+                ['credentials' => Grpc\ChannelCredentials::createInsecure(),]
+            )
+        );
+        $body        = [];
+        $state       = new SimpleState();
         $stateManager->save_object($state);
-        $body = assert_equals($body, null, $state->data, 'state is empty');
-        $body = assert_equals($body, 0, $state->counter, 'initial state is correct');
+        $body    = assert_equals($body, null, $state->data, 'state is empty');
+        $body    = assert_equals($body, 0, $state->counter, 'initial state is correct');
+
+        $request = new \Dapr\Proto\Runtime\V1\SaveStateRequest();
+        [$result, $status]  = $dapr_client->SaveState(
+            $request->setStoreName(STORE)->setStates(
+                [(new \Dapr\Proto\Common\V1\StateItem())->setKey('counter')->setValue(1)]
+            )
+        )->wait();
+        $logger->critical('got {result} with {status}', ['result' => $result, 'status' => $status]);
+        $request = new \Dapr\Proto\Runtime\V1\GetStateRequest();
+        [$result, $status]  = $dapr_client->GetState($request->setKey('counter')->setStoreName(STORE))->wait();
+        $logger->critical('got {result} with {status}', ['result' => $result, 'status' => $status]);
+        Psy\debug(get_defined_vars());
 
         $state->data = 'data';
         $stateManager->save_object($state);

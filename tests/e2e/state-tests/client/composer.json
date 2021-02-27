@@ -1,0 +1,15 @@
+{
+  "name": "dapr/test-client",
+  "scripts": {},
+  "require": {
+    "dapr/php-sdk": "dev-add/grpc",
+    "ext-grpc": "*",
+    "ext-protobuf": "*"
+  },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "../../../../../php-sdk"
+    }
+  ]
+}
