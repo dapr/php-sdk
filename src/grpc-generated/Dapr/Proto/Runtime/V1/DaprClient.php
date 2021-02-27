@@ -16,7 +16,7 @@ class DaprClient extends \Grpc\BaseStub implements \Dapr\Client\Interfaces\V1\Da
 	 * @param array $opts channel options
 	 * @param \Grpc\Channel $channel (optional) re-use channel object
 	 */
-	public function __construct(string $hostname, array|null $opts, \Grpc\Channel|null $channel = null)
+	public function __construct(string $hostname, mixed $opts, \Grpc\Channel|null $channel = null)
 	{
 		parent::__construct($hostname, $opts, $channel);
 	}
