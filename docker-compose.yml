@@ -8,8 +8,9 @@ services:
     image: redis:latest
   state-test-client:
     build:
-      dockerfile: images/tests.Dockerfile
+      dockerfile: images/grpc.Dockerfile
       context: .
+      target: production
       args:
         BASE: tests/e2e/state-tests/client/
     depends_on:

@@ -82,3 +82,31 @@ RUN cp $(php-config --extension-dir)/protobuf.so /php-extension
 FROM scratch as php-extension
 COPY --from=php-extension-builder /php-extension /
 COPY --from=protobuf-ext-builder /php-extension /
+
+FROM php:8.0-fpm AS base
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+RUN apt-get update && apt-get install -y wget git unzip && apt-get clean
+RUN install-php-extensions curl zip && mkdir -p /tests
+WORKDIR /tests
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY --from=grpc-builder /libgpr /
+COPY --from=php-extension / /php-extension
+RUN cp /php-extension/*.so $(php-config --extension-dir) \
+    && echo "extension=protobuf.so" >> $PHP_INI_DIR/php.ini \
+    && echo "extension=grpc.so" >> $PHP_INI_DIR/php.ini \
+    && ldconfig
+
+FROM base AS vendor
+ARG BASE
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY ${BASE}composer.json composer.json
+#COPY ${BASE}composer.lock composer.lock
+COPY . /php-sdk
+RUN composer update --no-dev -o -n
+
+FROM withinboredom/php-base-min AS config
+ARG BASE
+COPY ${BASE} /tests
+COPY --from=vendor /tests/vendor vendor
+
+FROM config AS production

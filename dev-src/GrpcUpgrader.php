@@ -92,6 +92,9 @@ class GrpcUpgrader
                         $method->getComment(),
                         $parameter->getName()
                     );
+                if($method->getName() === '__construct' && $parameter->getName() === 'opts') {
+                    $type .= '|null';
+                }
                 $parameter->setType($this->sanitize_type($type));
                 if ($type && $parameter->hasDefaultValue() && $parameter->getDefaultValue() === null) {
                     $parameter->setType($type.'|null');

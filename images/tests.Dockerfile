@@ -10,7 +10,7 @@ FROM withinboredom/php-base-min AS vendor
 ARG BASE
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY ${BASE}composer.json composer.json
-COPY ${BASE}composer.lock composer.lock
+#COPY ${BASE}composer.lock composer.lock
 COPY . /php-sdk
 RUN composer install --no-dev -o -n
 
