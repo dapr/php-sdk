@@ -70,6 +70,7 @@ abstract class ActorState
         }
 
         $this->client->post("/actors/{$this->dapr_type}/{$this->actor_id}/state", $operations);
+        $this->cache->flush_cache();
 
         $this->begin_transaction($this->dapr_type, $this->actor_id);
     }
