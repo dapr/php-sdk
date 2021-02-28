@@ -31,7 +31,7 @@ class FileCache implements CacheInterface {
 
     public function get_key(string $key): mixed
     {
-        if(!array_key_exists($key, $this->data)) {
+        if(array_key_exists($key, $this->data)) {
             return $this->data[$key];
         }
         throw new KeyNotFound();
