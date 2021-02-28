@@ -43,4 +43,9 @@ interface CacheInterface
      * Delete the entire cache
      */
     public function reset(): void;
+
+    /**
+     * Write to the cache
+     */
+    public function flush_cache(): void;
 }

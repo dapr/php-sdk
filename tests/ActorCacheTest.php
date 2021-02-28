@@ -35,7 +35,7 @@ class ActorCacheTest extends DaprTests {
         }
     }
 
-    public function testReadWriteCache() {
+    public function testReadWriteCacheOnSameInstance() {
         $cache = new FileCache($this->cache_name);
         $this->assertKeyNotExist($cache, 'test');
 

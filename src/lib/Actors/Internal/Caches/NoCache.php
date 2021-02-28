@@ -43,4 +43,11 @@ class NoCache implements CacheInterface
     public function reset(): void
     {
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function flush_cache(): void
+    {
+    }
 }

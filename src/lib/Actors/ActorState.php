@@ -190,6 +190,8 @@ abstract class ActorState
                 default:
                     throw new DaprException('Actor not found!');
             }
+        } finally {
+            $this->cache->set_key($key, $this->transaction->state[$key]);
         }
     }
 
