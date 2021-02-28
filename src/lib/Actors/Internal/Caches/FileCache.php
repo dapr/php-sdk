@@ -8,8 +8,14 @@ namespace Dapr\Actors\Internal\Caches;
  */
 class FileCache implements CacheInterface
 {
+    /**
+     * @var array The cache
+     */
     private array $data = [];
 
+    /**
+     * @inheritDoc
+     */
     public function __construct(private string $cache_name)
     {
         if ( ! file_exists(sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache')) {
@@ -18,6 +24,9 @@ class FileCache implements CacheInterface
         $this->unserialize_cache();
     }
 
+    /**
+     * @inheritDoc
+     */
     private function unserialize_cache()
     {
         $filename = sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache'.DIRECTORY_SEPARATOR.$this->cache_name;
@@ -26,6 +35,9 @@ class FileCache implements CacheInterface
         }
     }
 
+    /**
+     * @inheritDoc
+     */
     public function get_key(string $key): mixed
     {
         if (array_key_exists($key, $this->data)) {
@@ -34,26 +46,41 @@ class FileCache implements CacheInterface
         throw new KeyNotFound();
     }
 
+    /**
+     * @inheritDoc
+     */
     public function set_key(string $key, mixed $data): void
     {
         $this->data[$key] = $data;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function evict(string $key): void
     {
         unset($this->data[$key]);
     }
 
+    /**
+     * @inheritDoc
+     */
     public function reset(): void
     {
         $this->data = [];
     }
 
+    /**
+     * @inheritDoc
+     */
     public function __destruct()
     {
         $this->serialize_cache();
     }
 
+    /**
+     * @inheritDoc
+     */
     private function serialize_cache()
     {
         $filename = sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache'.DIRECTORY_SEPARATOR.$this->cache_name;
