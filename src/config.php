@@ -9,6 +9,7 @@ use Dapr\Actors\Generators\DynamicGenerator;
 use Dapr\Actors\Generators\ExistingOnly;
 use Dapr\Actors\Generators\FileGenerator;
 use Dapr\Actors\Generators\ProxyFactory;
+use Dapr\Actors\Internal\Caches\FileCache;
 use Dapr\App;
 use Dapr\DaprClient;
 use Dapr\Deserialization\DeserializationConfig;
@@ -130,6 +131,7 @@ return [
     'dapr.actors.scan_interval'     => null,
     'dapr.actors.drain_timeout'     => null,
     'dapr.actors.drain_enabled'     => null,
+    'dapr.actors.cache'             => FileCache::class,
     'dapr.http.middleware.request'  => [get(Tracing::class)],
     'dapr.http.middleware.response' => [get(ApplicationJson::class), get(Tracing::class)],
     'dapr.port'                     => env('DAPR_HTTP_PORT', "3500"),

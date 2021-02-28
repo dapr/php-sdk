@@ -2,6 +2,9 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Actors\Internal\Caches\CacheInterface;
+use Dapr\Actors\Internal\Caches\KeyNotFound;
+use Dapr\Actors\Internal\Caches\NoCache;
 use Dapr\Actors\Internal\KeyResponse;
 use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
@@ -37,9 +40,15 @@ abstract class ActorState
     private DaprClient $client;
     private string $actor_id;
     private string $dapr_type;
+    private CacheInterface $cache;
 
     public function __construct(private ContainerInterface $container, private FactoryInterface $factory)
     {
+        try {
+            $this->cache = $this->container->get(CacheInterface::class);
+        } catch (\Exception) {
+            $this->cache = new NoCache('');
+        }
     }
 
     /**
@@ -142,6 +151,7 @@ abstract class ActorState
             );
         }
         if (empty($this->_internal_data[$key])) {
+            $this->cache->set_key($key, $value);
             $this->_internal_data[$key] = 'override'; // must be anything other than null
         }
         $this->transaction->upsert($key, $value);
@@ -157,23 +167,29 @@ abstract class ActorState
      */
     private function _load_key(string $key): void
     {
-        $state = $this->client->get("/actors/{$this->dapr_type}/{$this->actor_id}/state/$key");
-        if (isset($state->data)) {
-            $property    = $this->reflection->getProperty($key);
-            $state->data = $this->deserializer->detect_from_property($property, $state->data);
-        }
-        switch ($state?->code) {
-            case KeyResponse::SUCCESS:
-                $this->_internal_data[$key]     = 'loaded';
-                $this->transaction->state[$key] = $state->data;
-                break;
-            case KeyResponse::KEY_NOT_FOUND:
-                $this->_internal_data[$key]     = 'default';
-                $this->transaction->state[$key] = $this->reflection->getProperty($key)->getDefaultValue();
-                break;
-            case KeyResponse::ACTOR_NOT_FOUND:
-            default:
-                throw new DaprException('Actor not found!');
+        try {
+            $data                           = $this->cache->get_key($key);
+            $this->_internal_data[$key]     = 'cache';
+            $this->transaction->state[$key] = $data;
+        } catch (KeyNotFound) {
+            $state = $this->client->get("/actors/{$this->dapr_type}/{$this->actor_id}/state/$key");
+            if (isset($state->data)) {
+                $property    = $this->reflection->getProperty($key);
+                $state->data = $this->deserializer->detect_from_property($property, $state->data);
+            }
+            switch ($state?->code) {
+                case KeyResponse::SUCCESS:
+                    $this->_internal_data[$key]     = 'loaded';
+                    $this->transaction->state[$key] = $state->data;
+                    break;
+                case KeyResponse::KEY_NOT_FOUND:
+                    $this->_internal_data[$key]     = 'default';
+                    $this->transaction->state[$key] = $this->reflection->getProperty($key)->getDefaultValue();
+                    break;
+                case KeyResponse::ACTOR_NOT_FOUND:
+                default:
+                    throw new DaprException('Actor not found!');
+            }
         }
     }
 
@@ -203,6 +219,7 @@ abstract class ActorState
     public function __unset(string $key): void
     {
         if (empty($this->_internal_data[$key])) {
+            $this->cache->set_key($key, null);
             $this->_internal_data[$key] = 'unset';
         }
         $this->transaction?->delete($key);
