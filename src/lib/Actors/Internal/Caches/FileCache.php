@@ -23,7 +23,7 @@ class FileCache implements CacheInterface {
 
     public function __construct(private string $cache_name)
     {
-        if(file_exists(sys_get_temp_dir().'/actor-cache')) {
+        if(!file_exists(sys_get_temp_dir().'/actor-cache')) {
             mkdir(sys_get_temp_dir().'/actor-cache');
         }
         $this->unserialize_cache();

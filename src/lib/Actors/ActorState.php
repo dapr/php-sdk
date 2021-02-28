@@ -4,6 +4,7 @@ namespace Dapr\Actors;
 
 use Dapr\Actors\Internal\Caches\CacheInterface;
 use Dapr\Actors\Internal\Caches\KeyNotFound;
+use Dapr\Actors\Internal\Caches\NoCache;
 use Dapr\Actors\Internal\KeyResponse;
 use Dapr\DaprClient;
 use Dapr\Deserialization\IDeserializer;
@@ -43,7 +44,11 @@ abstract class ActorState
 
     public function __construct(private ContainerInterface $container, private FactoryInterface $factory)
     {
-        $this->cache = $this->container->get(CacheInterface::class);
+        try {
+            $this->cache = $this->container->get(CacheInterface::class);
+        } catch (\Exception) {
+            $this->cache = new NoCache('');
+        }
     }
 
     /**
