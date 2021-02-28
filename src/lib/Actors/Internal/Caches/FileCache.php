@@ -70,11 +70,6 @@ class FileCache implements CacheInterface
         $this->data = [];
     }
 
-    public function __destruct()
-    {
-        $this->serialize_cache();
-    }
-
     /**
      * @inheritDoc
      */
