@@ -12,15 +12,15 @@ class FileCache implements CacheInterface
 
     public function __construct(private string $cache_name)
     {
-        if ( ! file_exists(sys_get_temp_dir().'/actor-cache')) {
-            mkdir(sys_get_temp_dir().'/actor-cache');
+        if ( ! file_exists(sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache')) {
+            mkdir(sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache');
         }
         $this->unserialize_cache();
     }
 
     private function unserialize_cache()
     {
-        $filename = sys_get_temp_dir().'/actor-cache/'.$this->cache_name;
+        $filename = sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache'.DIRECTORY_SEPARATOR.$this->cache_name;
         if (file_exists($filename)) {
             $this->data = unserialize(file_get_contents($filename));
         }
@@ -56,7 +56,7 @@ class FileCache implements CacheInterface
 
     private function serialize_cache()
     {
-        $filename = sys_get_temp_dir().'/actor-cache/'.$this->cache_name;
+        $filename = sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache'.DIRECTORY_SEPARATOR.$this->cache_name;
         if ($this->data === []) {
             if (file_exists($filename)) {
                 unlink($filename);
