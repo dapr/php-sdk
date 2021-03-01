@@ -6,22 +6,30 @@ namespace Dapr\Actors\Internal\Caches;
  * Class FileCache
  * @package Dapr\Actors\Internal\Caches
  */
-class FileCache implements CacheInterface
+class FileCache extends MemoryCache implements CacheInterface
 {
-    /**
-     * @var array The cache
-     */
-    private array $data = [];
+    private string $cache_file;
 
     /**
      * @inheritDoc
      */
-    public function __construct(private string $cache_name)
+    public function __construct(private string $dapr_type, private string $actor_id, private string $state_name)
     {
-        if ( ! file_exists(sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache')) {
-            mkdir(sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache');
+        parent::__construct($this->dapr_type, $this->actor_id, $this->state_name);
+        $base_dir = self::get_base_path($this->dapr_type, $this->actor_id);
+        if ( ! file_exists($base_dir)) {
+            mkdir($base_dir, recursive: true);
         }
+        $this->state_name = mb_ereg_replace("([^\w\s\d\-_~,;\[\]\(\).])", '', $this->state_name);
+        $this->state_name = mb_ereg_replace("([\.]{2,})", '', $this->state_name);
+        $this->cache_file = $base_dir.DIRECTORY_SEPARATOR.$this->state_name.'.actor';
         $this->unserialize_cache();
+    }
+
+    private static function get_base_path(string $dapr_type, string $actor_id): string
+    {
+        return sys_get_temp_dir().DIRECTORY_SEPARATOR.
+               'actor-cache'.DIRECTORY_SEPARATOR.$dapr_type.DIRECTORY_SEPARATOR.$actor_id;
     }
 
     /**
@@ -29,62 +37,24 @@ class FileCache implements CacheInterface
      */
     private function unserialize_cache()
     {
-        $filename = sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache'.DIRECTORY_SEPARATOR.$this->cache_name;
-        if (file_exists($filename)) {
-            $this->data = unserialize(file_get_contents($filename));
+        if (file_exists($this->cache_file)) {
+            $this->data = unserialize(file_get_contents($this->cache_file));
         }
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function get_key(string $key): mixed
+    public static function clear_actor(string $dapr_type, string $actor_id): void
     {
-        if (array_key_exists($key, $this->data)) {
-            return $this->data[$key];
-        }
-        throw new KeyNotFound();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function set_key(string $key, mixed $data): void
-    {
-        $this->data[$key] = $data;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function evict(string $key): void
-    {
-        unset($this->data[$key]);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function reset(): void
-    {
-        $this->data = [];
-    }
-
-    /**
-     * @inheritDoc
-     */
-    private function serialize_cache()
-    {
-        $filename = sys_get_temp_dir().DIRECTORY_SEPARATOR.'actor-cache'.DIRECTORY_SEPARATOR.$this->cache_name;
-        if ($this->data === []) {
-            if (file_exists($filename)) {
-                unlink($filename);
-            }
-
+        $path = self::get_base_path($dapr_type, $actor_id);
+        if ( ! file_exists($path)) {
             return;
         }
-
-        file_put_contents($filename, serialize($this->data));
+        foreach (scandir($path) as $file) {
+            if ($file === '.' || $file === '..') {
+                continue;
+            }
+            unlink($path.DIRECTORY_SEPARATOR.$file);
+        }
+        rmdir($path);
     }
 
     /**
@@ -93,5 +63,22 @@ class FileCache implements CacheInterface
     public function flush_cache(): void
     {
         $this->serialize_cache();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    private function serialize_cache()
+    {
+        var_dump($this->cache_file);
+        if ($this->data === []) {
+            if (file_exists($this->cache_file)) {
+                unlink($this->cache_file);
+            }
+
+            return;
+        }
+
+        file_put_contents($this->cache_file, serialize($this->data));
     }
 }

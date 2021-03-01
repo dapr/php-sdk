@@ -3,6 +3,7 @@
 namespace Dapr\Actors;
 
 use Dapr\Actors\Internal\Caches\CacheInterface;
+use Dapr\Actors\Internal\Caches\FileCache;
 use Dapr\Actors\Internal\Caches\NoCache;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
@@ -28,9 +29,6 @@ use ReflectionNamedType;
  */
 class ActorRuntime
 {
-    #[ArrayShape(['string' => ['string' => CacheInterface::class]])]
-    private array $caches = [];
-
     public function __construct(
         protected LoggerInterface $logger,
         protected ActorConfig $actor_config,
@@ -72,13 +70,6 @@ class ActorRuntime
     public function deactivate_actor(IActor $actor, string $dapr_type): void
     {
         $id = $actor->get_id();
-        /**
-         * @var $cache CacheInterface
-         */
-        foreach ($this->caches[$dapr_type.$id] as $cache) {
-            $cache->reset();
-        }
-
         $activation_tracker = hash('sha256', $dapr_type.$id);
         $activation_tracker = rtrim(
                                   sys_get_temp_dir(),
@@ -90,6 +81,7 @@ class ActorRuntime
         if ($is_activated) {
             unlink($activation_tracker);
             $actor->on_deactivation();
+            FileCache::clear_actor($dapr_type, $actor->get_id());
         }
     }
 
@@ -194,7 +186,6 @@ class ActorRuntime
                 if (class_exists($type_name)) {
                     $reflected_type = new ReflectionClass($type_name);
                     if ($reflected_type->isSubclassOf(ActorState::class)) {
-                        $this->setup_cache($dapr_type, $id, $type_name);
                         $state = $this->container->make($type_name);
                         $this->begin_transaction($state, $reflected_type, $dapr_type, $id);
 
@@ -204,27 +195,8 @@ class ActorRuntime
                 }
             }
         }
-        $this->teardown_cache();
 
         return $states;
-    }
-
-    /**
-     * @param string $dapr_type
-     * @param string $id
-     * @param string $state_type
-     */
-    private function setup_cache(string $dapr_type, string $id, string $state_type)
-    {
-        try {
-            $cache_type = $this->container->get('dapr.actors.cache');
-        } catch (DependencyException | NotFoundException) {
-            $this->logger->warning('No cache type found, turning off actor state cache. Set `dapr.actors.cache`');
-            $cache_type = NoCache::class;
-        }
-        $cache_name                             = $dapr_type.$id;
-        $this->caches[$cache_name][$state_type] ??= new $cache_type($cache_name);
-        $this->container->set(CacheInterface::class, $this->caches[$cache_name][$state_type]);
     }
 
     /**
@@ -261,11 +233,6 @@ class ActorRuntime
         $begin_transaction->invoke($state, $dapr_type, $actor_id);
     }
 
-    private function teardown_cache()
-    {
-        $this->container->set(CacheInterface::class, null);
-    }
-
     /**
      * Instantiates an actor implementation
      *
@@ -296,12 +263,6 @@ class ActorRuntime
                 ['type' => $dapr_type, 'id' => $id]
             );
             touch($activation_tracker);
-            /**
-             * @var $cache CacheInterface
-             */
-            foreach ($this->caches[$dapr_type.$id] as $cache) {
-                $cache->reset();
-            }
             $actor->on_activation();
         }
 

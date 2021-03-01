@@ -11,9 +11,11 @@ interface CacheInterface
     /**
      * CacheInterface constructor.
      *
-     * @param string $cache_name The name of the cache
+     * @param string $dapr_type The dapr type
+     * @param string $actor_id The actor id
+     * @param string $state_name The name of the state type
      */
-    public function __construct(string $cache_name);
+    public function __construct(string $dapr_type, string $actor_id, string $state_name);
 
     /**
      * Retrieve a key from the cache
@@ -48,4 +50,13 @@ interface CacheInterface
      * Write to the cache
      */
     public function flush_cache(): void;
+
+    /**
+     * Determine if a key is in the cache
+     *
+     * @param string $key The key to check
+     *
+     * @return bool True if the item is in the cache
+     */
+    public function has_key(string $key): bool;
 }

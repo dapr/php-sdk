@@ -6,12 +6,14 @@ namespace Dapr\Actors\Internal\Caches;
  * Class NoCache
  * @package Dapr\Actors\Internal\Caches
  */
-class NoCache implements CacheInterface
+class MemoryCache implements CacheInterface
 {
+    protected array $data = [];
+
     /**
      * @inheritDoc
      */
-    public function __construct(private string $cache_name)
+    public function __construct(string $dapr_type, string $actor_id, string $state_name)
     {
     }
 
@@ -20,6 +22,9 @@ class NoCache implements CacheInterface
      */
     public function get_key(string $key): mixed
     {
+        if ($this->has_key($key)) {
+            return $this->data[$key];
+        }
         throw new KeyNotFound();
     }
 
@@ -28,6 +33,7 @@ class NoCache implements CacheInterface
      */
     public function set_key(string $key, mixed $data): void
     {
+        $this->data[$key] = $data;
     }
 
     /**
@@ -35,6 +41,7 @@ class NoCache implements CacheInterface
      */
     public function evict(string $key): void
     {
+        unset($this->data[$key]);
     }
 
     /**
@@ -42,6 +49,7 @@ class NoCache implements CacheInterface
      */
     public function reset(): void
     {
+        $this->data = [];
     }
 
     /**
@@ -49,5 +57,10 @@ class NoCache implements CacheInterface
      */
     public function flush_cache(): void
     {
+    }
+
+    public function has_key(string $key): bool
+    {
+        return array_key_exists($key, $this->data);
     }
 }

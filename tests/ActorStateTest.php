@@ -10,6 +10,9 @@ use JetBrains\PhpStorm\Pure;
 
 require_once __DIR__.'/DaprTests.php';
 
+/**
+ * Class ActorStateTest
+ */
 class ActorStateTest extends DaprTests
 {
     /**

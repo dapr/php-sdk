@@ -3,7 +3,7 @@
 use Dapr\Actors\Internal\Caches\CacheInterface;
 use Dapr\Actors\Internal\Caches\FileCache;
 use Dapr\Actors\Internal\Caches\KeyNotFound;
-use Dapr\Actors\Internal\Caches\NoCache;
+use Dapr\Actors\Internal\Caches\MemoryCache;
 
 require_once __DIR__.'/DaprTests.php';
 
@@ -11,19 +11,12 @@ require_once __DIR__.'/DaprTests.php';
  * Class ActorStateTest
  */
 class ActorCacheTest extends DaprTests {
-    private string $cache_name;
-
-    public function setUp(): void
-    {
-        parent::setUp();
-        $this->cache_name = uniqid('unit_test');
-    }
-
     public function testNoCache() {
-        $cache = new NoCache($this->cache_name);
+        $cache = new MemoryCache('','','');
         $cache->set_key('test', 'test');
+        $this->assertSame('test', $cache->get_key('test'));
         $this->expectException(KeyNotFound::class);
-        $cache->get_key('test');
+        $cache->get_key('failure');
     }
 
     public function assertKeyNotExist(CacheInterface $cache, string $key): void {
@@ -36,7 +29,7 @@ class ActorCacheTest extends DaprTests {
     }
 
     public function testReadWriteCacheOnSameInstance() {
-        $cache = new FileCache($this->cache_name);
+        $cache = new FileCache('test', '123', 'state-test');
         $this->assertKeyNotExist($cache, 'test');
 
         $cache->set_key('test', 'test');
