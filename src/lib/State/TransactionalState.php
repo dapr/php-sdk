@@ -2,6 +2,9 @@
 
 namespace Dapr\State;
 
+use Dapr\Actors\Internal\Caches\CacheInterface;
+use Dapr\Actors\Internal\Caches\KeyNotFound;
+use Dapr\Actors\Internal\Caches\MemoryCache;
 use Dapr\DaprClient;
 use Dapr\exceptions\DaprException;
 use Dapr\exceptions\StateAlreadyCommitted;
@@ -29,6 +32,7 @@ abstract class TransactionalState
     private IManageState $state;
     private Transaction $transaction;
     private ReflectionClass $reflection;
+    private CacheInterface $cache;
 
     /**
      * TransactionalState constructor.
@@ -47,6 +51,7 @@ abstract class TransactionalState
         $this->client      = $this->container->get(DaprClient::class);
         $this->state       = $this->container->get(IManageState::class);
         $this->transaction = $this->factory->make(Transaction::class);
+        $this->cache       = new MemoryCache('', '', '');
         $this->reflection  = new ReflectionClass($this);
     }
 
@@ -74,7 +79,7 @@ abstract class TransactionalState
         foreach ($this->reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             $value = $this->{$property->name};
             unset($this->{$property->name});
-            $this->transaction->state[$property->name] = $value;
+            $this->cache->set_key($property->name, $value);
         }
     }
 
@@ -82,7 +87,11 @@ abstract class TransactionalState
     {
         $this->logger->debug('Getting value from transaction with key: {key}', ['key' => $key]);
 
-        return $this->transaction->state[$key];
+        try {
+            return $this->cache->get_key($key);
+        } catch (KeyNotFound) {
+            return null;
+        }
     }
 
     /**
@@ -106,6 +115,7 @@ abstract class TransactionalState
                 "$key does not_exist on ".get_class($this)." is not defined and thus will not be stored."
             );
         }
+        $this->cache->set_key($key, $value);
         $this->transaction->upsert($key, $value);
     }
 
@@ -127,7 +137,11 @@ abstract class TransactionalState
     {
         $this->logger->debug('Checking {key} is set', ['key' => $key]);
 
-        return isset($this->transaction->state[$key]);
+        try {
+            return $this->cache->get_key($key) !== null;
+        } catch(KeyNotFound) {
+            return false;
+        }
     }
 
     /**
@@ -140,6 +154,7 @@ abstract class TransactionalState
         $this->logger->debug('Deleting {key}', ['key' => $key]);
         $this->throw_if_committed();
         $this->transaction->delete($key);
+        $this->cache->evict($key);
     }
 
     /**

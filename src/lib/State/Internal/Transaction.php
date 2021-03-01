@@ -12,10 +12,6 @@ use Dapr\Serialization\ISerializer;
 class Transaction
 {
     /**
-     * @var mixed[] The current state
-     */
-    public array $state = [];
-    /**
      * @var bool Whether the transaction is closed
      */
     public bool $is_closed = false;
@@ -63,7 +59,6 @@ class Transaction
      */
     public function upsert(string $key, mixed $value): void
     {
-        $this->state[$key]       = $value;
         $this->transaction[$key] = [
             'order'     => $this->counter++,
             'operation' => 'upsert',
@@ -81,7 +76,6 @@ class Transaction
      */
     public function delete(string $key): void
     {
-        unset($this->state[$key]);
         $this->transaction[$key] = [
             'order'     => $this->counter++,
             'operation' => 'delete',
