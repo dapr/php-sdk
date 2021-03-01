@@ -70,7 +70,6 @@ class FileCache extends MemoryCache implements CacheInterface
      */
     private function serialize_cache()
     {
-        var_dump($this->cache_file);
         if ($this->data === []) {
             if (file_exists($this->cache_file)) {
                 unlink($this->cache_file);
