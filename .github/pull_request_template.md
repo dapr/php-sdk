@@ -13,6 +13,6 @@ Please reference the issue this PR will close: #_[issue number]_
 
 Please make sure you've completed the relevant tasks for this PR, out of the following list:
 
-* [ ] Code compiles correctly
+* [ ] Tests pass
 * [ ] Created/updated tests
 * [ ] Extended the documentation

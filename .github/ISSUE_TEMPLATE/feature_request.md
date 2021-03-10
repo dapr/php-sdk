@@ -1,7 +1,9 @@
 ---
-name: Feature Request about: Create a Feature Request for Dapr title: ''
-labels: kind/enhancement assignees: ''
-
+name: Feature Request
+about: Create a Feature Request for Dapr
+title: ''
+labels: kind/enhancement 
+assignees: 'withinboredom'
 ---
 
 ## Describe the feature
