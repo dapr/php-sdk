@@ -6,6 +6,7 @@ use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\Generators\ProxyFactory;
 use DI\DependencyException;
 use DI\NotFoundException;
+use JetBrains\PhpStorm\Deprecated;
 use LogicException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -29,7 +30,7 @@ class ActorProxy
      * Returns an actor proxy
      *
      * @param string $interface
-     * @param mixed $id The id to proxy for
+     * @param string|ActorReference $id The id to proxy for
      * @param string|null $override_type Allow overriding the Dapr type for a given interface
      *
      * @return object
@@ -37,14 +38,21 @@ class ActorProxy
      * @throws DependencyException
      * @throws NotFoundException
      */
-    public function get(string $interface, mixed $id, string|null $override_type = null): object
-    {
+    public function get(
+        string $interface,
+        string|ActorReference $id,
+        #[Deprecated('Please use an ActorReference instead')] string|null $override_type = null
+    ): object {
         $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
 
-        $reflected_interface = new ReflectionClass($interface);
-        $type                = $override_type ?? ($reflected_interface->getAttributes(
-                    DaprType::class
-                )[0] ?? null)?->newInstance()->type;
+        if ($id instanceof ActorReference) {
+            $type = $id->get_type();
+        } else {
+            $reflected_interface = new ReflectionClass($interface);
+            $type                = $override_type ?? ($reflected_interface->getAttributes(
+                        DaprType::class
+                    )[0] ?? null)?->newInstance()->type;
+        }
 
         if (empty($type)) {
             $this->logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
