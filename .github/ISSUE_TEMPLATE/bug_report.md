@@ -1,7 +1,8 @@
 ---
-name: Bug report about: Report a bug in Dapr title: ''
-labels: kind/bug assignees: ''
-
+name: Bug report
+about: Report a bug in Dapr 
+title: ''
+labels: kind/bug assignees: 'withinboredom'
 ---
 
 ## Expected Behavior
