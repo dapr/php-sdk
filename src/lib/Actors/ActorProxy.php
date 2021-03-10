@@ -30,17 +30,17 @@ class ActorProxy
      * Returns an actor proxy
      *
      * @param string $interface
-     * @param string|ActorReference $id The id to proxy for
+     * @param string|ActorReference $id_or_reference The id or actor reference to proxy for
      * @param string|null $override_type Allow overriding the Dapr type for a given interface
      *
      * @return object
-     * @throws ReflectionException
      * @throws DependencyException
      * @throws NotFoundException
+     * @throws ReflectionException
      */
     public function get(
         string $interface,
-        string|ActorReference $id,
+        string|ActorReference $id_or_reference,
         #[Deprecated('Please use an ActorReference instead')] string|null $override_type = null
     ): object {
         $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
