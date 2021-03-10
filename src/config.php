@@ -25,6 +25,7 @@ use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
 use Dapr\Serialization\Serializer;
 use Dapr\State\IManageState;
+use Dapr\State\Internal\Transaction;
 use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
 use FastRoute\DataGenerator\GroupCountBased;
@@ -65,6 +66,13 @@ return [
         get('dapr.log.processor')
     ),
 
+    // internal functionality
+    'dapr.internal.serializer'      => autowire(Serializer::class)->constructorParameter('logger', get('dapr.logger')),
+    'dapr.internal.deserializer'    => autowire(Deserializer::class)->constructorParameter(
+        'logger',
+        get('dapr.logger')
+    ),
+
     // SDK wiring
     ActorConfig::class              => autowire()
         ->constructorParameter('actor_name_to_type', get('dapr.actors'))
@@ -72,11 +80,15 @@ return [
         ->constructorParameter('scan_interval', get('dapr.actors.scan_interval'))
         ->constructorParameter('drain_timeout', get('dapr.actors.drain_timeout'))
         ->constructorParameter('drain_enabled', get('dapr.actors.drain_enabled')),
-    ActorRuntime::class             => autowire()->constructorParameter('logger', get('dapr.logger')),
+    ActorRuntime::class             => autowire()
+        ->constructorParameter('logger', get('dapr.logger'))
+        ->constructorParameter('deserializer', get('dapr.internal.deserializer')),
     ActorState::class               => autowire()->constructorParameter('logger', get('dapr.logger')),
     ActorProxy::class               => autowire()->constructorParameter('logger', get('dapr.logger')),
     ApplicationJson::class          => autowire(),
-    App::class                      => autowire()->constructorParameter('logger', get('dapr.logger')),
+    App::class                      => autowire()
+        ->constructorParameter('logger', get('dapr.logger'))
+        ->constructorParameter('serializer', get('dapr.internal.serializer')),
     CachedGenerator::class          => autowire(),
     DynamicGenerator::class         => autowire(),
     DaprClient::class               => autowire()
@@ -114,12 +126,14 @@ return [
         get(Psr17Factory::class),
         get(Psr17Factory::class)
     ),
+    StateManager::class             => autowire(),
     Subscriptions::class            => autowire()->constructorParameter(
         'subscriptions',
         get('dapr.subscriptions')
     ),
     Topic::class                    => autowire()->constructorParameter('logger', get('dapr.logger')),
     Tracing::class                  => autowire(),
+    Transaction::class              => autowire(),
     TransactionalState::class       => autowire()->constructorParameter('logger', get('dapr.logger')),
 
     // default application settings
