@@ -43,10 +43,10 @@ class ActorProxy
         string|IActorReference $id_or_reference,
         #[Deprecated('Please use an ActorReference instead')] string|null $override_type = null
     ): object {
-        $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
+        $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id_or_reference]);
 
-        if ($id instanceof IActorReference) {
-            $type = $id->get_type();
+        if ($id_or_reference instanceof IActorReference) {
+            $type = $id_or_reference->get_type();
         } else {
             $reflected_interface = new ReflectionClass($interface);
             $type                = $override_type ?? ($reflected_interface->getAttributes(
@@ -61,6 +61,6 @@ class ActorProxy
 
         $generator = $this->proxyFactory->get_generator($interface, $type);
 
-        return $generator->get_proxy($id);
+        return $generator->get_proxy($id_or_reference);
     }
 }
