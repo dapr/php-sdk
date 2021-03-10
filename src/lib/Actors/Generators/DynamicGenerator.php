@@ -4,8 +4,6 @@ namespace Dapr\Actors\Generators;
 
 use Dapr\Actors\Internal\InternalProxy;
 use Dapr\DaprClient;
-use Dapr\Deserialization\IDeserializer;
-use Dapr\Serialization\ISerializer;
 use DI\FactoryInterface;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
@@ -55,9 +53,9 @@ class DynamicGenerator extends GenerateProxy
     protected function generate_proxy_method(Method $method, string $id): callable
     {
         return function (...$params) use ($method, $id) {
-            $serializer   = $this->container->get(ISerializer::class);
+            $serializer   = $this->container->get('dapr.internal.serializer');
             $client       = $this->container->get(DaprClient::class);
-            $deserializer = $this->container->get(IDeserializer::class);
+            $deserializer = $this->container->get('dapr.internal.deserializer');
             if ( ! empty($params)) {
                 $params = $serializer->as_array($params[0]);
             }
