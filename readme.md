@@ -236,10 +236,6 @@ $app->get('/', function(\Dapr\Serialization\ISerializer $serializer) {
 $app->start();
 ```
 
-# Project setup
-
-See [Getting Started](docs/getting-started.md)
-
 # Development
 
 Simply run `composer start` on a machine where `dapr init` has already been run. This will start the daprd service on
