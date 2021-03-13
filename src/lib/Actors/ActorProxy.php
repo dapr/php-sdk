@@ -40,11 +40,8 @@ class ActorProxy
      * @throws NotFoundException
      * @throws ReflectionException
      */
-    public function get(
-        string $interface,
-        string $id,
-        string|null $override_type = null
-    ): object {
+    public function get(string $interface, string $id, string|null $override_type = null): object
+    {
         $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
 
         $reflected_interface = new ReflectionClass($interface);
