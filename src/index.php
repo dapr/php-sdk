@@ -7,6 +7,7 @@ define('STORE', 'statestore');
 
 use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorReference;
+use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
@@ -59,14 +60,14 @@ $app = App::create(
 
 $app->get(
     '/test/actors',
-    function (ActorProxy $actorProxy, DaprClient $client, LoggerInterface $logger) {
+    function (ProxyFactory $proxyFactory, DaprClient $client, LoggerInterface $logger) {
         $id = uniqid(prefix: 'actor_');
-        $reference = new ActorReference($id, 'SimpleActor');
+        $reference = ActorReference::bind($id, ISimpleActor::class);
 
         /**
          * @var ISimpleActor|IActor $actor
          */
-        $actor = $actorProxy->get(ISimpleActor::class, $reference);
+        $actor = $reference->get_proxy($proxyFactory);
         $body  = [];
 
         $logger->critical('Created actor proxy');
@@ -74,6 +75,10 @@ $app->get(
         $actor->increment();
         $body = assert_equals($body, 1, $actor->get_count(), 'Actor should have data');
         $logger->critical('Incremented actor');
+
+        // get the actor proxy again
+        $reference = ActorReference::get($actor);
+        $reference->get_proxy($proxyFactory);
 
         $reminder = new Reminder(
             name: 'increment',

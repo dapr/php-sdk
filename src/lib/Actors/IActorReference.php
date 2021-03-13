@@ -2,6 +2,8 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Actors\Generators\ProxyFactory;
+
 /**
  * Class IActorReference
  * @package Dapr\Actors
@@ -18,26 +20,28 @@ interface IActorReference
     public static function get(mixed $actor): IActorReference;
 
     /**
-     * Get a reference from a given actor interface
+     * Get an actor reference bound to a given interface.
      *
      * @param string $id The id of the actor
      * @param string $interface The interface of the actor
      *
      * @return IActorReference The actor's reference
      */
-    public static function get_from_interface(string $id, string $interface): IActorReference;
+    public static function bind(string $id, string $interface): IActorReference;
 
     /**
-     * Get the actor id
+     * Get the actor address
      *
-     * @return string The actor id
+     * @return ActorAddress The actor address
      */
-    public function get_id(): string;
+    public function get_address(): ActorAddress;
 
     /**
-     * Get the dapr type of the actor
+     * Get a proxy for communicating with the actor
      *
-     * @return string The dapr type
+     * @param ProxyFactory $proxy_factory The actor proxy factory.
+     *
+     * @return IActor An actor proxy
      */
-    public function get_type(): string;
+    public function get_proxy(ProxyFactory $proxy_factory): mixed;
 }

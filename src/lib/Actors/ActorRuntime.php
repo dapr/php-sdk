@@ -248,6 +248,7 @@ class ActorRuntime
     protected function get_actor(ReflectionClass $reflection, string $dapr_type, string $id, array $states): IActor
     {
         $states['id']       = $id;
+        $this->container->set(ActorAddress::class, new ActorAddress($id, $dapr_type));
         $actor              = $this->factory->make($reflection->getName(), $states);
         $activation_tracker = hash('sha256', $dapr_type.$id);
         $activation_tracker = rtrim(

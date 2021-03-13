@@ -6,7 +6,6 @@ use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\Generators\ProxyFactory;
 use DI\DependencyException;
 use DI\NotFoundException;
-use JetBrains\PhpStorm\Deprecated;
 use LogicException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -40,20 +39,15 @@ class ActorProxy
      */
     public function get(
         string $interface,
-        string|IActorReference $id_or_reference,
-        #[Deprecated('Please use an ActorReference instead')]
+        string $id,
         string|null $override_type = null
     ): object {
-        $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id_or_reference]);
+        $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
 
-        if ($id_or_reference instanceof IActorReference) {
-            $type = $id_or_reference->get_type();
-        } else {
-            $reflected_interface = new ReflectionClass($interface);
-            $type                = $override_type ?? ($reflected_interface->getAttributes(
-                        DaprType::class
-                    )[0] ?? null)?->newInstance()->type;
-        }
+        $reflected_interface = new ReflectionClass($interface);
+        $type                = $override_type ?? ($reflected_interface->getAttributes(
+                    DaprType::class
+                )[0] ?? null)?->newInstance()->type;
 
         if (empty($type)) {
             $this->logger?->critical('{i} is missing a DaprType attribute', ['i' => $interface]);
@@ -62,6 +56,6 @@ class ActorProxy
 
         $generator = $this->proxyFactory->get_generator($interface, $type);
 
-        return $generator->get_proxy($id_or_reference);
+        return $generator->get_proxy($id);
     }
 }

@@ -3,6 +3,9 @@
 namespace Dapr\Actors;
 
 use Dapr\Actors\Attributes\DaprType;
+use Dapr\Actors\Generators\IGenerateProxy;
+use Dapr\Actors\Generators\ProxyFactory;
+use DI\Container;
 use LogicException;
 use ReflectionClass;
 
@@ -12,7 +15,7 @@ use ReflectionClass;
  */
 final class ActorReference implements IActorReference
 {
-    public function __construct(public string $actor_id, public string $actor_type)
+    public function __construct(public string $interface, public ActorAddress $address)
     {
     }
 
@@ -27,9 +30,12 @@ final class ActorReference implements IActorReference
             throw new LogicException('actor(proxy) must implement get_id()');
         }
 
-        $type_attribute = self::get_dapr_type($actor);
+        $dapr_type = $actor->DAPR_TYPE ?? self::get_dapr_type($actor)->type;
 
-        return new ActorReference($id, $type_attribute->type);
+        $address = new ActorAddress($id, $dapr_type);
+        $interface = $actor->IMPLEMENTED_INTERFACE ?? $actor::class;
+
+        return new self($interface, $address);
     }
 
     private static function get_dapr_type(object|string $type): DaprType
@@ -47,24 +53,27 @@ final class ActorReference implements IActorReference
         return $type_attribute;
     }
 
-    public static function get_from_interface(string $id, string $interface): IActorReference
+    /**
+     * @inheritDoc
+     */
+    public static function bind(string $id, string $interface): IActorReference
     {
-        return new ActorReference($id, self::get_dapr_type($interface)->type);
+        return new self($interface, new ActorAddress($id, self::get_dapr_type($interface)->type));
     }
 
     /**
      * @inheritDoc
      */
-    public function get_id(): string
+    public function get_address(): ActorAddress
     {
-        return $this->actor_id;
+        return $this->get_address();
     }
 
     /**
      * @inheritDoc
      */
-    public function get_type(): string
+    public function get_proxy(ProxyFactory $proxy_factory): mixed
     {
-        return $this->get_type();
+        return $proxy_factory->get_generator($this->interface, $this->address->actor_type)->get_proxy($this->address->id);
     }
 }
