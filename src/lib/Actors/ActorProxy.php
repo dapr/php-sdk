@@ -6,6 +6,7 @@ use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\Generators\ProxyFactory;
 use DI\DependencyException;
 use DI\NotFoundException;
+use JetBrains\PhpStorm\Deprecated;
 use LogicException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -18,7 +19,9 @@ use ReflectionException;
  *
  * @codeCoverageIgnore
  * @package Dapr
+ * @deprecated Please use ActorReference instead
  */
+#[Deprecated('Please use ActorReference instead')]
 class ActorProxy
 {
     public function __construct(protected ProxyFactory $proxyFactory, protected LoggerInterface $logger)
