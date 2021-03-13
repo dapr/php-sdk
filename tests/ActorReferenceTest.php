@@ -3,6 +3,8 @@
 use Dapr\Actors\ActorAddress;
 use Dapr\Actors\ActorReference;
 use Dapr\Actors\Generators\ProxyFactory;
+use Dapr\Deserialization\IDeserializer;
+use Dapr\Serialization\ISerializer;
 use Fixtures\ITestActor;
 
 /**
@@ -50,5 +52,35 @@ class ActorReferenceTest extends DaprTests
         );
         $new_reference = ActorReference::get($actor);
         $this->assertEquals($reference, $new_reference);
+    }
+
+    public function testGetters()
+    {
+        $reference = new ActorReference('id', 'TestActor');
+        $this->assertSame('id', $reference->get_actor_id());
+        $this->assertSame('TestActor', $reference->get_actor_type());
+    }
+
+    public function testSerialization()
+    {
+        $reference  = new ActorReference('id', 'TestActor');
+        $serializer = $this->container->get(ISerializer::class);
+        $this->assertSame(
+            json_encode(['ActorId' => 'id', 'ActorType' => 'TestActor']),
+            $serializer->as_json($reference)
+        );
+    }
+
+    public function testDeserialization()
+    {
+        $reference    = new ActorReference('id', 'TestActor');
+        $deserializer = $this->container->get(IDeserializer::class);
+        $this->assertEquals(
+            $reference,
+            $deserializer->from_json(
+                ActorReference::class,
+                json_encode(['ActorId' => 'id', 'ActorType' => 'TestActor'])
+            )
+        );
     }
 }
