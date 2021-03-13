@@ -2,7 +2,6 @@
 
 namespace Dapr\Actors;
 
-use Dapr\Actors\Internal\Caches\CacheInterface;
 use Dapr\Actors\Internal\Caches\FileCache;
 use Dapr\Actors\Internal\Caches\NoCache;
 use Dapr\Deserialization\IDeserializer;
@@ -14,7 +13,6 @@ use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
 use Exception;
-use JetBrains\PhpStorm\ArrayShape;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionException;
@@ -69,7 +67,7 @@ class ActorRuntime
 
     public function deactivate_actor(IActor $actor, string $dapr_type): void
     {
-        $id = $actor->get_id();
+        $id                 = $actor->get_id();
         $activation_tracker = hash('sha256', $dapr_type.$id);
         $activation_tracker = rtrim(
                                   sys_get_temp_dir(),
@@ -247,8 +245,8 @@ class ActorRuntime
      */
     protected function get_actor(ReflectionClass $reflection, string $dapr_type, string $id, array $states): IActor
     {
-        $states['id']       = $id;
-        $this->container->set(ActorAddress::class, new ActorAddress($id, $dapr_type));
+        $states['id'] = $id;
+        $this->container->set(ActorReference::class, new ActorReference($id, $dapr_type));
         $actor              = $this->factory->make($reflection->getName(), $states);
         $activation_tracker = hash('sha256', $dapr_type.$id);
         $activation_tracker = rtrim(

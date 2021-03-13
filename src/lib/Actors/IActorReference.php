@@ -22,26 +22,20 @@ interface IActorReference
     /**
      * Get an actor reference bound to a given interface.
      *
-     * @param string $id The id of the actor
      * @param string $interface The interface of the actor
+     * @param ProxyFactory $proxy_factory The proxy factory to use
      *
-     * @return IActorReference The actor's reference
+     * @return IActor The actor's reference
      */
-    public static function bind(string $id, string $interface): IActorReference;
+    public function bind(string $interface, ProxyFactory $proxy_factory): mixed;
 
     /**
-     * Get the actor address
-     *
-     * @return ActorAddress The actor address
+     * @return string The actor id
      */
-    public function get_address(): ActorAddress;
+    public function get_actor_id(): string;
 
     /**
-     * Get a proxy for communicating with the actor
-     *
-     * @param ProxyFactory $proxy_factory The actor proxy factory.
-     *
-     * @return IActor An actor proxy
+     * @return string The actor type
      */
-    public function get_proxy(ProxyFactory $proxy_factory): mixed;
+    public function get_actor_type(): string;
 }

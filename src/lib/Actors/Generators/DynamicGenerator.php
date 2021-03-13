@@ -36,7 +36,6 @@ class DynamicGenerator extends GenerateProxy
         $interface                = ClassType::from($this->interface);
         $methods                  = $this->get_methods($interface);
         $current_proxy->DAPR_TYPE = $this->dapr_type;
-        $current_proxy->IMPLEMENTED_INTERFACE = $interface;
         foreach ($methods as $method) {
             $current_proxy->{$method->getName()} = $this->generate_method($method, $id);
         }

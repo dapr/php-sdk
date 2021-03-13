@@ -3,9 +3,11 @@
 namespace Dapr\Actors;
 
 use Dapr\Actors\Attributes\DaprType;
-use Dapr\Actors\Generators\IGenerateProxy;
 use Dapr\Actors\Generators\ProxyFactory;
-use DI\Container;
+use Dapr\Deserialization\Deserializers\IDeserialize;
+use Dapr\Deserialization\IDeserializer;
+use Dapr\Serialization\ISerializer;
+use Dapr\Serialization\Serializers\ISerialize;
 use LogicException;
 use ReflectionClass;
 
@@ -13,9 +15,9 @@ use ReflectionClass;
  * Class ActorReference
  * @package Dapr\Actors
  */
-final class ActorReference implements IActorReference
+final class ActorReference implements IActorReference, ISerialize, IDeserialize
 {
-    public function __construct(public string $interface, public ActorAddress $address)
+    public function __construct(private string $id, private string $actor_type)
     {
     }
 
@@ -30,15 +32,18 @@ final class ActorReference implements IActorReference
             throw new LogicException('actor(proxy) must implement get_id()');
         }
 
-        $dapr_type = $actor->DAPR_TYPE ?? self::get_dapr_type($actor)->type;
+        $detected_dapr_type = self::get_dapr_type($actor);
 
-        $address = new ActorAddress($id, $dapr_type);
-        $interface = $actor->IMPLEMENTED_INTERFACE ?? $actor::class;
+        $dapr_type = $actor->DAPR_TYPE ?? $detected_dapr_type?->type;
 
-        return new self($interface, $address);
+        if ($dapr_type === null) {
+            throw new LogicException('Missing DaprType attribute on '.$actor::class);
+        }
+
+        return new self(id: $id, actor_type: $dapr_type);
     }
 
-    private static function get_dapr_type(object|string $type): DaprType
+    private static function get_dapr_type(object|string $type): DaprType|null
     {
         $reflector = new ReflectionClass($type);
         /**
@@ -46,34 +51,48 @@ final class ActorReference implements IActorReference
          */
         $type_attribute = ($reflector->getAttributes(DaprType::class)[0] ?? null)?->newInstance();
 
-        if ($type_attribute === null) {
-            throw new LogicException('Missing DaprType attribute on '.is_object($type) ? $type::class : $type);
-        }
-
         return $type_attribute;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public static function bind(string $id, string $interface): IActorReference
+    public static function deserialize(mixed $value, IDeserializer $deserializer): mixed
     {
-        return new self($interface, new ActorAddress($id, self::get_dapr_type($interface)->type));
+        return new ActorReference(id: $value['ActorId'], actor_type: $value['ActorType']);
     }
 
     /**
      * @inheritDoc
      */
-    public function get_address(): ActorAddress
+    public function bind(string $interface, ProxyFactory $proxy_factory): mixed
     {
-        return $this->get_address();
+        return $proxy_factory->get_generator($interface, $this->actor_type)->get_proxy(
+            $this->id
+        );
     }
 
     /**
      * @inheritDoc
      */
-    public function get_proxy(ProxyFactory $proxy_factory): mixed
+    public function get_actor_id(): string
     {
-        return $proxy_factory->get_generator($this->interface, $this->address->actor_type)->get_proxy($this->address->id);
+        return $this->id;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function get_actor_type(): string
+    {
+        return $this->actor_type;
+    }
+
+    /**
+     * @param ActorReference $value
+     * @param ISerializer $serializer
+     *
+     * @return array
+     */
+    public function serialize(mixed $value, ISerializer $serializer): array
+    {
+        return ['ActorId' => $value->id, 'ActorType' => $value->actor_type];
     }
 }

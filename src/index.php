@@ -61,13 +61,13 @@ $app = App::create(
 $app->get(
     '/test/actors',
     function (ProxyFactory $proxyFactory, DaprClient $client, LoggerInterface $logger) {
-        $id = uniqid(prefix: 'actor_');
-        $reference = ActorReference::bind($id, ISimpleActor::class);
+        $id        = uniqid(prefix: 'actor_');
+        $reference = new ActorReference($id, 'SimpleActor');
 
         /**
          * @var ISimpleActor|IActor $actor
          */
-        $actor = $reference->get_proxy($proxyFactory);
+        $actor = $reference->bind(ISimpleActor::class, $proxyFactory);
         $body  = [];
 
         $logger->critical('Created actor proxy');
@@ -78,7 +78,7 @@ $app->get(
 
         // get the actor proxy again
         $reference = ActorReference::get($actor);
-        $reference->get_proxy($proxyFactory);
+        $actor     = $reference->bind(ISimpleActor::class, $proxyFactory);
 
         $reminder = new Reminder(
             name: 'increment',
