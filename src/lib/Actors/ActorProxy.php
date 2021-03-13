@@ -32,7 +32,7 @@ class ActorProxy
      * Returns an actor proxy
      *
      * @param string $interface
-     * @param string|IActorReference $id_or_reference The id or actor reference to proxy for
+     * @param string $id
      * @param string|null $override_type Allow overriding the Dapr type for a given interface
      *
      * @return object
