@@ -41,7 +41,8 @@ class ActorProxy
     public function get(
         string $interface,
         string|IActorReference $id_or_reference,
-        #[Deprecated('Please use an ActorReference instead')] string|null $override_type = null
+        #[Deprecated('Please use an ActorReference instead')]
+        string|null $override_type = null
     ): object {
         $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id_or_reference]);
 

@@ -6,6 +6,7 @@ require_once __DIR__.'/../tests/Fixtures/SimpleActor.php';
 define('STORE', 'statestore');
 
 use Dapr\Actors\ActorProxy;
+use Dapr\Actors\ActorReference;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
@@ -60,11 +61,12 @@ $app->get(
     '/test/actors',
     function (ActorProxy $actorProxy, DaprClient $client, LoggerInterface $logger) {
         $id = uniqid(prefix: 'actor_');
+        $reference = new ActorReference($id, 'SimpleActor');
 
         /**
          * @var ISimpleActor|IActor $actor
          */
-        $actor = $actorProxy->get(ISimpleActor::class, $id);
+        $actor = $actorProxy->get(ISimpleActor::class, $reference);
         $body  = [];
 
         $logger->critical('Created actor proxy');
