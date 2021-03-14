@@ -19,9 +19,7 @@ use ReflectionException;
  *
  * @codeCoverageIgnore
  * @package Dapr
- * @deprecated Please use ActorReference instead
  */
-#[Deprecated('Please use ActorReference instead')]
 class ActorProxy
 {
     public function __construct(protected ProxyFactory $proxyFactory, protected LoggerInterface $logger)
