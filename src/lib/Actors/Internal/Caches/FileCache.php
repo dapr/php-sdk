@@ -2,6 +2,9 @@
 
 namespace Dapr\Actors\Internal\Caches;
 
+use Dapr\State\FileWriter;
+use phpDocumentor\Reflection\File;
+
 /**
  * Class FileCache
  * @package Dapr\Actors\Internal\Caches
@@ -78,6 +81,6 @@ class FileCache extends MemoryCache implements CacheInterface
             return;
         }
 
-        file_put_contents($this->cache_file, serialize($this->data));
+        FileWriter::write($this->cache_file, serialize($this->data));
     }
 }
