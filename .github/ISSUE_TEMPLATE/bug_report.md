@@ -2,7 +2,8 @@
 name: Bug report
 about: Report a bug in Dapr 
 title: ''
-labels: kind/bug assignees: 'withinboredom'
+labels: 
+kind/bug assignees: 'withinboredom'
 ---
 
 ## Expected Behavior
