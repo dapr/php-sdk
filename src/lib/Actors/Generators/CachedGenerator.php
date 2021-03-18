@@ -2,6 +2,7 @@
 
 namespace Dapr\Actors\Generators;
 
+use Dapr\State\FileWriter;
 use DI\FactoryInterface;
 use JetBrains\PhpStorm\Pure;
 use Psr\Container\ContainerInterface;
@@ -48,7 +49,7 @@ class CachedGenerator extends ExistingOnly
                 mkdir($this->cache_dir);
             }
             $filename = $this->cache_dir.$this->get_short_class_name();
-            file_put_contents($filename, $file);
+            FileWriter::write($filename, $file);
             require_once $filename;
         }
 

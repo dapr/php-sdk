@@ -13,6 +13,7 @@ use Dapr\Actors\Timer;
 use Dapr\exceptions\DaprException;
 use Dapr\exceptions\Http\NotFound;
 use Dapr\exceptions\SaveStateFailure;
+use Dapr\State\FileWriter;
 use DI\DependencyException;
 use DI\NotFoundException;
 use Fixtures\ActorClass;
@@ -357,7 +358,7 @@ class ActorTest extends DaprTests
         $generated_class = (string)FileGenerator::generate(ITestActor::class, $this->container);
         $take_snapshot   = false;
         if ($take_snapshot) {
-            file_put_contents(__DIR__.'/Fixtures/GeneratedProxy.php', $generated_class);
+            FileWriter::write(__DIR__.'/Fixtures/GeneratedProxy.php', $generated_class);
         }
         $expected_proxy = file_get_contents(__DIR__.'/Fixtures/GeneratedProxy.php');
         $this->assertSame($expected_proxy, $generated_class);
