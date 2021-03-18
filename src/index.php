@@ -22,6 +22,7 @@ use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscription;
 use Dapr\PubSub\Topic;
 use Dapr\State\Attributes\StateStore;
+use Dapr\State\FileWriter;
 use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
 use DI\ContainerBuilder;
@@ -422,7 +423,7 @@ $app->post(
     ) {
         $logger->critical('Received an event: {subject}', ['subject' => $event->subject]);
         touch('/tmp/sub-received');
-        file_put_contents('/tmp/sub-received', $event->to_json());
+        FileWriter::write('/tmp/sub-received', $event->to_json());
 
         return [
             'status' => 'SUCCESS',
