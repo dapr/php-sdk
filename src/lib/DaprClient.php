@@ -201,4 +201,14 @@ class DaprClient
 
         return $response;
     }
+
+    /**
+     * Shutdown the sidecar.
+     *
+     * @return void
+     */
+    public function shutdown(array $metadata = []): void
+    {
+        $this->get("/shutdown", $metadata);
+    }
 }
