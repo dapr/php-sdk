@@ -206,6 +206,9 @@ class DaprClient
      * Shutdown the sidecar.
      *
      * @return void
+     * @param array $metadata
+     *
+     * @throws DaprException
      */
     public function shutdown(array $metadata = []): void
     {
