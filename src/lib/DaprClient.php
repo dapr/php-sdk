@@ -206,7 +206,7 @@ class DaprClient
      * Shutdown the sidecar.
      *
      * @return void
-     * @param array $metadata
+     * @param array $metadata Metadata to pass to the shutdown endpoint
      *
      * @throws DaprException
      */
