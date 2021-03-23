@@ -214,4 +214,13 @@ class DaprClient
     {
         $this->get("/shutdown", $metadata);
     }
+
+    /**
+     * Shutdown the sidecar at the end of the current request.
+     *
+     * @param array $metadata Metadata to pass to the shutdown endpoint
+     */
+    public function schedule_shutdown(array $metadata): void {
+        register_shutdown_function(fn() => $this->shutdown($metadata));
+    }
 }
