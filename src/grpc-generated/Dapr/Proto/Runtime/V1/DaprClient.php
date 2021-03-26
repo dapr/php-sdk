@@ -9,7 +9,7 @@ namespace Dapr\Proto\Runtime\V1;
 /**
  * Dapr service provides APIs to user application to access Dapr building blocks.
  */
-class DaprClient extends \Grpc\BaseStub implements \Dapr\Client\Interfaces\V1\DaprClientInterface
+class DaprClient extends \Grpc\BaseStub
 {
 	/**
 	 * @param string $hostname hostname

@@ -2,8 +2,6 @@
 
 namespace Dapr\Dev;
 
-use Dapr\Client\Interfaces\V1\DaprClientInterface;
-use Dapr\Proto\Runtime\V1\DaprClient;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\PhpFile;
 
@@ -13,6 +11,7 @@ use Nette\PhpGenerator\PhpFile;
  */
 class GrpcUpgrader
 {
+    protected const BASE_DIR = __DIR__.'/../src/grpc-generated';
     protected ClassType $class;
 
     public function __construct(public string $file, public string $name)
@@ -22,15 +21,12 @@ class GrpcUpgrader
 
     public static function upgrade()
     {
-        $base_dir = __DIR__.'/../src/grpc-generated';
-        $files    = self::get_files($base_dir);
+        $files = self::get_files(self::BASE_DIR);
         foreach ($files as $file) {
             if (str_contains($file, 'GPBMetadata')) {
                 continue;
             }
-            $class    = str_replace($base_dir, '', $file);
-            $class    = str_replace('.php', '', $class);
-            $class    = str_replace('/', '\\', $class);
+            $class    = self::get_class_name($file);
             $upgrader = new GrpcUpgrader($file, $class);
             $upgrader->do_upgrade();
         }
@@ -61,11 +57,19 @@ class GrpcUpgrader
         return $files_to_return;
     }
 
+    protected static function get_class_name(string $file): string
+    {
+        $class = str_replace(self::BASE_DIR, '', $file);
+        $class = str_replace('.php', '', $class);
+        $class = str_replace('/', '\\', $class);
+
+        return $class;
+    }
+
     public function do_upgrade(): void
     {
         echo "Enriching: {$this->name}\n";
         $this->enrich_methods();
-        $this->maybe_extend();
         $this->write_file();
     }
 
@@ -92,7 +96,7 @@ class GrpcUpgrader
                         $method->getComment(),
                         $parameter->getName()
                     );
-                if($method->getName() === '__construct' && $parameter->getName() === 'opts') {
+                if ($method->getName() === '__construct' && $parameter->getName() === 'opts') {
                     $type = 'mixed';
                 }
                 $parameter->setType($this->sanitize_type($type));
@@ -133,13 +137,6 @@ class GrpcUpgrader
         return $output_array['type'] ?? null;
     }
 
-    protected function maybe_extend(): void
-    {
-        if ($this->name === '\\'.DaprClient::class) {
-            $this->class->addImplement(DaprClientInterface::class);
-        }
-    }
-
     protected function write_file(): void
     {
         $file = new PhpFile();
@@ -148,5 +145,26 @@ class GrpcUpgrader
         $namespace = $file->addNamespace($namespace);
         $namespace->add($this->class);
         file_put_contents($this->file, $file);
+    }
+
+    public static function add_interfaces()
+    {
+        $files = self::get_files(self::BASE_DIR);
+        foreach ($files as $file) {
+            if (str_contains($file, 'GPBMetadata')) {
+                continue;
+            }
+            $class    = self::get_class_name($file);
+            $upgrader = new GrpcUpgrader($file, $class);
+            $upgrader->create_interface();
+        }
+    }
+
+    protected function create_interface(): string
+    {
+        $builder = new InterfaceBuilder($this->name);
+        echo "Generating Interface: {$this->name}\n";
+
+        return $builder->write_interface($builder->build());
     }
 }

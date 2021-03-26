@@ -11,296 +11,266 @@ namespace Dapr\Client\Interfaces\V1;
  */
 interface DaprClientInterface
 {
-	/**
-	 * Invokes a method on a remote Dapr app.
-	 * @param \Dapr\Proto\Runtime\V1\InvokeServiceRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function InvokeService(
-		\Dapr\Proto\Runtime\V1\InvokeServiceRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Invokes a method on a remote Dapr app.
+     *
+     * @param InvokeServiceRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function InvokeService(InvokeServiceRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Gets the state for a specific key.
-	 * @param \Dapr\Proto\Runtime\V1\GetStateRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function GetState(
-		\Dapr\Proto\Runtime\V1\GetStateRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Gets the state for a specific key.
+     *
+     * @param GetStateRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return GetStateResponseInterface
+     */
+	public function GetState(GetStateRequestInterface $argument, $metadata = [], $options = []): GetStateResponseInterface;
 
 
-	/**
-	 * Gets a bulk of state items for a list of keys
-	 * @param \Dapr\Proto\Runtime\V1\GetBulkStateRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function GetBulkState(
-		\Dapr\Proto\Runtime\V1\GetBulkStateRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Gets a bulk of state items for a list of keys
+     *
+     * @param GetBulkStateRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return GetBulkStateResponseInterface
+     */
+	public function GetBulkState(GetBulkStateRequestInterface $argument, $metadata = [], $options = []): GetBulkStateResponseInterface;
 
 
-	/**
-	 * Saves the state for a specific key.
-	 * @param \Dapr\Proto\Runtime\V1\SaveStateRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function SaveState(
-		\Dapr\Proto\Runtime\V1\SaveStateRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Saves the state for a specific key.
+     *
+     * @param SaveStateRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function SaveState(SaveStateRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Deletes the state for a specific key.
-	 * @param \Dapr\Proto\Runtime\V1\DeleteStateRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function DeleteState(
-		\Dapr\Proto\Runtime\V1\DeleteStateRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Deletes the state for a specific key.
+     *
+     * @param DeleteStateRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function DeleteState(DeleteStateRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Deletes a bulk of state items for a list of keys
-	 * @param \Dapr\Proto\Runtime\V1\DeleteBulkStateRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function DeleteBulkState(
-		\Dapr\Proto\Runtime\V1\DeleteBulkStateRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Deletes a bulk of state items for a list of keys
+     *
+     * @param DeleteBulkStateRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function DeleteBulkState(DeleteBulkStateRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Executes transactions for a specified store
-	 * @param \Dapr\Proto\Runtime\V1\ExecuteStateTransactionRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
+    /**
+     * Executes transactions for a specified store
+     *
+     * @param ExecuteStateTransactionRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
 	public function ExecuteStateTransaction(
-		\Dapr\Proto\Runtime\V1\ExecuteStateTransactionRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+		ExecuteStateTransactionRequestInterface $argument,
+		$metadata = [],
+		$options = []
+	);
 
 
-	/**
-	 * Publishes events to the specific topic.
-	 * @param \Dapr\Proto\Runtime\V1\PublishEventRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function PublishEvent(
-		\Dapr\Proto\Runtime\V1\PublishEventRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Publishes events to the specific topic.
+     *
+     * @param PublishEventRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function PublishEvent(PublishEventRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Invokes binding data to specific output bindings
-	 * @param \Dapr\Proto\Runtime\V1\InvokeBindingRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function InvokeBinding(
-		\Dapr\Proto\Runtime\V1\InvokeBindingRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Invokes binding data to specific output bindings
+     *
+     * @param InvokeBindingRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return InvokeBindingResponseInterface
+     */
+	public function InvokeBinding(InvokeBindingRequestInterface $argument, $metadata = [], $options = []): InvokeBindingResponseInterface;
 
 
-	/**
-	 * Gets secrets from secret stores.
-	 * @param \Dapr\Proto\Runtime\V1\GetSecretRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function GetSecret(
-		\Dapr\Proto\Runtime\V1\GetSecretRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Gets secrets from secret stores.
+     *
+     * @param GetSecretRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return GetSecretResponseInterface
+     */
+	public function GetSecret(GetSecretRequestInterface $argument, $metadata = [], $options = []): GetSecretResponseInterface;
 
 
-	/**
-	 * Gets a bulk of secrets
-	 * @param \Dapr\Proto\Runtime\V1\GetBulkSecretRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function GetBulkSecret(
-		\Dapr\Proto\Runtime\V1\GetBulkSecretRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Gets a bulk of secrets
+     *
+     * @param GetBulkSecretRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return GetBulkSecretResponseInterface
+     */
+	public function GetBulkSecret(GetBulkSecretRequestInterface $argument, $metadata = [], $options = []): GetBulkSecretResponseInterface;
 
 
-	/**
-	 * Register an actor timer.
-	 * @param \Dapr\Proto\Runtime\V1\RegisterActorTimerRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function RegisterActorTimer(
-		\Dapr\Proto\Runtime\V1\RegisterActorTimerRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Register an actor timer.
+     *
+     * @param RegisterActorTimerRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function RegisterActorTimer(RegisterActorTimerRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Unregister an actor timer.
-	 * @param \Dapr\Proto\Runtime\V1\UnregisterActorTimerRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function UnregisterActorTimer(
-		\Dapr\Proto\Runtime\V1\UnregisterActorTimerRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Unregister an actor timer.
+     *
+     * @param UnregisterActorTimerRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function UnregisterActorTimer(UnregisterActorTimerRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Register an actor reminder.
-	 * @param \Dapr\Proto\Runtime\V1\RegisterActorReminderRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function RegisterActorReminder(
-		\Dapr\Proto\Runtime\V1\RegisterActorReminderRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Register an actor reminder.
+     *
+     * @param RegisterActorReminderRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function RegisterActorReminder(RegisterActorReminderRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Unregister an actor reminder.
-	 * @param \Dapr\Proto\Runtime\V1\UnregisterActorReminderRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
+    /**
+     * Unregister an actor reminder.
+     *
+     * @param UnregisterActorReminderRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
 	public function UnregisterActorReminder(
-		\Dapr\Proto\Runtime\V1\UnregisterActorReminderRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+		UnregisterActorReminderRequestInterface $argument,
+		$metadata = [],
+		$options = []
+	);
 
 
-	/**
-	 * Gets the state for a specific actor.
-	 * @param \Dapr\Proto\Runtime\V1\GetActorStateRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function GetActorState(
-		\Dapr\Proto\Runtime\V1\GetActorStateRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Gets the state for a specific actor.
+     *
+     * @param GetActorStateRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function GetActorState(GetActorStateRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Executes state transactions for a specified actor
-	 * @param \Dapr\Proto\Runtime\V1\ExecuteActorStateTransactionRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
+    /**
+     * Executes state transactions for a specified actor
+     *
+     * @param ExecuteActorStateTransactionRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
 	public function ExecuteActorStateTransaction(
-		\Dapr\Proto\Runtime\V1\ExecuteActorStateTransactionRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+		ExecuteActorStateTransactionRequestInterface $argument,
+		$metadata = [],
+		$options = []
+	);
 
 
-	/**
-	 * InvokeActor calls a method on an actor.
-	 * @param \Dapr\Proto\Runtime\V1\InvokeActorRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function InvokeActor(
-		\Dapr\Proto\Runtime\V1\InvokeActorRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * InvokeActor calls a method on an actor.
+     *
+     * @param InvokeActorRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function InvokeActor(InvokeActorRequestInterface $argument, $metadata = [], $options = []): InvokeActorResponseInterface;
 
 
-	/**
-	 * Gets metadata of the sidecar
-	 * @param \Google\Protobuf\GPBEmpty $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function GetMetadata(
-		\Google\Protobuf\GPBEmpty $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Gets metadata of the sidecar
+     *
+     * @param GPBEmptyInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function GetMetadata(GPBEmptyInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Sets value in extended metadata of the sidecar
-	 * @param \Dapr\Proto\Runtime\V1\SetMetadataRequest $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function SetMetadata(
-		\Dapr\Proto\Runtime\V1\SetMetadataRequest $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Sets value in extended metadata of the sidecar
+     *
+     * @param SetMetadataRequestInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function SetMetadata(SetMetadataRequestInterface $argument, $metadata = [], $options = []);
 
 
-	/**
-	 * Shutdown the sidecar
-	 * @param \Google\Protobuf\GPBEmpty $argument input argument
-	 * @param array $metadata metadata
-	 * @param array $options call options
-	 * @return \Grpc\UnaryCall
-	 */
-	public function Shutdown(
-		\Google\Protobuf\GPBEmpty $argument,
-		array $metadata = [],
-		array $options = []
-	): \Grpc\UnaryCall;
+    /**
+     * Shutdown the sidecar
+     *
+     * @param GPBEmptyInterface $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     *
+     * @return \Grpc\UnaryCall
+     */
+	public function Shutdown(GPBEmptyInterface $argument, $metadata = [], $options = []);
 }
