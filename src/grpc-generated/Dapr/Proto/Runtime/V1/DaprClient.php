@@ -376,4 +376,23 @@ class DaprClient extends \Grpc\BaseStub implements \Dapr\Client\Interfaces\V1\Da
 		['\Google\Protobuf\GPBEmpty', 'decode'],
 		$metadata, $options);
 	}
+
+
+	/**
+	 * Shutdown the sidecar
+	 * @param \Google\Protobuf\GPBEmpty $argument input argument
+	 * @param array $metadata metadata
+	 * @param array $options call options
+	 * @return \Grpc\UnaryCall
+	 */
+	public function Shutdown(
+		\Google\Protobuf\GPBEmpty $argument,
+		array $metadata = [],
+		array $options = []
+	): \Grpc\UnaryCall {
+		return $this->_simpleRequest('/dapr.proto.runtime.v1.Dapr/Shutdown',
+		$argument,
+		['\Google\Protobuf\GPBEmpty', 'decode'],
+		$metadata, $options);
+	}
 }

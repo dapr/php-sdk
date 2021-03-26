@@ -289,4 +289,18 @@ interface DaprClientInterface
 		array $metadata = [],
 		array $options = []
 	): \Grpc\UnaryCall;
+
+
+	/**
+	 * Shutdown the sidecar
+	 * @param \Google\Protobuf\GPBEmpty $argument input argument
+	 * @param array $metadata metadata
+	 * @param array $options call options
+	 * @return \Grpc\UnaryCall
+	 */
+	public function Shutdown(
+		\Google\Protobuf\GPBEmpty $argument,
+		array $metadata = [],
+		array $options = []
+	): \Grpc\UnaryCall;
 }
