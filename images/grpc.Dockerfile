@@ -7,10 +7,11 @@ WORKDIR /grpc
 RUN git submodule update --init
 
 FROM grpc-sources AS grpc-builder
+ENV PROTOBUF_VERSION=v3.15.2
 RUN apt-get install -y cmake
 RUN mkdir -p cmake/build
 WORKDIR /grpc/third_party/protobuf/php/ext/google/protobuf
-RUN git checkout v3.15.2
+RUN git checkout $PROTOBUF_VERSION
 WORKDIR /grpc/cmake/build
 RUN cmake ../.. -DBUILD_SHARED_LIBS=ON -DgRPC_INSTALL=ON -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc)
@@ -24,7 +25,7 @@ COPY --from=grpc-builder /grpc/third_party/protobuf/src /protobuf
 RUN ldconfig && protoc --version
 
 FROM php-grpc AS dapr-protobuf-builder
-ENV DAPR_VERSION=v1.0.0
+ENV DAPR_VERSION=release-1.1
 WORKDIR /
 RUN git clone -b $DAPR_VERSION https://github.com/dapr/dapr.git
 WORKDIR /dapr
