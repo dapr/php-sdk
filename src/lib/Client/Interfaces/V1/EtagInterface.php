@@ -19,7 +19,7 @@ interface EtagInterface
 	 * Generated from protobuf field <code>string value = 1;</code>
 	 * @return string
 	 */
-	public function getValue();
+	public function getValue(): string;
 
 
 	/**
@@ -29,5 +29,5 @@ interface EtagInterface
 	 * @param string $var
 	 * @return $this
 	 */
-	public function setValue($var);
+	public function setValue(string $var): \Dapr\Proto\Common\V1\Etag;
 }

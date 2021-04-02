@@ -70,7 +70,11 @@
     ],
     "build-grpc": [
       "@update-protos",
-      "Dapr\\Dev\\GrpcUpgrader::upgrade",
+      "Dapr\\Dev\\GrpcUpgrader::upgrade"
+    ],
+    "generate-interfaces": [
+      "rm -rf src/lib/Client/Interfaces/V1",
+      "mkdir src/lib/Client/Interfaces/V1",
       "Dapr\\Dev\\GrpcUpgrader::add_interfaces"
     ]
   }

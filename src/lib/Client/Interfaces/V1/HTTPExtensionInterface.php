@@ -25,7 +25,7 @@ interface HTTPExtensionInterface
 	 * Generated from protobuf field <code>.dapr.proto.common.v1.HTTPExtension.Verb verb = 1;</code>
 	 * @return int
 	 */
-	public function getVerb();
+	public function getVerb(): int;
 
 
 	/**
@@ -35,7 +35,7 @@ interface HTTPExtensionInterface
 	 * @param int $var
 	 * @return $this
 	 */
-	public function setVerb($var);
+	public function setVerb(int $var): \Dapr\Proto\Common\V1\HTTPExtension;
 
 
 	/**
@@ -44,7 +44,7 @@ interface HTTPExtensionInterface
 	 * Generated from protobuf field <code>string querystring = 2;</code>
 	 * @return string
 	 */
-	public function getQuerystring();
+	public function getQuerystring(): string;
 
 
 	/**
@@ -54,5 +54,5 @@ interface HTTPExtensionInterface
 	 * @param string $var
 	 * @return $this
 	 */
-	public function setQuerystring($var);
+	public function setQuerystring(string $var): \Dapr\Proto\Common\V1\HTTPExtension;
 }

@@ -25,13 +25,21 @@ class InterfaceBuilder
         $builder->write_interface($builder->build());
     }
 
-    public function write_interface(PhpFile $file): string {
+    public function write_interface(PhpFile|null $file): string
+    {
+        if ($file === null) {
+            return '';
+        }
         file_put_contents(__DIR__.'/../src/lib/Client/Interfaces/V1/'.$this->generated_interface.'.php', $file);
+
         return $this->generated_namespace.'\\'.$this->generated_interface;
     }
 
-    public function build(): PhpFile
+    public function build(): PhpFile|null
     {
+        if ( ! class_exists($this->class)) {
+            return null;
+        }
         $class = ClassType::from($this->class);
         $class->setInterface();
         $class->setImplements([]);
@@ -71,8 +79,8 @@ class InterfaceBuilder
                 $new_types[] = $type;
                 continue;
             }
-            $builder = new InterfaceBuilder($type);
-            $file    = $builder->build();
+            $builder     = new InterfaceBuilder($type);
+            $file        = $builder->build();
             $new_types[] = $builder->write_interface($file);
         }
 
