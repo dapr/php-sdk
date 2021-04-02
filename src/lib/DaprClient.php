@@ -212,7 +212,7 @@ class DaprClient
      */
     public function shutdown(array $metadata = []): void
     {
-        $this->get("/shutdown", $metadata);
+        $this->post("/shutdown", $metadata);
     }
 
     /**
