@@ -6,6 +6,8 @@ require_once __DIR__.'/../tests/Fixtures/SimpleActor.php';
 define('STORE', 'statestore');
 
 use Dapr\Actors\ActorProxy;
+use Dapr\Actors\ActorReference;
+use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Actors\IActor;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
@@ -58,13 +60,14 @@ $app = App::create(
 
 $app->get(
     '/test/actors',
-    function (ActorProxy $actorProxy, DaprClient $client, LoggerInterface $logger) {
-        $id = uniqid(prefix: 'actor_');
+    function (ProxyFactory $proxyFactory, DaprClient $client, LoggerInterface $logger) {
+        $id        = uniqid(prefix: 'actor_');
+        $reference = new ActorReference($id, 'SimpleActor');
 
         /**
          * @var ISimpleActor|IActor $actor
          */
-        $actor = $actorProxy->get(ISimpleActor::class, $id);
+        $actor = $reference->bind(ISimpleActor::class, $proxyFactory);
         $body  = [];
 
         $logger->critical('Created actor proxy');
@@ -72,6 +75,10 @@ $app->get(
         $actor->increment();
         $body = assert_equals($body, 1, $actor->get_count(), 'Actor should have data');
         $logger->critical('Incremented actor');
+
+        // get the actor proxy again
+        $reference = ActorReference::get($actor);
+        $actor     = $reference->bind(ISimpleActor::class, $proxyFactory);
 
         $reminder = new Reminder(
             name: 'increment',

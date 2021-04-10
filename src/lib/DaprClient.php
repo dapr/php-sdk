@@ -201,4 +201,26 @@ class DaprClient
 
         return $response;
     }
+
+    /**
+     * Shutdown the sidecar.
+     *
+     * @return void
+     * @param array $metadata Metadata to pass to the shutdown endpoint
+     *
+     * @throws DaprException
+     */
+    public function shutdown(array $metadata = []): void
+    {
+        $this->post("/shutdown", $metadata);
+    }
+
+    /**
+     * Shutdown the sidecar at the end of the current request.
+     *
+     * @param array $metadata Metadata to pass to the shutdown endpoint
+     */
+    public function schedule_shutdown(array $metadata): void {
+        register_shutdown_function(fn() => $this->shutdown($metadata));
+    }
 }
