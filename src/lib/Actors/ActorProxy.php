@@ -6,6 +6,7 @@ use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\Generators\ProxyFactory;
 use DI\DependencyException;
 use DI\NotFoundException;
+use JetBrains\PhpStorm\Deprecated;
 use LogicException;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -29,15 +30,15 @@ class ActorProxy
      * Returns an actor proxy
      *
      * @param string $interface
-     * @param mixed $id The id to proxy for
+     * @param string $id
      * @param string|null $override_type Allow overriding the Dapr type for a given interface
      *
      * @return object
-     * @throws ReflectionException
      * @throws DependencyException
      * @throws NotFoundException
+     * @throws ReflectionException
      */
-    public function get(string $interface, mixed $id, string|null $override_type = null): object
+    public function get(string $interface, string $id, string|null $override_type = null): object
     {
         $this->logger?->debug('Getting actor proxy for {i}||{id}', ['i' => $interface, 'id' => $id]);
 
