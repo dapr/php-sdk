@@ -19,6 +19,14 @@ use PHPUnit\Framework\Assert;
 class TestClient extends DaprClient
 {
     public array $responses = [];
+    private bool $is_shutdown = false;
+
+    /**
+     * Asserts that the sidecar isn't shutdown
+     */
+    private function fail_if_shutdown() {
+        Assert::assertFalse($this->is_shutdown, 'The sidecar was previously shutdown.');
+    }
 
     /**
      * @param string $url
@@ -29,6 +37,7 @@ class TestClient extends DaprClient
      */
     public function get(string $url, ?array $params = null): DaprResponse
     {
+        $this->fail_if_shutdown();
         $url = $this->get_api_path($url, $params);
         $url = "GET $url";
         $this->validate($url, '');
@@ -102,6 +111,7 @@ class TestClient extends DaprClient
      */
     public function post(string $url, mixed $data, ?array $params = null): DaprResponse
     {
+        $this->fail_if_shutdown();
         $url = $this->get_api_path($url, $params);
         $url = "POST $url";
         $this->validate($url, json_encode($data, JSON_PRETTY_PRINT));
@@ -143,6 +153,7 @@ class TestClient extends DaprClient
      */
     public function delete(string $url, ?array $params = null): DaprResponse
     {
+        $this->fail_if_shutdown();
         $url = $this->get_api_path($url, $params);
         $url = "DELETE $url";
         $this->validate($url, '');
@@ -159,5 +170,16 @@ class TestClient extends DaprClient
         $response                          = new DaprResponse();
         $response->code                    = $expected_code;
         $this->responses["DELETE $path"][] = $response;
+    }
+
+    public function shutdown(array $metadata = []): void
+    {
+        parent::shutdown($metadata);
+        $this->is_shutdown = true;
+    }
+
+    public function schedule_shutdown(array $metadata): void
+    {
+        // noop because a unit test will never hit it
     }
 }
