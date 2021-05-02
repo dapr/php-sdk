@@ -1,0 +1,8 @@
+{
+  "name": "dapr/actor-example",
+  "license": "MIT",
+  "description": "A basic example demonstrating actors",
+  "require": {
+    "dapr/php-sdk": "^1.0"
+  }
+}

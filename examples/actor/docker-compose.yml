@@ -1,38 +1,38 @@
 version: "3"
 services:
-  secrets-service:
-    image: ${DOCKER_USER}/php-secrets-service:latest
+  actor-service:
+    image: ${DOCKER_USER}/php-actor-service:latest
     build:
       args:
-        SERVICE: secrets
+        SERVICE: actor
       dockerfile: ../../examples/images/service.Dockerfile
-      context: ../../examples/secrets
+      context: ../../examples/actor
       target: production
-  secrets-http:
-    image: ${DOCKER_USER}/php-secrets-http:latest
+  actor-http:
+    image: ${DOCKER_USER}/php-actor-http:latest
     build:
       args:
-        SERVICE: secrets
+        SERVICE: actor
       dockerfile: ../../examples/images/caddy.Dockerfile
-      context: ../../examples/secrets
+      context: ../../examples/actor
     depends_on:
-      - secrets-service
-    network_mode: service:secrets-service
-  secrets-daprd:
+      - actor-service
+    network_mode: service:actor-service
+  actor-daprd:
     image: daprio/daprd:1.1.2
-    command: [ "./daprd","-app-id","secrets","-app-port","80","-placement-host-address","placement:50006","-components-path","/components" ]
+    command: [ "./daprd","-app-id","actor","-app-port","80","-placement-host-address","placement:50006","-components-path","/components" ]
     volumes:
       - ./components:/components
     depends_on:
-      - secrets-http
-    network_mode: service:secrets-service
+      - actor-http
+    network_mode: service:actor-service
   client-service:
     image: ${DOCKER_USER}/php-client-service:latest
     build:
       args:
         SERVICE: client
       dockerfile: ../../examples/images/service.Dockerfile
-      context: ../../examples/secrets
+      context: ../../examples/actor
       target: production
     ports:
       - 8080:80
@@ -42,7 +42,7 @@ services:
       args:
         SERVICE: client
       dockerfile: ../../examples/images/caddy.Dockerfile
-      context: ../../examples/secrets
+      context: ../../examples/actor
     depends_on:
       - client-service
     network_mode: service:client-service
@@ -52,3 +52,5 @@ services:
     depends_on:
       - client-http
     network_mode: service:client-service
+  redis:
+    image: 'redis:alpine'

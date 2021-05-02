@@ -1,5 +1,5 @@
 version: "3"
 services:
   placement:
-    image: daprio/dapr:1.0.1
+    image: daprio/dapr:1.1.2
     command: ["./placement","-port","50006"]
