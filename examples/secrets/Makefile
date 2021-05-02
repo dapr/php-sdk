@@ -11,6 +11,15 @@ deps: images/fpm.conf images/opcache.ini images/xdebug.ini images/Caddyfile dock
 start:
 	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
 
+.PHONY: stop
+stop:
+	docker-compose -f docker-compose.yml -f ../docker-compose.common.yml stop
+
+.PHONY: clean
+clean: stop
+	docker-compose -f docker-compose.yml -f ../docker-compose.common.yml rm -f
+	rm -rf images
+
 .PHONY: push
 push: deps
 	docker-compose push
