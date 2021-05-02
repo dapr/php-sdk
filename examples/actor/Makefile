@@ -24,20 +24,6 @@ clean: stop
 push: deps
 	docker-compose push
 
-.PHONY: deploy
-deploy:
-	kubectl apply -f deployments/simple-secret.yml
-	kubectl apply -f deployments/some-secrets.yml
-	envsubst < deployments/secret-service.yml | kubectl apply -f -
-	envsubst < deployments/client-service.yml | kubectl apply -f -
-
-.PHONY: deploy-delete
-deploy-delete:
-	kubectl delete -f deployments/simple-secret.yml
-	kubectl delete -f deployments/some-secrets.yml
-	envsubst < deployments/secret-service.yml | kubectl delete -f -
-	envsubst < deployments/client-service.yml | kubectl delete -f -
-
 images/fpm.conf: ../images/fpm.conf
 	mkdir -p images
 	cp ../images/fpm.conf images/fpm.conf
