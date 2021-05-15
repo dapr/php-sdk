@@ -37,7 +37,7 @@ class GrpcUpgrader
      *
      * @return array
      */
-    protected static function get_files(string $dir): array
+    public static function get_files(string $dir): array
     {
         $files           = scandir($dir);
         $files_to_return = [];
@@ -57,7 +57,7 @@ class GrpcUpgrader
         return $files_to_return;
     }
 
-    protected static function get_class_name(string $file): string
+    public static function get_class_name(string $file): string
     {
         $class = str_replace(self::BASE_DIR, '', $file);
         $class = str_replace('.php', '', $class);

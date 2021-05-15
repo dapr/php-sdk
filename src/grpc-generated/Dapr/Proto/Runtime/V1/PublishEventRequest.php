@@ -43,7 +43,6 @@ class PublishEventRequest extends \Google\Protobuf\Internal\Message
 
 	/**
 	 * The metadata passing to pub components
-	 *
 	 * metadata property:
 	 * - key : the key of the message.
 	 *
@@ -68,7 +67,6 @@ class PublishEventRequest extends \Google\Protobuf\Internal\Message
 	 *           The content type for the data (optional).
 	 *     @type array|\Google\Protobuf\Internal\MapField $metadata
 	 *           The metadata passing to pub components
-	 *
 	 *           metadata property:
 	 *           - key : the key of the message.
 	 * }
@@ -194,7 +192,6 @@ class PublishEventRequest extends \Google\Protobuf\Internal\Message
 
 	/**
 	 * The metadata passing to pub components
-	 *
 	 * metadata property:
 	 * - key : the key of the message.
 	 *
@@ -209,7 +206,6 @@ class PublishEventRequest extends \Google\Protobuf\Internal\Message
 
 	/**
 	 * The metadata passing to pub components
-	 *
 	 * metadata property:
 	 * - key : the key of the message.
 	 *
