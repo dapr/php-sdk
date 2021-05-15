@@ -1,13 +1,13 @@
 FROM php:8-cli AS grpc-sources
 RUN apt-get update && apt-get install -y git
-ENV GRPC_VERSION=v1.36.0
+ENV GRPC_VERSION=v1.37.1
 WORKDIR /
 RUN git clone -b $GRPC_VERSION https://github.com/grpc/grpc
 WORKDIR /grpc
 RUN git submodule update --init
 
 FROM grpc-sources AS grpc-builder
-ENV PROTOBUF_VERSION=v3.15.2
+ENV PROTOBUF_VERSION=v3.17.0
 RUN apt-get install -y cmake
 RUN mkdir -p cmake/build
 WORKDIR /grpc/third_party/protobuf/php/ext/google/protobuf
@@ -25,7 +25,7 @@ COPY --from=grpc-builder /grpc/third_party/protobuf/src /protobuf
 RUN ldconfig && protoc --version
 
 FROM php-grpc AS dapr-protobuf-builder
-ENV DAPR_VERSION=release-1.1
+ENV DAPR_VERSION=v1.1.2
 WORKDIR /
 RUN git clone -b $DAPR_VERSION https://github.com/dapr/dapr.git
 WORKDIR /dapr
