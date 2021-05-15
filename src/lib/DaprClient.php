@@ -50,7 +50,7 @@ class DaprClient
             $curl,
             [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER     => self::get_headers(),
+                CURLOPT_HTTPHEADER     => self::set_current_reentrancy_id(self::get_headers()),
                 CURLINFO_HEADER_OUT    => true,
             ]
         );
@@ -114,6 +114,75 @@ class DaprClient
     }
 
     /**
+     * Delete a uri
+     *
+     * @param string $url The url to delete
+     * @param array|null $params
+     *
+     * @return DaprResponse The response
+     * @throws DaprException
+     */
+    public function delete(string $url, ?array $params = []): DaprResponse
+    {
+        $url = $this->get_api_path($url, $params);
+        $this->logger->debug('Calling DELETE {url}', ['url' => $url]);
+        $curl = curl_init($url);
+        curl_setopt_array(
+            $curl,
+            [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST  => 'DELETE',
+                CURLOPT_HTTPHEADER     => self::set_current_reentrancy_id(self::as_json(self::get_headers())),
+                CURLINFO_HEADER_OUT    => true,
+            ]
+        );
+        $response          = new DaprResponse();
+        $response->data    = json_decode(curl_exec($curl), true);
+        $response->code    = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $response->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
+
+        $this->logger->debug('Got response: {r}', ['r' => $response]);
+
+        if ($this->deserializer->is_exception($response->data)) {
+            /**
+             * @var DaprException $ex
+             */
+            $ex = $this->deserializer->get_exception($response->data);
+            throw $ex;
+        }
+
+        return $response;
+    }
+
+    #[Pure] private function as_json(array $headers): array
+    {
+        return array_merge($headers, ["Content-type: application/json"], $this->extra_headers);
+    }
+
+    /**
+     * Shutdown the sidecar at the end of the current request.
+     *
+     * @param array $metadata Metadata to pass to the shutdown endpoint
+     */
+    public function schedule_shutdown(array $metadata): void
+    {
+        register_shutdown_function(fn() => $this->shutdown($metadata));
+    }
+
+    /**
+     * Shutdown the sidecar.
+     *
+     * @param array $metadata Metadata to pass to the shutdown endpoint
+     *
+     * @return void
+     * @throws DaprException
+     */
+    public function shutdown(array $metadata = []): void
+    {
+        $this->post("/shutdown", $metadata);
+    }
+
+    /**
      * Post a uri.
      *
      * @param string $url The url to post to.
@@ -133,7 +202,7 @@ class DaprClient
             [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST           => true,
-                CURLOPT_HTTPHEADER     => self::as_json(self::get_headers()),
+                CURLOPT_HTTPHEADER     => self::set_current_reentrancy_id(self::as_json(self::get_headers())),
                 CURLOPT_POSTFIELDS     => json_encode($data),
                 CURLINFO_HEADER_OUT    => true,
             ]
@@ -156,71 +225,15 @@ class DaprClient
         return $response;
     }
 
-    #[Pure] private function as_json(array $headers): array
+    private function set_current_reentrancy_id(array $headers): array
     {
-        return array_merge($headers, ["Content-type: application/json"], $this->extra_headers);
+        $current_id = $this->get_current_reentrancy_id();
+
+        return array_merge($headers, ['Dapr-Reentrancy-Id: '.$current_id], $this->extra_headers);
     }
 
-    /**
-     * Delete a uri
-     *
-     * @param string $url The url to delete
-     * @param array|null $params
-     *
-     * @return DaprResponse The response
-     * @throws DaprException
-     */
-    public function delete(string $url, ?array $params = []): DaprResponse
+    private function get_current_reentrancy_id(): string|null
     {
-        $url = $this->get_api_path($url, $params);
-        $this->logger->debug('Calling DELETE {url}', ['url' => $url]);
-        $curl = curl_init($url);
-        curl_setopt_array(
-            $curl,
-            [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_CUSTOMREQUEST  => 'DELETE',
-                CURLOPT_HTTPHEADER     => self::as_json(self::get_headers()),
-                CURLINFO_HEADER_OUT    => true,
-            ]
-        );
-        $response          = new DaprResponse();
-        $response->data    = json_decode(curl_exec($curl), true);
-        $response->code    = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        $response->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
-
-        $this->logger->debug('Got response: {r}', ['r' => $response]);
-
-        if ($this->deserializer->is_exception($response->data)) {
-            /**
-             * @var DaprException $ex
-             */
-            $ex = $this->deserializer->get_exception($response->data);
-            throw $ex;
-        }
-
-        return $response;
-    }
-
-    /**
-     * Shutdown the sidecar.
-     *
-     * @return void
-     * @param array $metadata Metadata to pass to the shutdown endpoint
-     *
-     * @throws DaprException
-     */
-    public function shutdown(array $metadata = []): void
-    {
-        $this->post("/shutdown", $metadata);
-    }
-
-    /**
-     * Shutdown the sidecar at the end of the current request.
-     *
-     * @param array $metadata Metadata to pass to the shutdown endpoint
-     */
-    public function schedule_shutdown(array $metadata): void {
-        register_shutdown_function(fn() => $this->shutdown($metadata));
+        return $_SERVER['HTTP_DAPR_REENTRANCY_ID'] ?? null;
     }
 }

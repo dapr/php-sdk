@@ -35,7 +35,8 @@ class ActorConfig implements ISerialize
         protected DateInterval|null $idle_timeout = null,
         protected DateInterval|null $scan_interval = null,
         protected DateInterval|null $drain_timeout = null,
-        protected bool|null $drain_enabled = null
+        protected bool|null $drain_enabled = null,
+        protected ReentrancyConfig|null $reentrancy_config = null,
     ) {
     }
 
@@ -49,7 +50,9 @@ class ActorConfig implements ISerialize
      */
     public function get_actor_type_from_dapr_type(string $dapr_type): string|null
     {
-        if($this->actor_name_to_type[$dapr_type] ?? false) return $this->actor_name_to_type[$dapr_type];
+        if ($this->actor_name_to_type[$dapr_type] ?? false) {
+            return $this->actor_name_to_type[$dapr_type];
+        }
 
         $actors = array_combine($this->get_supported_actors(), $this->actor_name_to_type);
 
@@ -71,6 +74,57 @@ class ActorConfig implements ISerialize
         );
 
         return $actors;
+    }
+
+    public function reentrancy_enabled(): bool|null
+    {
+        return ($this->reentrancy_config ?? null)?->enabled;
+    }
+
+    public function get_max_stack_depth(): int|null
+    {
+        return ($this->reentrancy_config ?? null)?->max_stack_depth;
+    }
+
+    #[ArrayShape([
+        'entities'                => "",
+        'drainRebalancedActors'   => "",
+        'drainOngoingCallTimeout' => "mixed",
+        'actorScanInterval'       => "mixed",
+        'actorIdleTimeout'        => "mixed",
+        'reentrancy'              => 'object',
+    ])] public function serialize(
+        mixed $value,
+        ISerializer $serializer
+    ): array {
+        if ($value instanceof self) {
+            $return = [
+                'entities' => $value->get_supported_actors(),
+            ];
+            if ($a = $value->get_idle_timeout()) {
+                $return['actorIdleTimeout'] = Formats::normalize_interval($a);
+            }
+            if ($a = $value->get_scan_interval()) {
+                $return['actorScanInterval'] = Formats::normalize_interval($a);
+            }
+            if ($a = $value->get_drain_timeout()) {
+                $return['drainOngoingCallTimeout'] = Formats::normalize_interval($a);
+            }
+            if ($a = $value->drain_enabled()) {
+                $return['drainRebalancedActors'] = $a;
+            }
+            if ($value->reentrancy_config ?? false) {
+                $config = [
+                    'enabled' => $value->reentrancy_config->enabled,
+                ];
+                if ($value->reentrancy_config->max_stack_depth) {
+                    $config['maxStackDepth'] = $value->reentrancy_config->max_stack_depth;
+                }
+                $return['reentrancy'] = $config;
+            }
+        }
+
+        return $return ?? [];
     }
 
     /**
@@ -103,34 +157,5 @@ class ActorConfig implements ISerialize
     public function drain_enabled(): bool|null
     {
         return $this->drain_enabled ?? null;
-    }
-
-    #[ArrayShape([
-        'entities'                => "",
-        'drainRebalancedActors'   => "",
-        'drainOngoingCallTimeout' => "mixed",
-        'actorScanInterval'       => "mixed",
-        'actorIdleTimeout'        => "mixed",
-    ])] public function serialize(
-        mixed $value,
-        ISerializer $serializer
-    ): array {
-        $return = [
-            'entities' => $value->get_supported_actors(),
-        ];
-        if ($a = $value->get_idle_timeout()) {
-            $return['actorIdleTimeout'] = Formats::normalize_interval($a);
-        }
-        if ($a = $value->get_scan_interval()) {
-            $return['actorScanInterval'] = Formats::normalize_interval($a);
-        }
-        if ($a = $value->get_drain_timeout()) {
-            $return['drainOngoingCallTimeout'] = Formats::normalize_interval($a);
-        }
-        if ($a = $value->drain_enabled()) {
-            $return['drainRebalancedActors'] = $a;
-        }
-
-        return $return;
     }
 }
