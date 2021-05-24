@@ -52,16 +52,20 @@ class DaprClient
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER     => self::get_headers(),
                 CURLINFO_HEADER_OUT    => true,
+                CURLOPT_HEADER         => true,
             ]
         );
         $result          = curl_exec($curl);
         $return          = new DaprResponse();
-        $return->data    = json_decode($result, true);
+        $header_size     = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
+        $header          = substr($result, 0, $header_size);
+        $body            = substr($result, $header_size);
+        $return->data    = json_decode($body, true);
         $return->code    = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        $return->headers = explode("\r\n", curl_getinfo($curl, CURLINFO_HEADER_OUT));
+        $return->headers = explode("\r\n", $header);
         $return->etag    = array_reduce(
             $return->headers,
-            fn($carry, $item) => str_starts_with($item, 'etag:') ? str_replace('etag: ', '', $item) : $carry
+            fn($carry, $item) => str_starts_with($item, 'Etag:') ? str_replace('Etag: ', '', $item) : $carry
         );
 
         $this->logger->debug('Got response: {response}', ['response' => $return]);
