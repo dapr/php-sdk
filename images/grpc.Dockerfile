@@ -25,7 +25,7 @@ COPY --from=grpc-builder /grpc/third_party/protobuf/src /protobuf
 RUN ldconfig && protoc --version
 
 FROM php-grpc AS dapr-protobuf-builder
-ENV DAPR_VERSION=v1.1.2
+ENV DAPR_VERSION=v1.2.0
 WORKDIR /
 RUN git clone -b $DAPR_VERSION https://github.com/dapr/dapr.git
 WORKDIR /dapr
