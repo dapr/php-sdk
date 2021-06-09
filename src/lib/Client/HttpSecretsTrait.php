@@ -27,6 +27,8 @@ trait HttpSecretsTrait
 
     public function getSecretAsync(string $storeName, string $key, array $metadata = []): PromiseInterface
     {
+        $storeName = rawurlencode($storeName);
+        $key = rawurlencode($key);
         return $this->handlePromise(
             $this->httpClient->getAsync("/v1.0/secrets/$storeName/$key", ['query' => $metadata]),
             fn(ResponseInterface $response) => $this->deserializer->from_json(
@@ -43,6 +45,7 @@ trait HttpSecretsTrait
 
     public function getBulkSecretAsync(string $storeName, array $metadata = []): PromiseInterface
     {
+        $storeName = rawurlencode($storeName);
         return $this->handlePromise(
             $this->httpClient->getAsync(
                 "/v1.0/secrets/$storeName/bulk",

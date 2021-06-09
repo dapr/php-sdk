@@ -51,7 +51,7 @@ class DaprHttpClient extends DaprClient
     {
         return $this->handlePromise(
             $this->httpClient->putAsync(
-                '/v1.0/bindings/' . $bindingRequest->bindingName,
+                '/v1.0/bindings/' . rawurlencode($bindingRequest->bindingName),
                 [
                     'body' => $this->serializer->as_json(
                         [
@@ -88,6 +88,8 @@ class DaprHttpClient extends DaprClient
             'query' => $metadata,
             'body' => $this->serializer->as_json($data)
         ];
+        $pubsubName = rawurlencode($pubsubName);
+        $topicName = rawurlencode($topicName);
         return $this->handlePromise($this->httpClient->postAsync("/v1.0/publish/$pubsubName/$topicName", $options));
     }
 
@@ -118,6 +120,8 @@ class DaprHttpClient extends DaprClient
             $options['body'] = $this->serializer->as_json($data);
         }
         $options['headers'] = $metadata;
+        $appId = rawurlencode($appId);
+        $methodName = rawurlencode($methodName);
         return $this->handlePromise(
             $this->httpClient->requestAsync($httpMethod, "/v1.0/invoke/$appId/$methodName", $options)
         );

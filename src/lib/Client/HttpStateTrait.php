@@ -60,6 +60,8 @@ trait HttpStateTrait
             $options['concurrency'] = $consistency->get_concurrency();
         }
         $options = array_merge($options, $metadata);
+        $storeName = rawurlencode($storeName);
+        $key = rawurlencode($key);
         return $this->handlePromise(
             $this->httpClient->getAsync(
                 "/v1.0/state/$storeName/$key",
@@ -95,6 +97,7 @@ trait HttpStateTrait
         array $metadata = []
     ): PromiseInterface {
         $item = new StateItem($key, $value, $consistency, null, $metadata);
+        $storeName = rawurlencode($storeName);
         return $this->handlePromise(
             $this->httpClient->postAsync(
                 "/v1.0/state/$storeName",
@@ -125,6 +128,7 @@ trait HttpStateTrait
         array $metadata = []
     ): PromiseInterface {
         $item = new StateItem($key, $value, $consistency ?? new EventualFirstWrite(), $etag, $metadata);
+        $storeName = rawurlencode($storeName);
         return $this->handlePromise(
             $this->httpClient->postAsync(
                 "/v1.0/state/$storeName",
@@ -190,6 +194,7 @@ trait HttpStateTrait
                 ]
             ),
         ];
+        $storeName = rawurlencode($storeName);
         return $this->handlePromise($this->httpClient->postAsync("/v1.0/state/$storeName/transaction", $options));
     }
 
@@ -219,6 +224,8 @@ trait HttpStateTrait
         array $metadata = []
     ): PromiseInterface {
         $consistency ??= new EventualFirstWrite();
+        $storeName = rawurlencode($storeName);
+        $key = rawurlencode($key);
         return $this->handlePromise(
             $this->httpClient->deleteAsync(
                 "/v1.0/state/$storeName/$key",
