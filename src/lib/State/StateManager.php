@@ -27,12 +27,16 @@ class StateManager implements IManageState
     protected static WeakMap $obj_meta;
 
     public function __construct(
-        protected LoggerInterface $logger,
-        protected ISerializer $serializer,
-        protected IDeserializer $deserializer,
-        protected DaprClient $client
+        protected LoggerInterface|null $logger = null,
+        protected ISerializer|null $serializer = null,
+        protected IDeserializer|null $deserializer = null,
+        protected DaprClient|\Dapr\Client\DaprClient|null $client = null
     ) {
-        if ( ! isset(self::$obj_meta)) {
+        if ($client instanceof \Dapr\Client\DaprClient && ($logger !== null || $serializer !== null || $deserializer !== null)) {
+            throw new \LogicException('All parameters must be null when using the new client!');
+        }
+
+        if (!isset(self::$obj_meta)) {
             self::$obj_meta = new WeakMap();
         }
     }
@@ -45,6 +49,10 @@ class StateManager implements IManageState
         string $store_name,
         StateItem $item
     ): void {
+        if ($this->client instanceof \Dapr\Client\DaprClient) {
+            $this->client->saveState($store_name, $item->key, $item->value, $item->consistency, $item->metadata);
+            return;
+        }
         $request = [
             $this->serializer->as_array($item),
         ];
@@ -60,8 +68,19 @@ class StateManager implements IManageState
         string $key,
         mixed $default_value = null,
         array $metadata = [],
-        ?Consistency $consistency = null
+        ?Consistency $consistency = null,
+        string $as_type = 'mixed'
     ): StateItem {
+        if ($this->client instanceof \Dapr\Client\DaprClient) {
+            ['etag' => $etag, 'value' => $value] = $this->client->getStateAndEtag(
+                $store_name,
+                $key,
+                $as_type,
+                $consistency,
+                $metadata
+            );
+            return new StateItem($key, $value ?? $default_value, $consistency, $etag, $metadata);
+        }
         $data = $this->client->get("/state/$store_name/$key", $metadata);
         switch ($data->code) {
             case KeyResponse::KEY_NOT_FOUND:
@@ -74,6 +93,10 @@ class StateManager implements IManageState
 
     public function delete_keys(string $store_name, array $keys, array $metadata = []): void
     {
+        if ($this->client instanceof \Dapr\Client\DaprClient) {
+            throw new \LogicException('not implemented');
+        }
+
         foreach ($keys as $key) {
             $this->client->delete("/state/$store_name/$key", $metadata);
         }
@@ -91,18 +114,18 @@ class StateManager implements IManageState
     ): void {
         $this->logger->debug('Saving state');
         $reflection = new ReflectionClass($item);
-        $store      = self::get_description($reflection);
-        $keys       = self::$obj_meta[$item] ?? [];
-        $request    = [];
+        $store = self::get_description($reflection);
+        $keys = self::$obj_meta[$item] ?? [];
+        $request = [];
         foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
-            $key   = $prefix.$property->getName();
+            $key = $prefix . $property->getName();
             $value = [
-                'key'   => $key,
+                'key' => $key,
                 'value' => $this->serializer->as_array($item->{$property->getName()} ?? null),
             ];
 
             if (isset($keys[$key]['etag'])) {
-                $value['etag']    = $keys[$key]['etag'];
+                $value['etag'] = $keys[$key]['etag'];
                 $value['options'] = [
                     'consistency' => ($consistency ?? new EventualLastWrite())->get_consistency(),
                     'concurrency' => ($consistency ?? new EventualLastWrite())->get_concurrency(),
@@ -114,6 +137,10 @@ class StateManager implements IManageState
             $request[] = $value;
         }
 
+        if ($this->client instanceof \Dapr\Client\DaprClient) {
+            throw new \LogicException('Not implemented');
+        }
+
         $this->client->post("/state/{$store->name}", $request);
     }
 
@@ -123,16 +150,20 @@ class StateManager implements IManageState
      */
     public function load_object(object $into, string $prefix = '', int $parallelism = 10, array $metadata = []): void
     {
+        if ($this->client instanceof \Dapr\Client\DaprClient) {
+            throw new \LogicException('Not implemented');
+        }
+
         $this->logger->debug('Loading state');
         $reflection = new ReflectionClass($into);
         $store_name = self::get_description($reflection)->name;
-        $keys       = [];
+        $keys = [];
         $properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
-        $result     = $this->client->post(
+        $result = $this->client->post(
             "/state/$store_name/bulk",
             [
-                'keys'        => array_map(
-                    fn($key) => $prefix.$key,
+                'keys' => array_map(
+                    fn($key) => $prefix . $key,
                     array_column($properties, 'name')
                 ),
                 'parallelism' => $parallelism,
@@ -140,7 +171,7 @@ class StateManager implements IManageState
             $metadata
         );
         foreach ($result->data as $value) {
-            $key       = $value['key'];
+            $key = $value['key'];
             $prop_name = empty($prefix) ? $key : substr($key, strlen($prefix));
             if (isset($value['data'])) {
                 $value['data'] = $this->deserializer->detect_from_property(
@@ -149,10 +180,10 @@ class StateManager implements IManageState
                 );
             }
             if (isset($value['data']) && $value['data'] !== null) {
-                $into->$prop_name   = $value['data'];
+                $into->$prop_name = $value['data'];
                 $keys[$key]['etag'] = $value['etag'];
             } elseif (isset($value['etag'])) {
-                $into->$prop_name   = null;
+                $into->$prop_name = null;
                 $keys[$key]['etag'] = $value['etag'];
             }
         }
