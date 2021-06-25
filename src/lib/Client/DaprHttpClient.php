@@ -121,6 +121,7 @@ class DaprHttpClient extends DaprClient
         }
         $options['headers'] = $metadata;
         $appId = rawurlencode($appId);
+        $methodName = rawurlencode($methodName);
         return $this->handlePromise(
             $this->httpClient->requestAsync($httpMethod, "/v1.0/invoke/$appId/method/$methodName", $options)
         );
