@@ -20,7 +20,9 @@ trait PromiseHandlingTrait
         callable|null $errorTransformer = null
     ): PromiseInterface {
         if (empty($transformResult)) {
-            $transformResult = fn(ResponseInterface $response) => $response;
+            $transformResult = fn(
+                ResponseInterface|DaprException $response
+            ) => $response instanceof DaprException ? throw $response : $response;
         }
         if (empty($errorTransformer)) {
             $errorTransformer = fn(\Throwable $exception) => match ($exception::class) {
