@@ -257,4 +257,40 @@ trait HttpStateTrait
     ): bool {
         return $this->tryDeleteStateAsync($storeName, $key, $etag, $consistency, $metadata)->wait();
     }
+
+    public function getBulkState(string $storeName, array $keys, int $parallelism = 10, array $metadata = [])
+    {
+        return $this->getBulkStateAsync($storeName, $keys, $parallelism, $metadata)->wait();
+    }
+
+    public function getBulkStateAsync(
+        string $storeName,
+        array $keys,
+        int $parallelism = 10,
+        array $metadata = []
+    ): PromiseInterface {
+        $storeName = rawurlencode($storeName);
+        return $this->handlePromise(
+            $this->httpClient->postAsync(
+                "/v1.0/state/$storeName/bulk",
+                [
+                    'body' => $this->serializer->as_json(
+                        [
+                            'keys' => $keys,
+                            'parallelism' => $parallelism
+                        ]
+                    ),
+                    'query' => array_merge(
+                        ...array_map(fn($key, $value) => ["metadata.$key" => $value], array_keys($metadata), $metadata)
+                    )
+                ]
+            ),
+            fn(ResponseInterface $response) => array_merge(
+                ...array_map(
+                       fn($result) => [$result['key'] => ['value' => $result['data'], 'etag' => $result['etag']]],
+                       $this->deserializer->from_json('array', $response->getBody()->getContents())
+                   )
+            )
+        );
+    }
 }
