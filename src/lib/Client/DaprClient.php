@@ -9,6 +9,7 @@ use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
@@ -17,8 +18,11 @@ use Psr\Log\NullLogger;
  */
 abstract class DaprClient
 {
-    public function __construct(public IDeserializer $deserializer, public ISerializer $serializer)
-    {
+    public function __construct(
+        public IDeserializer $deserializer,
+        public ISerializer $serializer,
+        public LoggerInterface $logger
+    ) {
     }
 
     public static function clientBuilder(): DaprClientBuilder
@@ -83,7 +87,8 @@ abstract class DaprClient
         string $pubsubName,
         string $topicName,
         mixed $data,
-        array $metadata = []
+        array $metadata = [],
+        string $contentType = 'application/json'
     ): void;
 
     /**
@@ -98,7 +103,8 @@ abstract class DaprClient
         string $pubsubName,
         string $topicName,
         mixed $data,
-        array $metadata = []
+        array $metadata = [],
+        string $contentType = 'application/json'
     ): PromiseInterface;
 
     /**

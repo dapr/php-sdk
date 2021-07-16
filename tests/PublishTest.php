@@ -3,11 +3,15 @@
 use Dapr\DaprClient;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Publish;
+use Dapr\PubSub\Topic;
 use DI\DependencyException;
 use DI\NotFoundException;
 
-require_once __DIR__.'/DaprTests.php';
+require_once __DIR__ . '/DaprTests.php';
 
+/**
+ * Class PublishTest
+ */
 class PublishTest extends DaprTests
 {
     /**
@@ -16,25 +20,18 @@ class PublishTest extends DaprTests
      */
     public function testSimplePublish()
     {
-        $publisher = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
-        $this->get_client()->register_post(
-            '/publish/pubsub/topic',
-            200,
-            null,
-            [
-                'my' => 'event',
-            ]
-        );
-        $publisher->topic('topic')->publish(['my' => 'event']);
+        $client = $this->get_new_client();
+        $client->expects($this->once())->method('publishEvent')->with();
+        $topic = new Topic('pubsub', 'topic', $client);
+        $topic->publish(['my' => 'event']);
     }
 
     public function testBinaryPublish()
     {
-        $publisher = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
-        $this->get_client()->register_post('/publish/pubsub/topic', 200, null, 'data');
-        $publisher->topic('topic')->publish('data', content_type: 'application/octet-stream');
-        $client = $this->container->get(DaprClient::class);
-        $this->assertSame(['Content-Type: application/octet-stream'], $client->extra_headers);
+        $client = $this->get_new_client();
+        $client->expects($this->once())->method('publishEvent');
+        $topic = new Topic('pubsub', 'test', $client);
+        $topic->publish('data', content_type: 'application/octet-stream');
     }
 
     /**
@@ -43,28 +40,28 @@ class PublishTest extends DaprTests
      */
     public function testCloudEventPublish()
     {
-        $publisher                = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
-        $event                    = new CloudEvent();
-        $event->data              = ['my' => 'event'];
-        $event->type              = 'type';
-        $event->subject           = 'subject';
-        $event->id                = 'id';
+        $publisher = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
+        $event = new CloudEvent();
+        $event->data = ['my' => 'event'];
+        $event->type = 'type';
+        $event->subject = 'subject';
+        $event->id = 'id';
         $event->data_content_type = 'application/json';
-        $event->source            = 'source';
-        $event->time              = new DateTime('2020-12-12T20:47:00+00:00Z');
+        $event->source = 'source';
+        $event->time = new DateTime('2020-12-12T20:47:00+00:00Z');
         $this->get_client()->register_post(
             '/publish/pubsub/topic',
             200,
             null,
             [
-                'id'              => 'id',
-                'source'          => 'source',
-                'specversion'     => '1.0',
-                'type'            => 'type',
+                'id' => 'id',
+                'source' => 'source',
+                'specversion' => '1.0',
+                'type' => 'type',
                 'datacontenttype' => 'application/json',
-                'subject'         => 'subject',
-                'time'            => '2020-12-12T20:47:00+00:00Z',
-                'data'            => [
+                'subject' => 'subject',
+                'time' => '2020-12-12T20:47:00+00:00Z',
+                'data' => [
                     'my' => 'event',
                 ],
             ]
@@ -89,7 +86,7 @@ class PublishTest extends DaprTests
     "data" : "<note><to>User1</to><from>user2</from><message>hi</message></note>"
 }
 JSON;
-        $event     = CloudEvent::parse($eventjson);
+        $event = CloudEvent::parse($eventjson);
         $this->assertTrue($event->validate());
         $this->assertSame('https://example.com/message', $event->source);
     }
@@ -109,7 +106,7 @@ JSON;
     "data_base64": "ZGF0YQ=="
 }
 JSON;
-        $event     = CloudEvent::parse($eventjson);
+        $event = CloudEvent::parse($eventjson);
         $this->assertTrue($event->validate());
         $this->assertSame('data', $event->data);
     }

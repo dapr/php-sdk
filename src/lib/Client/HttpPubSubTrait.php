@@ -23,20 +23,27 @@ trait HttpPubSubTrait
     /**
      * @throws DaprException
      */
-    public function publishEvent(string $pubsubName, string $topicName, mixed $data, array $metadata = []): void
-    {
-        $this->publishEventAsync($pubsubName, $topicName, $data, $metadata)->wait();
+    public function publishEvent(
+        string $pubsubName,
+        string $topicName,
+        mixed $data,
+        array $metadata = [],
+        string $contentType = 'application/json'
+    ): void {
+        $this->publishEventAsync($pubsubName, $topicName, $data, $metadata, $contentType)->wait();
     }
 
     public function publishEventAsync(
         string $pubsubName,
         string $topicName,
         mixed $data,
-        array $metadata = []
+        array $metadata = [],
+        string $contentType = 'application/json'
     ): PromiseInterface {
         $options = [
             'query' => $metadata,
-            'body' => $this->serializer->as_json($data)
+            'body' => $this->serializer->as_json($data),
+            'header' => []
         ];
         $pubsubName = rawurlencode($pubsubName);
         $topicName = rawurlencode($topicName);

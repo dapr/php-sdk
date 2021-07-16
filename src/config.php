@@ -131,7 +131,9 @@ return [
         'subscriptions',
         get('dapr.subscriptions')
     ),
-    Topic::class                    => autowire()->constructorParameter('logger', get('dapr.logger')),
+    Topic::class                    => autowire()
+        ->constructorParameter('logger', get('dapr.logger'))
+        ->constructorParameter('client', get(DaprClient::class)),
     Tracing::class                  => autowire(),
     Transaction::class              => autowire(),
     TransactionalState::class       => autowire()->constructorParameter('logger', get('dapr.logger')),

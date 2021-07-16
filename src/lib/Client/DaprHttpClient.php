@@ -5,6 +5,7 @@ namespace Dapr\Client;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
 use GuzzleHttp\Client;
+use Psr\Log\LoggerInterface;
 
 /**
  * Class DaprHttpClient
@@ -20,9 +21,13 @@ class DaprHttpClient extends DaprClient
 
     private Client $httpClient;
 
-    public function __construct(private string $baseHttpUri, IDeserializer $deserializer, ISerializer $serializer)
-    {
-        parent::__construct($deserializer, $serializer);
+    public function __construct(
+        private string $baseHttpUri,
+        IDeserializer $deserializer,
+        ISerializer $serializer,
+        LoggerInterface $logger
+    ) {
+        parent::__construct($deserializer, $serializer, $logger);
         if (str_ends_with($this->baseHttpUri, '/')) {
             $this->baseHttpUri = rtrim($this->baseHttpUri, '/');
         }

@@ -5,6 +5,7 @@ namespace Dapr\PubSub;
 use Dapr\Client\DaprClient as NewClient;
 use Dapr\DaprClient;
 use Dapr\exceptions\DaprException;
+use JetBrains\PhpStorm\Deprecated;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -17,7 +18,7 @@ class Topic
         private string $pubsub,
         private string $topic,
         private DaprClient|NewClient $client,
-        private LoggerInterface|null $logger = null
+        #[Deprecated(since: '1.2.0')] private LoggerInterface|null $logger = null
     ) {
     }
 
@@ -32,7 +33,11 @@ class Topic
      */
     public function publish(mixed $event, ?array $metadata = null, string $content_type = 'application/json'): bool
     {
-        $this->logger->debug('Sending {event} to {topic}', ['event' => $event, 'topic' => $this->topic]);
+        if ($this->logger !== null) {
+            $this->logger->debug('Sending {event} to {topic}', ['event' => $event, 'topic' => $this->topic]);
+        } elseif ($this->client instanceof NewClient) {
+            $this->client->logger->debug('Sending {event} to {topic}', ['event' => $event, 'topic' => $this->topic]);
+        }
         if ($event instanceof CloudEvent) {
             $this->client->extra_headers = [
                 'Content-Type: application/cloudevents+json',
@@ -51,9 +56,11 @@ class Topic
             } catch (DaprException) { // @codeCoverageIgnoreStart
                 return false;
             } // @codeCoverageIgnoreEnd
-        } elseif ($this->client instanceof NewClient) {
+        }
+
+        if ($this->client instanceof NewClient) {
             try {
-                $this->client->publishEvent($this->pubsub, $this->topic, $event, $metadata);
+                $this->client->publishEvent($this->pubsub, $this->topic, $event, $metadata ?? [], $content_type);
                 return true;
             } catch (DaprException) {
                 return false;
