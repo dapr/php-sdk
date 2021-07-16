@@ -1,6 +1,5 @@
 <?php
 
-use Dapr\DaprClient;
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Publish;
 use Dapr\PubSub\Topic;
@@ -21,7 +20,13 @@ class PublishTest extends DaprTests
     public function testSimplePublish()
     {
         $client = $this->get_new_client();
-        $client->expects($this->once())->method('publishEvent')->with();
+        $client->expects($this->once())->method('publishEvent')->with(
+            $this->equalTo('pubsub'),
+            $this->equalTo('topic'),
+            $this->equalTo(['my' => 'event']),
+            $this->equalTo([]),
+            $this->equalTo('application/json')
+        );
         $topic = new Topic('pubsub', 'topic', $client);
         $topic->publish(['my' => 'event']);
     }
@@ -29,7 +34,13 @@ class PublishTest extends DaprTests
     public function testBinaryPublish()
     {
         $client = $this->get_new_client();
-        $client->expects($this->once())->method('publishEvent');
+        $client->expects($this->once())->method('publishEvent')->with(
+            $this->equalTo('pubsub'),
+            $this->equalTo('test'),
+            $this->equalTo('data'),
+            $this->equalTo([]),
+            $this->equalTo('application/octet-stream')
+        );
         $topic = new Topic('pubsub', 'test', $client);
         $topic->publish('data', content_type: 'application/octet-stream');
     }
@@ -40,7 +51,6 @@ class PublishTest extends DaprTests
      */
     public function testCloudEventPublish()
     {
-        $publisher = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
         $event = new CloudEvent();
         $event->data = ['my' => 'event'];
         $event->type = 'type';
@@ -49,6 +59,30 @@ class PublishTest extends DaprTests
         $event->data_content_type = 'application/json';
         $event->source = 'source';
         $event->time = new DateTime('2020-12-12T20:47:00+00:00Z');
+
+        $client = $this->get_new_client();
+        $client->expects($this->once())->method('publishEvent')->with(
+            $this->equalTo('pubsub'),
+            $this->equalTo('test'),
+            $this->equalTo([
+                               'id' => 'id',
+                               'source' => 'source',
+                               'specversion' => '1.0',
+                               'type' => 'type',
+                               'datacontenttype' => 'application/json',
+                               'subject' => 'subject',
+                               'time' => '2020-12-12T20:47:00+00:00Z',
+                               'data' => [
+                                   'my' => 'event',
+                               ],
+                           ]),
+            $this->equalTo([]),
+            $this->equalTo('application/cloudevents+json')
+        );
+        $topic = new Topic('pubsub', 'test', $client);
+        $topic->publish($event);
+
+        $publisher = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
         $this->get_client()->register_post(
             '/publish/pubsub/topic',
             200,

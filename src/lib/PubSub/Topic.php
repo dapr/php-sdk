@@ -39,6 +39,7 @@ class Topic
             $this->client->logger->debug('Sending {event} to {topic}', ['event' => $event, 'topic' => $this->topic]);
         }
         if ($event instanceof CloudEvent) {
+            $content_type = 'application/cloudevents+json';
             $this->client->extra_headers = [
                 'Content-Type: application/cloudevents+json',
             ];
