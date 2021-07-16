@@ -4,6 +4,7 @@ namespace Dapr\Client;
 
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
+use Dapr\State\StateItem;
 use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
 

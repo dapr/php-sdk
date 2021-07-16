@@ -108,6 +108,21 @@ trait HttpStateTrait
         );
     }
 
+    public function saveBulkState(string $storeName, array $stateItems): bool
+    {
+        return $this->saveBulkStateAsync($storeName, $stateItems)->wait();
+    }
+
+    public function saveBulkStateAsync(string $storeName, array $stateItems): PromiseInterface
+    {
+        $storeName = rawurlencode($storeName);
+        return $this->handlePromise(
+            $this->httpClient->postAsync("/v1.0/state/$storeName", ['body' => $this->serializer->as_json($stateItems)]),
+            fn(ResponseInterface $response) => $response->getStatusCode() === 200,
+            fn(\Throwable $ex) => false
+        );
+    }
+
     public function trySaveState(
         string $storeName,
         string $key,
