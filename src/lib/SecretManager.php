@@ -3,6 +3,7 @@
 namespace Dapr;
 
 use Dapr\exceptions\DaprException;
+use JetBrains\PhpStorm\Deprecated;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -10,6 +11,7 @@ use Psr\Log\LoggerInterface;
  * @see https://v1-rc1.docs.dapr.io/reference/api/secrets_api/
  * @package Dapr
  */
+#[Deprecated(since: '1.2.0')]
 class SecretManager
 {
     public function __construct(protected DaprClient $client, protected LoggerInterface $logger)
