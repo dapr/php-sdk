@@ -19,30 +19,40 @@ class PublishTest extends DaprTests
      */
     public function testSimplePublish()
     {
-        $client = $this->get_new_client();
-        $client->expects($this->once())->method('publishEvent')->with(
-            $this->equalTo('pubsub'),
-            $this->equalTo('topic'),
-            $this->equalTo(['my' => 'event']),
-            $this->equalTo([]),
-            $this->equalTo('application/json')
+        $container = $this->get_http_client_stack(
+            [
+                new \GuzzleHttp\Psr7\Response(204)
+            ]
         );
+        $client = $this->get_new_client_with_http($container->client);
         $topic = new Topic('pubsub', 'topic', $client);
-        $topic->publish(['my' => 'event']);
+        $topic->publish(['my' => 'event'], ['test' => 'meta']);
+
+        $request = $container->history[0]['request'];
+        $this->assertRequestMethod('POST', $request);
+        $this->assertRequestUri('/v1.0/publish/pubsub/topic', $request);
+        $this->assertRequestQueryString('metadata.test=meta', $request);
+        $this->assertRequestHasHeaders(['Content-Type' => 'application/json'], $request);
+        $this->assertRequestBody(json_encode(['my' => 'event']), $request);
     }
 
     public function testBinaryPublish()
     {
-        $client = $this->get_new_client();
-        $client->expects($this->once())->method('publishEvent')->with(
-            $this->equalTo('pubsub'),
-            $this->equalTo('test'),
-            $this->equalTo('data'),
-            $this->equalTo([]),
-            $this->equalTo('application/octet-stream')
+        $container = $this->get_http_client_stack(
+            [
+                new \GuzzleHttp\Psr7\Response(204),
+            ]
         );
+        $client = $this->get_new_client_with_http($container->client);
         $topic = new Topic('pubsub', 'test', $client);
         $topic->publish('data', content_type: 'application/octet-stream');
+
+        $request = $container->history[0]['request'];
+        $this->assertRequestMethod('POST', $request);
+        $this->assertRequestUri('/v1.0/publish/pubsub/test', $request);
+        $this->assertRequestQueryString('', $request);
+        $this->assertRequestHasHeaders(['Content-Type' => 'application/octet-stream'], $request);
+        $this->assertRequestBody('"data"', $request);
     }
 
     /**
@@ -51,6 +61,9 @@ class PublishTest extends DaprTests
      */
     public function testCloudEventPublish()
     {
+        $container = $this->get_http_client_stack([new \GuzzleHttp\Psr7\Response(204)]);
+        $client = $this->get_new_client_with_http($container->client);
+
         $event = new CloudEvent();
         $event->data = ['my' => 'event'];
         $event->type = 'type';
@@ -60,25 +73,6 @@ class PublishTest extends DaprTests
         $event->source = 'source';
         $event->time = new DateTime('2020-12-12T20:47:00+00:00Z');
 
-        $client = $this->get_new_client();
-        $client->expects($this->once())->method('publishEvent')->with(
-            $this->equalTo('pubsub'),
-            $this->equalTo('test'),
-            $this->equalTo([
-                               'id' => 'id',
-                               'source' => 'source',
-                               'specversion' => '1.0',
-                               'type' => 'type',
-                               'datacontenttype' => 'application/json',
-                               'subject' => 'subject',
-                               'time' => '2020-12-12T20:47:00+00:00Z',
-                               'data' => [
-                                   'my' => 'event',
-                               ],
-                           ]),
-            $this->equalTo([]),
-            $this->equalTo('application/cloudevents+json')
-        );
         $topic = new Topic('pubsub', 'test', $client);
         $topic->publish($event);
 
@@ -101,6 +95,16 @@ class PublishTest extends DaprTests
             ]
         );
         $publisher->topic('topic')->publish($event);
+
+        $request = $container->history[0]['request'];
+        $this->assertRequestMethod('POST', $request);
+        $this->assertRequestUri('/v1.0/publish/pubsub/test', $request);
+        $this->assertRequestQueryString('', $request);
+        $this->assertRequestHasHeaders(['Content-Type' => 'application/cloudevents+json'], $request);
+        $this->assertRequestBody(
+            '{"id":"id","source":"source","specversion":"1.0","type":"type","datacontenttype":"application\/json","subject":"subject","time":"2020-12-12T20:47:00+00:00Z","data":{"my":"event"}}',
+            $request
+        );
     }
 
     /**

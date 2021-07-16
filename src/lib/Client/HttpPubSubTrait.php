@@ -30,7 +30,7 @@ trait HttpPubSubTrait
         array $metadata = [],
         string $contentType = 'application/json'
     ): void {
-        $this->publishEventAsync($pubsubName, $topicName, $data, $metadata, $contentType)->wait();
+        $this->publishEventAsync($pubsubName, $topicName, $data, $metadata, $contentType)->wait(true);
     }
 
     public function publishEventAsync(
@@ -45,7 +45,9 @@ trait HttpPubSubTrait
                 ...array_map(fn($key, $value) => ["metadata.$key" => $value], array_keys($metadata), $metadata)
             ),
             'body' => $this->serializer->as_json($data),
-            'header' => []
+            'headers' => [
+                'Content-Type' => $contentType,
+            ]
         ];
         $pubsubName = rawurlencode($pubsubName);
         $topicName = rawurlencode($topicName);
