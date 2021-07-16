@@ -112,7 +112,7 @@ abstract class DaprClient
      */
     abstract public function invokeMethod(
         string $httpMethod,
-        string $appId,
+        AppId $appId,
         string $methodName,
         mixed $data = null,
         array $metadata = []
@@ -129,7 +129,7 @@ abstract class DaprClient
      */
     abstract public function invokeMethodAsync(
         string $httpMethod,
-        string $appId,
+        AppId $appId,
         string $methodName,
         mixed $data = null,
         array $metadata = []
@@ -152,6 +152,34 @@ abstract class DaprClient
         Consistency $consistency = null,
         array $metadata = []
     ): PromiseInterface;
+
+    /**
+     * @param string $storeName
+     * @param array<string> $keys
+     * @param int $parallelism
+     * @param array<array-key, string> $metadata
+     * @return PromiseInterface<array<array-key, array>>
+     */
+    abstract public function getBulkStateAsync(
+        string $storeName,
+        array $keys,
+        int $parallelism = 10,
+        array $metadata = []
+    ): PromiseInterface;
+
+    /**
+     * @param string $storeName
+     * @param array<string> $keys
+     * @param int $parallelism
+     * @param array<array-key, string> $metadata
+     * @return array<array-key, array>
+     */
+    abstract public function getBulkState(
+        string $storeName,
+        array $keys,
+        int $parallelism = 10,
+        array $metadata = []
+    ): array;
 
     /**
      * @template T
