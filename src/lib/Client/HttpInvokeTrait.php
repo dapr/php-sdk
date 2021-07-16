@@ -26,7 +26,7 @@ trait HttpInvokeTrait
      */
     public function invokeMethod(
         string $httpMethod,
-        string $appId,
+        AppId $appId,
         string $methodName,
         mixed $data = null,
         array $metadata = []
@@ -38,7 +38,7 @@ trait HttpInvokeTrait
 
     public function invokeMethodAsync(
         string $httpMethod,
-        string $appId,
+        AppId $appId,
         string $methodName,
         mixed $data = null,
         array $metadata = []
@@ -48,7 +48,7 @@ trait HttpInvokeTrait
             $options['body'] = $this->serializer->as_json($data);
         }
         $options['headers'] = $metadata;
-        $appId = rawurlencode($appId);
+        $appId = rawurlencode($appId->getAddress());
         $methodName = rawurlencode($methodName);
         return $this->handlePromise(
             $this->httpClient->requestAsync($httpMethod, "/v1.0/invoke/$appId/method/$methodName", $options)
