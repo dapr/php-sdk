@@ -55,6 +55,9 @@ trait HttpStateTrait
         array $metadata = []
     ): PromiseInterface {
         $options = [];
+        $metadata = array_merge(
+            ...array_map(fn($key, $value) => ["metadata.$key" => $value], array_keys($metadata), $metadata)
+        );
         if (!empty($consistency)) {
             $options['consistency'] = $consistency->get_consistency();
             $options['concurrency'] = $consistency->get_concurrency();
@@ -302,7 +305,12 @@ trait HttpStateTrait
             ),
             fn(ResponseInterface $response) => array_merge(
                 ...array_map(
-                       fn($result) => [$result['key'] => ['value' => $result['data'], 'etag' => $result['etag']]],
+                       fn($result) => [
+                           $result['key'] => [
+                               'value' => $result['data'] ?? null,
+                               'etag' => $result['etag'] ?? null
+                           ]
+                       ],
                        $this->deserializer->from_json('array', $response->getBody()->getContents())
                    )
             )

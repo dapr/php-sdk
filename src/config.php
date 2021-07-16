@@ -73,7 +73,7 @@ return [
         'logger',
         get('dapr.logger')
     ),
-    'dapr.client' => fn(ContainerInterface $container) => \Dapr\Client\DaprClient::clientBuilder()
+    \Dapr\Client\DaprClient::class => fn(ContainerInterface $container) => \Dapr\Client\DaprClient::clientBuilder()
         ->withDeserializationConfig($container->get(DeserializationConfig::class))
         ->withSerializationConfig($container->get(SerializationConfig::class))
         ->withLogger($container->get('dapr.logger'))
@@ -111,10 +111,7 @@ return [
         'logger',
         get('dapr.logger')
     ),
-    IManageState::class => autowire(StateManager::class)->constructorParameter(
-        'client',
-        get('dapr.client')
-    ),
+    IManageState::class => autowire(StateManager::class),
     ISerializer::class => autowire(Serializer::class)->constructorParameter('logger', get('dapr.logger')),
     ProxyFactory::class => autowire()->constructorParameter(
         'mode',

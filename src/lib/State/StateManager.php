@@ -40,7 +40,8 @@ class StateManager implements IManageState
         array $metadata = [],
         ?Consistency $consistency = null
     ): mixed {
-        return $this->client->getState($store_name, $key, consistency: $consistency, metadata: $metadata);
+        $response = $this->client->getStateAndEtag($store_name, $key, consistency: $consistency, metadata: $metadata);
+        return new StateItem($key, $response['value'], $consistency, $response['etag'] ?: null, $metadata);
     }
 
     public function delete_keys(string $store_name, array $keys, array $metadata = []): void
@@ -67,7 +68,7 @@ class StateManager implements IManageState
                 $property->getValue($item),
                 new $store->consistency,
                 $keys[$key],
-                $metadata
+                $metadata ?? []
             );
         }
         $this->client->saveBulkState($store->name, $items);
