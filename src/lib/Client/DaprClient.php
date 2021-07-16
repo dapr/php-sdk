@@ -404,12 +404,12 @@ abstract class DaprClient
      * @param array<array-key, string> $metadata
      * @return array<array-key, string>
      */
-    abstract public function getSecret(string $storeName, string $key, array $metadata = []): array;
+    abstract public function getSecret(string $storeName, string $key, array $metadata = []): array|null;
 
     /**
      * @param string $storeName
      * @param array<array-key, string> $metadata
-     * @return PromiseInterface<array<array-key,array<array-key, string>>>
+     * @return PromiseInterface<null|array<array-key,array<array-key, string>>>
      */
     abstract public function getBulkSecretAsync(string $storeName, array $metadata = []): PromiseInterface;
 

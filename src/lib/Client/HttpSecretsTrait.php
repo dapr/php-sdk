@@ -20,7 +20,7 @@ trait HttpSecretsTrait
     public ISerializer $serializer;
     private Client $httpClient;
 
-    public function getSecret(string $storeName, string $key, array $metadata = []): array
+    public function getSecret(string $storeName, string $key, array $metadata = []): array|null
     {
         return $this->getSecretAsync($storeName, $key, $metadata)->wait();
     }
@@ -30,7 +30,18 @@ trait HttpSecretsTrait
         $storeName = rawurlencode($storeName);
         $key = rawurlencode($key);
         return $this->handlePromise(
-            $this->httpClient->getAsync("/v1.0/secrets/$storeName/$key", ['query' => $metadata]),
+            $this->httpClient->getAsync(
+                "/v1.0/secrets/$storeName/$key",
+                [
+                    'query' => array_merge(
+                        ...array_map(
+                            fn($key, $value) => ["metadata.$key" => $value],
+                            array_keys($metadata),
+                            $metadata
+                        )
+                    )
+                ]
+            ),
             fn(ResponseInterface $response) => $this->deserializer->from_json(
                 'array',
                 $response->getBody()->getContents()
@@ -50,7 +61,13 @@ trait HttpSecretsTrait
             $this->httpClient->getAsync(
                 "/v1.0/secrets/$storeName/bulk",
                 [
-                    'query' => $metadata
+                    'query' => array_merge(
+                        ...array_map(
+                               fn($key, $value) => ["metadata.$key" => $value],
+                               array_keys($metadata),
+                               $metadata
+                           )
+                    )
                 ]
             ),
             fn(ResponseInterface $response) => $this->deserializer->from_json(
