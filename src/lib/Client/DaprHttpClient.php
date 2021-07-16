@@ -43,4 +43,17 @@ class DaprHttpClient extends DaprClient
             ]
         );
     }
+
+    public function isDaprHealthy(): bool
+    {
+        try {
+            $result = $this->httpClient->get('/v1.0/healthz');
+            if (200 === $result->getStatusCode()) {
+                return true;
+            }
+            return false;
+        } catch (\Throwable $exception) {
+            return false;
+        }
+    }
 }

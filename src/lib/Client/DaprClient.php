@@ -420,6 +420,8 @@ abstract class DaprClient
      */
     abstract public function getBulkSecret(string $storeName, array $metadata = []): array;
 
+    abstract public function isDaprHealthy(): bool;
+
     /**
      * @param string $token
      * @return null|array{dapr-api-token: string}
