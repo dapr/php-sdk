@@ -26,14 +26,14 @@ trait PromiseHandlingTrait
         }
         if (empty($errorTransformer)) {
             $errorTransformer = fn(\Throwable $exception) => match ($exception::class) {
-                ServerException::class, ClientException::class => new DaprException(
+                ServerException::class, ClientException::class => throw new DaprException(
                     $exception->hasResponse()
                         ? $exception->getResponse()->getBody()->getContents()
                         : $exception->getMessage(),
                     $exception->getCode(),
                     $exception
                 ),
-                default => $exception
+                default => throw $exception
             };
         }
         return $closure->then(

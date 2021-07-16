@@ -50,7 +50,8 @@ class DaprClientBuilder
         return new DaprHttpClient(
             $this->defaultHttpHost,
             new Deserializer($this->deserializationConfig, $this->logger),
-            new Serializer($this->serializationConfig, $this->logger)
+            new Serializer($this->serializationConfig, $this->logger),
+            $this->logger
         );
     }
 }

@@ -1,11 +1,10 @@
 <?php
 
-require_once __DIR__.'/../vendor/autoload.php';
-require_once __DIR__.'/../tests/Fixtures/SimpleActor.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../tests/Fixtures/SimpleActor.php';
 
 define('STORE', 'statestore');
 
-use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorReference;
 use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Actors\IActor;
@@ -20,7 +19,6 @@ use Dapr\exceptions\SaveStateFailure;
 use Dapr\exceptions\StateAlreadyCommitted;
 use Dapr\Formats;
 use Dapr\PubSub\CloudEvent;
-use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscription;
 use Dapr\PubSub\Topic;
 use Dapr\State\Attributes\StateStore;
@@ -53,7 +51,7 @@ $app = App::create(
                 new Subscription('pubsub', 'test', '/testsub'),
             ]
         ),
-        'dapr.actors'        => [SimpleActor::class],
+        'dapr.actors' => [SimpleActor::class],
     ]
 )
 );
@@ -61,14 +59,14 @@ $app = App::create(
 $app->get(
     '/test/actors',
     function (ProxyFactory $proxyFactory, DaprClient $client, LoggerInterface $logger) {
-        $id        = uniqid(prefix: 'actor_');
+        $id = uniqid(prefix: 'actor_');
         $reference = new ActorReference($id, 'SimpleActor');
 
         /**
          * @var ISimpleActor|IActor $actor
          */
         $actor = $reference->bind(ISimpleActor::class, $proxyFactory);
-        $body  = [];
+        $body = [];
 
         $logger->critical('Created actor proxy');
         $body = assert_equals($body, 0, $actor->get_count(), 'Empty actor should have no data');
@@ -78,7 +76,7 @@ $app->get(
 
         // get the actor proxy again
         $reference = ActorReference::get($actor);
-        $actor     = $reference->bind(ISimpleActor::class, $proxyFactory);
+        $actor = $reference->bind(ISimpleActor::class, $proxyFactory);
 
         $reminder = new Reminder(
             name: 'increment',
@@ -89,7 +87,7 @@ $app->get(
         $actor->create_reminder($reminder, $client);
         $logger->critical('Created reminder');
         sleep(2);
-        $body          = assert_equals($body, 3, $actor->get_count(), 'Reminder should increment');
+        $body = assert_equals($body, 3, $actor->get_count(), 'Reminder should increment');
         $read_reminder = $actor->get_reminder('increment', $client);
         $logger->critical('Got reminder');
         $body = assert_equals(
@@ -117,13 +115,13 @@ $app->get(
         $actor->delete_timer('nope', $client);
         $logger->critical('Cleaned up');
 
-        $object      = new SimpleObject();
+        $object = new SimpleObject();
         $object->bar = ['hello', 'world'];
         $object->foo = "hello world";
         $actor->set_object($object);
         $saved_object = $actor->get_object();
-        $body         = assert_equals($body, $object->bar, $saved_object->bar, "[object] saved array should match");
-        $body         = assert_equals($body, $object->foo, $saved_object->foo, "[object] saved string should match");
+        $body = assert_equals($body, $object->bar, $saved_object->bar, "[object] saved array should match");
+        $body = assert_equals($body, $object->foo, $saved_object->foo, "[object] saved string should match");
 
         $body = assert_equals($body, true, $actor->a_function(), 'actor can return a simple value');
 
@@ -134,7 +132,7 @@ $app->get(
 $app->get(
     '/test/state',
     function (StateManager $stateManager) {
-        $body  = [];
+        $body = [];
         $state = new SimpleState();
         $stateManager->save_object($state);
         $body = assert_equals($body, null, $state->data, 'state is empty');
@@ -149,17 +147,17 @@ $app->get(
         $body = assert_equals($body, 'data', $state->data, 'properly loaded saved state');
 
         $prefix = uniqid();
-        $state  = new SimpleState();
+        $state = new SimpleState();
         $stateManager->load_object($state, $prefix);
         $body = assert_not_equals($body, 'data', $state->data, 'prefix should work');
 
         $random_key = uniqid();
-        $state      = $stateManager->load_state('statestore', $random_key, 'hello');
-        $body       = assert_equals($body, 'hello', $state->value, 'single key read with default');
+        $state = $stateManager->load_state('statestore', $random_key, 'hello');
+        $body = assert_equals($body, 'hello', $state->value, 'single key read with default');
 
         $stateManager->save_state('statestore', $state);
         $state2 = $stateManager->load_state('statestore', $random_key, 'world');
-        $body   = assert_equals($body, 'hello', $state2->value, 'single key write');
+        $body = assert_equals($body, 'hello', $state2->value, 'single key write');
 
         return $body;
     }
@@ -168,19 +166,19 @@ $app->get(
 $app->get(
     '/test/state/concurrency',
     function (StateManager $stateManager) {
-        $last  = new #[StateStore(STORE, StrongLastWrite::class)] class extends SimpleState {
+        $last = new #[StateStore(STORE, StrongLastWrite::class)] class extends SimpleState {
         };
         $first = new #[StateStore(STORE, StrongFirstWrite::class)] class extends SimpleState {
         };
-        $body  = [];
-        $body  = assert_equals($body, 0, $last->counter, 'initial value correct');
+        $body = [];
+        $body = assert_equals($body, 0, $last->counter, 'initial value correct');
         $stateManager->save_object($last);
         $stateManager->load_object($last);
         $stateManager->load_object($first);
         $body = assert_equals($body, 0, $last->counter, 'Starting from 0');
 
         $first->counter = 1;
-        $last->counter  = 2;
+        $last->counter = 2;
         $stateManager->save_object($last);
         $stateManager->load_object($last);
         $body = assert_equals($body, 2, $last->counter, 'last-write update succeeds');
@@ -203,10 +201,10 @@ $app->get(
         $reset_state = $container->make(TState::class);
         $stateManager->save_object($reset_state);
         ($transaction = $container->make(TState::class))->begin();
-        $body                 = [];
-        $body                 = assert_equals($body, 0, $transaction->counter, 'initial count = 0');
+        $body = [];
+        $body = assert_equals($body, 0, $transaction->counter, 'initial count = 0');
         $transaction->counter += 1;
-        $body                 = assert_equals(
+        $body = assert_equals(
             $body,
             1,
             $transaction->counter,
@@ -271,12 +269,8 @@ $app->get(
 $app->get(
     '/test/pubsub',
     function (FactoryInterface $container) {
-        $publisher = $container->make(Publish::class, ['pubsub' => 'pubsub']);
-        /**
-         * @var Topic $topic
-         */
-        $topic = $publisher->topic(topic: 'test');
-        $body  = [];
+        $topic = new Topic('pubsub', 'test', \Dapr\Client\DaprClient::clientBuilder()->build());
+        $body = [];
 
         $topic->publish(['test_event']);
         sleep(5);
@@ -298,19 +292,19 @@ $app->get(
         );
 
         $return = ['simple-test' => $body];
-        $body   = [];
+        $body = [];
 
-        $event                    = new CloudEvent();
-        $event->id                = "123";
-        $event->source            = "http://example.com";
-        $event->type              = "com.example.test";
+        $event = new CloudEvent();
+        $event->id = "123";
+        $event->source = "http://example.com";
+        $event->type = "com.example.test";
         $event->data_content_type = 'application/json';
-        $event->subject           = 'yolo';
-        $event->time              = new DateTime();
-        $event->data              = ['yolo'];
+        $event->subject = 'yolo';
+        $event->time = new DateTime();
+        $event->data = ['yolo'];
         $topic->publish($event);
         sleep(5);
-        $body                           = assert_equals(
+        $body = assert_equals(
             $body,
             true,
             file_exists('/tmp/sub-received'),
@@ -319,20 +313,20 @@ $app->get(
         $body["Received this raw data"] = json_decode($raw_event = file_get_contents('/tmp/sub-received'));
         unlink('/tmp/sub-received');
         //unset($event->time);
-        $event->topic                = "test";
-        $event->pubsub_name          = "pubsub";
+        $event->topic = "test";
+        $event->pubsub_name = "pubsub";
         $body["Expecting this data"] = json_decode($event->to_json());
-        $received                    = CloudEvent::parse($raw_event);
+        $received = CloudEvent::parse($raw_event);
         unset($received->trace_id);
-        $body['Received this decoded data']   = json_decode($received->to_json());
-        $body                                 = assert_equals(
+        $body['Received this decoded data'] = json_decode($received->to_json());
+        $body = assert_equals(
             $body,
             $event->to_json(),
             $received->to_json(),
             'Event should be the same event we sent, minus the trace id.'
         );
         $return['Testing custom cloud event'] = $body;
-        $body                                 = [];
+        $body = [];
 
         $topic->publish(
             json_decode(
@@ -353,7 +347,7 @@ RAW
             )
         );
         sleep(2);
-        $body                       = assert_equals(
+        $body = assert_equals(
             $body,
             true,
             file_exists('/tmp/sub-received'),
@@ -381,14 +375,14 @@ RAW
 $app->get(
     '/test/invoke',
     function (DaprClient $client) {
-        $body   = [];
+        $body = [];
         $result = $client->post("/invoke/dev/method/say_something", "My Message");
-        $body   = assert_equals($body, 200, $result->code, 'Should receive a 200 response');
+        $body = assert_equals($body, 200, $result->code, 'Should receive a 200 response');
 
         $json = '{"ok": true}';
 
         $result = $client->post('/invoke/dev/method/test_json', $json);
-        $body   = assert_equals($body, 200, $result->code, 'Static function should receive json string');
+        $body = assert_equals($body, 200, $result->code, 'Static function should receive json string');
 
         return $body;
     }
@@ -408,8 +402,8 @@ $app->post(
 $app->get(
     '/test/binding',
     function () {
-        $body      = [];
-        $cron_file = sys_get_temp_dir().'/cron';
+        $body = [];
+        $cron_file = sys_get_temp_dir() . '/cron';
         //Binding::invoke_output('cron', 'delete');
         $body = assert_equals($body, true, file_exists($cron_file), 'we should have received at least one cron');
         // see https://github.com/dapr/components-contrib/issues/639
@@ -421,7 +415,7 @@ $app->get(
         return $body;
     }
 );
-$app->post('/cron', fn() => touch(sys_get_temp_dir().'/cron'));
+$app->post('/cron', fn() => touch(sys_get_temp_dir() . '/cron'));
 $app->post(
     '/testsub',
     function (
@@ -442,20 +436,20 @@ $app->get(
     '/do_tests',
     function (DaprClient $client) {
         $test_results = [
-            '/test/actors'            => null,
-            '/test/binding'           => null,
-            '/test/invoke'            => null,
-            '/test/pubsub'            => null,
+            '/test/actors' => null,
+            '/test/binding' => null,
+            '/test/invoke' => null,
+            '/test/pubsub' => null,
             '/test/state/concurrency' => null,
-            '/test/state'             => null,
+            '/test/state' => null,
         ];
 
         foreach (array_keys($test_results) as $suite) {
-            $result               = $client->get('/invoke/dev/method'.$suite);
-            $body                 = [];
-            $body                 = assert_equals($body, 200, $result->code, 'test completed successfully');
+            $result = $client->get('/invoke/dev/method' . $suite);
+            $body = [];
+            $body = assert_equals($body, 200, $result->code, 'test completed successfully');
             $test_results[$suite] = [
-                'status'  => $body,
+                'status' => $body,
                 'results' => $result->data,
             ];
         }
