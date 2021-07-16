@@ -258,7 +258,7 @@ trait HttpStateTrait
         return $this->tryDeleteStateAsync($storeName, $key, $etag, $consistency, $metadata)->wait();
     }
 
-    public function getBulkState(string $storeName, array $keys, int $parallelism = 10, array $metadata = [])
+    public function getBulkState(string $storeName, array $keys, int $parallelism = 10, array $metadata = []): array
     {
         return $this->getBulkStateAsync($storeName, $keys, $parallelism, $metadata)->wait();
     }
