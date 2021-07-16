@@ -41,7 +41,9 @@ trait HttpPubSubTrait
         string $contentType = 'application/json'
     ): PromiseInterface {
         $options = [
-            'query' => $metadata,
+            'query' => array_merge(
+                ...array_map(fn($key, $value) => ["metadata.$key" => $value], array_keys($metadata), $metadata)
+            ),
             'body' => $this->serializer->as_json($data),
             'header' => []
         ];
