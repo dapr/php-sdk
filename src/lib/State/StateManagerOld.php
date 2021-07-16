@@ -10,6 +10,7 @@ use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\Serialization\ISerializer;
 use Dapr\State\Internal\StateHelpers;
+use JetBrains\PhpStorm\Deprecated;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionException;
@@ -20,7 +21,8 @@ use WeakMap;
  * Class StateManager
  * @package Dapr\State
  */
-class StateManager implements IManageState
+#[Deprecated]
+class StateManagerOld implements IManageState
 {
     use StateHelpers;
 
