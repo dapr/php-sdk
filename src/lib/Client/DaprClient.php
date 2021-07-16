@@ -421,6 +421,13 @@ abstract class DaprClient
     abstract public function getBulkSecret(string $storeName, array $metadata = []): array;
 
     /**
+     * Check if the daprd instance is up and running.
+     *
+     * @return bool True if it is running, else false.
+     */
+    abstract public function isDaprHealthy(): bool;
+
+    /**
      * @param string $token
      * @return null|array{dapr-api-token: string}
      */
