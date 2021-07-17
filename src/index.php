@@ -437,8 +437,15 @@ $app->post(
 $app->get(
     '/do_tests',
     function (\Dapr\Client\DaprClient $client) {
-        while (!$client->isDaprHealthy()) {
+        while (true) {
             sleep(1);
+            if ($client->isDaprHealthy()) {
+                $meta = $client->getMetadata();
+                error_log(print_r($meta, true));
+                if (!empty($meta->actors)) {
+                    break;
+                }
+            }
         }
 
         $test_results = [
