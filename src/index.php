@@ -12,6 +12,7 @@ use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
 use Dapr\App;
 use Dapr\Attributes\FromBody;
+use Dapr\Client\AppId;
 use Dapr\consistency\StrongFirstWrite;
 use Dapr\consistency\StrongLastWrite;
 use Dapr\DaprClient;
@@ -268,8 +269,8 @@ $app->get(
 
 $app->get(
     '/test/pubsub',
-    function (FactoryInterface $container) {
-        $topic = new Topic('pubsub', 'test', \Dapr\Client\DaprClient::clientBuilder()->build());
+    function (\Dapr\Client\DaprClient $client) {
+        $topic = new Topic('pubsub', 'test', $client);
         $body = [];
 
         $topic->publish(['test_event']);
@@ -374,15 +375,15 @@ RAW
 
 $app->get(
     '/test/invoke',
-    function (DaprClient $client) {
+    function (\Dapr\Client\DaprClient $client) {
         $body = [];
-        $result = $client->post("/invoke/dev/method/say_something", "My Message");
-        $body = assert_equals($body, 200, $result->code, 'Should receive a 200 response');
+        $result = $client->invokeMethod('POST', new AppId('dev'), 'say_something', 'My Message');
+        $body = assert_equals($body, 200, $result->getStatusCode(), 'Should receive a 200 response');
 
         $json = '{"ok": true}';
 
-        $result = $client->post('/invoke/dev/method/test_json', $json);
-        $body = assert_equals($body, 200, $result->code, 'Static function should receive json string');
+        $result = $client->invokeMethod('POST', new AppId('dev'), 'test_json', $json);
+        $body = assert_equals($body, 200, $result->getStatusCode(), 'Static function should receive json string');
 
         return $body;
     }
@@ -434,7 +435,7 @@ $app->post(
 
 $app->get(
     '/do_tests',
-    function (DaprClient $client) {
+    function (\Dapr\Client\DaprClient $client) {
         $test_results = [
             '/test/actors' => null,
             '/test/binding' => null,
@@ -443,14 +444,15 @@ $app->get(
             '/test/state/concurrency' => null,
             '/test/state' => null,
         ];
+        $appId = new AppId('dev');
 
         foreach (array_keys($test_results) as $suite) {
-            $result = $client->get('/invoke/dev/method' . $suite);
+            $result = $client->invokeMethod('GET', $appId, $suite);
             $body = [];
-            $body = assert_equals($body, 200, $result->code, 'test completed successfully');
+            $body = assert_equals($body, 200, $result->getStatusCode(), 'test completed successfully');
             $test_results[$suite] = [
                 'status' => $body,
-                'results' => $result->data,
+                'results' => $result->getBody()->getContents(),
             ];
         }
 
