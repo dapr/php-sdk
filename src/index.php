@@ -437,12 +437,12 @@ $app->get(
     '/do_tests',
     function (\Dapr\Client\DaprClient $client) {
         $test_results = [
-            '/test/actors' => null,
-            '/test/binding' => null,
-            '/test/invoke' => null,
-            '/test/pubsub' => null,
-            '/test/state/concurrency' => null,
-            '/test/state' => null,
+            'test/actors' => null,
+            'test/binding' => null,
+            'test/invoke' => null,
+            'test/pubsub' => null,
+            'test/state/concurrency' => null,
+            'test/state' => null,
         ];
         $appId = new AppId('dev');
 

@@ -50,6 +50,7 @@ trait HttpInvokeTrait
         $options['headers'] = $metadata;
         $appId = rawurlencode($appId->getAddress());
         $methodName = rawurlencode($methodName);
+        $methodName = str_replace('%2F', '/', $methodName);
         return $this->handlePromise(
             $this->httpClient->requestAsync($httpMethod, "/v1.0/invoke/$appId/method/$methodName", $options)
         );

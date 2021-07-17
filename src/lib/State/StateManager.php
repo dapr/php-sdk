@@ -41,7 +41,7 @@ class StateManager implements IManageState
         ?Consistency $consistency = null
     ): mixed {
         $response = $this->client->getStateAndEtag($store_name, $key, consistency: $consistency, metadata: $metadata);
-        return new StateItem($key, $response['value'], $consistency, $response['etag'] ?: null, $metadata);
+        return new StateItem($key, $response['value'], $consistency, $response['etag'] ?: '', $metadata);
     }
 
     public function delete_keys(string $store_name, array $keys, array $metadata = []): void
