@@ -67,7 +67,7 @@ class StateManager implements IManageState
                 "$prefix$key",
                 $property->getValue($item),
                 new $store->consistency,
-                $keys[$key],
+                $keys[$key] ?? null,
                 $metadata ?? []
             );
         }
