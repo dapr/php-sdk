@@ -152,8 +152,6 @@ jobs:
         env:
           DAPR_VERSION: ${{ matrix.dapr-version }}
         run: docker-compose up -d
-      - name: Wait for environment stabilization
-        run: sleep 10
       - name: Execute Tests
         run: |
           STATUSCODE=$(curl --silent --output /tmp/test-results.json --write-out "%{http_code}" http://localhost:9502/do_tests)

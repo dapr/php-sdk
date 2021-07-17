@@ -435,6 +435,10 @@ $app->post(
 $app->get(
     '/do_tests',
     function (\Dapr\Client\DaprClient $client) {
+        while (!$client->isDaprHealthy()) {
+            sleep(1);
+        }
+
         $test_results = [
             'test/actors' => null,
             'test/binding' => null,
