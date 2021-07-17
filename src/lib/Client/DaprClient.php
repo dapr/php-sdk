@@ -445,6 +445,13 @@ abstract class DaprClient
     abstract public function isDaprHealthy(): bool;
 
     /**
+     * Retrieve metadata from the sidecar
+     *
+     * @return MetadataResponse
+     */
+    abstract public function getMetadata(): MetadataResponse|null;
+
+    /**
      * @param string $token
      * @return null|array{dapr-api-token: string}
      */
