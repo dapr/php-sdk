@@ -14,6 +14,7 @@ use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
 use InvalidArgumentException;
+use JetBrains\PhpStorm\Deprecated;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -23,7 +24,8 @@ use ReflectionProperty;
  * Class TransactionalState
  * @package Dapr\State
  */
-abstract class TransactionalState
+#[Deprecated]
+abstract class TransactionalStateOld
 {
     use StateHelpers;
 
