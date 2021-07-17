@@ -72,6 +72,9 @@ jobs:
         run: composer run-script lint
   build-integration-test-containers:
     runs-on: ubuntu-latest
+    needs:
+      - lint
+      - unit-tests
     strategy:
       matrix:
         image: [ 'caddy', 'tests' ]
