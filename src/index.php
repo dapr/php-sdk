@@ -451,9 +451,9 @@ $app->get(
             $result = $client->invokeMethod('GET', $appId, $suite);
             $body = [];
             $body = assert_equals($body, 200, $result->getStatusCode(), 'test completed successfully');
-            $all_results = json_decode($result->getBody()->getContents());
+            $all_results = json_decode($result->getBody()->getContents(), true);
             foreach ($all_results as $test => $assertion) {
-                if (!$has_failed && ($assertion === null || str_contains($assertion, '❌'))) {
+                if (!$has_failed && ($assertion === null || (is_string($assertion) && str_contains($assertion, '❌')))) {
                     $has_failed = true;
                 }
             }
