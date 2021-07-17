@@ -27,7 +27,6 @@ use Dapr\State\FileWriter;
 use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
 use DI\ContainerBuilder;
-use DI\FactoryInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -446,17 +445,25 @@ $app->get(
         ];
         $appId = new AppId('dev');
 
+        $has_failed = false;
+
         foreach (array_keys($test_results) as $suite) {
             $result = $client->invokeMethod('GET', $appId, $suite);
             $body = [];
             $body = assert_equals($body, 200, $result->getStatusCode(), 'test completed successfully');
+            $all_results = json_decode($result->getBody()->getContents());
+            foreach ($all_results as $test => $assertion) {
+                if (!$has_failed && ($assertion === null || str_contains($assertion, '❌'))) {
+                    $has_failed = true;
+                }
+            }
             $test_results[$suite] = [
                 'status' => $body,
-                'results' => json_decode($result->getBody()->getContents()),
+                'results' => $all_results,
             ];
         }
 
-        return $test_results;
+        return new \Nyholm\Psr7\Response($has_failed ? 500 : 200, body: json_encode($test_results));
     }
 );
 
