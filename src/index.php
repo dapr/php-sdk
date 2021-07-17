@@ -443,6 +443,7 @@ $app->get(
                 $meta = $client->getMetadata();
                 error_log(print_r($meta, true));
                 if (!empty($meta->actors)) {
+                    sleep(3);
                     break;
                 }
             }
