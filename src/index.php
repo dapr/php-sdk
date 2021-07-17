@@ -476,6 +476,12 @@ $app->get(
             ];
         }
 
+        $client->shutdown(afterRequest: false);
+
+        while ($client->isDaprHealthy()) {
+            error_log('waiting for daprd shutdown...');
+        }
+
         return new \Nyholm\Psr7\Response($has_failed ? 500 : 200, body: json_encode($test_results));
     }
 );

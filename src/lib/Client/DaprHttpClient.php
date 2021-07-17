@@ -66,4 +66,15 @@ class DaprHttpClient extends DaprClient
             return null;
         }
     }
+
+    public function shutdown(bool $afterRequest = true): void
+    {
+        $shutdown = fn() => $this->httpClient->post('/v1.0/shutdown');
+        if ($afterRequest) {
+            register_shutdown_function($shutdown);
+            return;
+        }
+
+        $shutdown();
+    }
 }
