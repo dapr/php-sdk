@@ -1,4 +1,4 @@
-# A Docker Compose file for spinning up integration tests in CI
+# A Docker Compose file for spinning up integration tests in CI, you can run these locally by running `make`
 version: "3"
 services:
   placement:

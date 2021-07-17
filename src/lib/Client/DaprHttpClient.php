@@ -49,7 +49,7 @@ class DaprHttpClient extends DaprClient
     {
         try {
             $result = $this->httpClient->get('/v1.0/healthz');
-            if (200 === $result->getStatusCode()) {
+            if (204 === $result->getStatusCode()) {
                 return true;
             }
             return false;
