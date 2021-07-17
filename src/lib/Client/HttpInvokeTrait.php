@@ -19,7 +19,7 @@ trait HttpInvokeTrait
 
     public IDeserializer $deserializer;
     public ISerializer $serializer;
-    private Client $httpClient;
+    protected Client $httpClient;
 
     /**
      * @throws DaprException

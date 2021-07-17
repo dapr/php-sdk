@@ -2,11 +2,14 @@
 
 namespace Dapr\Client;
 
+use Dapr\Actors\IActorReference;
+use Dapr\Actors\Reminder;
 use Dapr\consistency\Consistency;
 use Dapr\Deserialization\DeserializationConfig;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
+use Dapr\State\Internal\Transaction;
 use Dapr\State\StateItem;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -457,6 +460,71 @@ abstract class DaprClient
      * @param bool $afterRequest If true, schedules a php shutdown function, otherwise fires the request immediately.
      */
     abstract public function shutdown(bool $afterRequest = true): void;
+
+    /**
+     * Invoke an actor method
+     *
+     * @param string $httpMethod The HTTP method to use in the invocation
+     * @param IActorReference $actor The actor reference to invoke
+     * @param string $method The method of the actor to call
+     * @param string $as The type to cast the result to using the deserialization config
+     * @return mixed
+     */
+    abstract public function invokeActorMethod(
+        string $httpMethod,
+        IActorReference $actor,
+        string $method,
+        string $as = 'array'
+    ): mixed;
+
+    /**
+     * Save a transaction to actor state
+     *
+     * @param IActorReference $actor The actor type
+     * @param Transaction $transaction The transaction to store
+     * @return bool Whether the state was successfully saved
+     */
+    abstract public function saveActorState(IActorReference $actor, Transaction $transaction): bool;
+
+    /**
+     * Retrieve actor state by key
+     *
+     * @param IActorReference $actor The actor reference
+     * @param string $key The key to retrieve
+     * @param string $as The type to deserialize to
+     * @return mixed
+     */
+    abstract public function getActorState(IActorReference $actor, string $key, string $as = 'array'): mixed;
+
+    /**
+     * Set up an actor reminder.
+     *
+     * @param IActorReference $actor The actor reference
+     * @param string $reminderName The reminder name to update/create
+     * @param \DateTimeImmutable|\DateInterval $dueTime When to schedule the reminder for
+     * @param \DateInterval|int|null $period How often to repeat
+     * @return bool
+     */
+    abstract public function createActorReminder(
+        IActorReference $actor,
+        string $reminderName,
+        \DateInterval|\DateTimeImmutable $dueTime,
+        int|\DateInterval|null $period
+    ): bool;
+
+    abstract public function getActorReminder(IActorReference $actor, string $name): Reminder;
+
+    abstract public function deleteActorReminder(IActorReference $actor, string $name): bool;
+
+    abstract public function createActorTimer(
+        IActorReference $actor,
+        string $timerName,
+        \DateInterval|\DateTimeImmutable $dueTime,
+        int|\DateInterval|null $period,
+        string|null $callback
+    ): bool;
+
+    abstract public function deleteActorTimer(IActorReference $actor, string $name): bool;
 
     /**
      * @param string $token

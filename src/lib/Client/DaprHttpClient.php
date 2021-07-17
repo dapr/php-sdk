@@ -18,8 +18,13 @@ class DaprHttpClient extends DaprClient
     use HttpInvokeTrait;
     use HttpPubSubTrait;
     use HttpBindingTrait;
+    use HttpActorTrait;
 
-    private Client $httpClient;
+    protected Client $httpClient;
+
+    protected function getHttpClient(): Client {
+        return $this->httpClient;
+    }
 
     public function __construct(
         private string $baseHttpUri,

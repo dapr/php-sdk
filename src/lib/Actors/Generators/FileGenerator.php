@@ -5,7 +5,7 @@ namespace Dapr\Actors\Generators;
 use Dapr\Actors\ActorTrait;
 use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\IActor;
-use Dapr\DaprClient;
+use Dapr\Client\DaprClient;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
 use DI\DependencyException;
