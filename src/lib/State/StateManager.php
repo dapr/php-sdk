@@ -14,7 +14,7 @@ class StateManager implements IManageState
 {
     use StateHelpers;
 
-    private static \WeakMap $objMap;
+    protected static \WeakMap $objMap;
 
     public function __construct(protected DaprClient $client)
     {

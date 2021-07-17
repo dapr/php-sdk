@@ -194,11 +194,11 @@ trait HttpStateTrait
                             'request' => array_merge(
                                 [
                                     'key' => $operation->key,
-                                    'value' => $operation->value,
                                 ],
+                                $operation instanceof UpsertTransactionRequest ? ['value' => $operation->value] : [],
                                 empty($operation->etag) ? [] : ['etag' => $operation->etag],
                                 empty($operation->metadata) ? [] : ['metadata' => $operation->metadata],
-                                empty($operation->consistency) ? [] : [
+                                empty($operation->consistency) || empty($operation->etag) ? [] : [
                                     'options' => [
                                         'consistency' => $operation->consistency->get_consistency(),
                                         'concurrency' => $operation->consistency->get_concurrency(),
