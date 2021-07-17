@@ -12,6 +12,7 @@ use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
 use Dapr\App;
 use Dapr\Attributes\FromBody;
+use Dapr\Client\AppId;
 use Dapr\consistency\StrongFirstWrite;
 use Dapr\consistency\StrongLastWrite;
 use Dapr\DaprClient;
@@ -26,7 +27,6 @@ use Dapr\State\FileWriter;
 use Dapr\State\StateManager;
 use Dapr\State\TransactionalState;
 use DI\ContainerBuilder;
-use DI\FactoryInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -268,8 +268,8 @@ $app->get(
 
 $app->get(
     '/test/pubsub',
-    function (FactoryInterface $container) {
-        $topic = new Topic('pubsub', 'test', \Dapr\Client\DaprClient::clientBuilder()->build());
+    function (\Dapr\Client\DaprClient $client) {
+        $topic = new Topic('pubsub', 'test', $client);
         $body = [];
 
         $topic->publish(['test_event']);
@@ -374,15 +374,15 @@ RAW
 
 $app->get(
     '/test/invoke',
-    function (DaprClient $client) {
+    function (\Dapr\Client\DaprClient $client) {
         $body = [];
-        $result = $client->post("/invoke/dev/method/say_something", "My Message");
-        $body = assert_equals($body, 200, $result->code, 'Should receive a 200 response');
+        $result = $client->invokeMethod('POST', new AppId('dev'), 'say_something', 'My Message');
+        $body = assert_equals($body, 200, $result->getStatusCode(), 'Should receive a 200 response');
 
         $json = '{"ok": true}';
 
-        $result = $client->post('/invoke/dev/method/test_json', $json);
-        $body = assert_equals($body, 200, $result->code, 'Static function should receive json string');
+        $result = $client->invokeMethod('POST', new AppId('dev'), 'test_json', $json);
+        $body = assert_equals($body, 200, $result->getStatusCode(), 'Static function should receive json string');
 
         return $body;
     }
@@ -434,27 +434,36 @@ $app->post(
 
 $app->get(
     '/do_tests',
-    function (DaprClient $client) {
+    function (\Dapr\Client\DaprClient $client) {
         $test_results = [
-            '/test/actors' => null,
-            '/test/binding' => null,
-            '/test/invoke' => null,
-            '/test/pubsub' => null,
-            '/test/state/concurrency' => null,
-            '/test/state' => null,
+            'test/actors' => null,
+            'test/binding' => null,
+            'test/invoke' => null,
+            'test/pubsub' => null,
+            'test/state/concurrency' => null,
+            'test/state' => null,
         ];
+        $appId = new AppId('dev');
+
+        $has_failed = false;
 
         foreach (array_keys($test_results) as $suite) {
-            $result = $client->get('/invoke/dev/method' . $suite);
+            $result = $client->invokeMethod('GET', $appId, $suite);
             $body = [];
-            $body = assert_equals($body, 200, $result->code, 'test completed successfully');
+            $body = assert_equals($body, 200, $result->getStatusCode(), 'test completed successfully');
+            $all_results = json_decode($result->getBody()->getContents(), true);
+            foreach ($all_results as $test => $assertion) {
+                if (!$has_failed && ($assertion === null || (is_string($assertion) && str_contains($assertion, '❌')))) {
+                    $has_failed = true;
+                }
+            }
             $test_results[$suite] = [
                 'status' => $body,
-                'results' => $result->data,
+                'results' => $all_results,
             ];
         }
 
-        return $test_results;
+        return new \Nyholm\Psr7\Response($has_failed ? 500 : 200, body: json_encode($test_results));
     }
 );
 

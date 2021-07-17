@@ -55,6 +55,9 @@ trait HttpStateTrait
         array $metadata = []
     ): PromiseInterface {
         $options = [];
+        $metadata = array_merge(
+            ...array_map(fn($key, $value) => ["metadata.$key" => $value], array_keys($metadata), $metadata)
+        );
         if (!empty($consistency)) {
             $options['consistency'] = $consistency->get_consistency();
             $options['concurrency'] = $consistency->get_concurrency();
@@ -105,6 +108,21 @@ trait HttpStateTrait
                     'body' => $this->serializer->as_json([$item])
                 ]
             )
+        );
+    }
+
+    public function saveBulkState(string $storeName, array $stateItems): bool
+    {
+        return $this->saveBulkStateAsync($storeName, $stateItems)->wait();
+    }
+
+    public function saveBulkStateAsync(string $storeName, array $stateItems): PromiseInterface
+    {
+        $storeName = rawurlencode($storeName);
+        return $this->handlePromise(
+            $this->httpClient->postAsync("/v1.0/state/$storeName", ['body' => $this->serializer->as_json($stateItems)]),
+            fn(ResponseInterface $response) => $response->getStatusCode() === 200,
+            fn(\Throwable $ex) => false
         );
     }
 
@@ -176,11 +194,11 @@ trait HttpStateTrait
                             'request' => array_merge(
                                 [
                                     'key' => $operation->key,
-                                    'value' => $operation->value,
                                 ],
+                                $operation instanceof UpsertTransactionRequest ? ['value' => $operation->value] : [],
                                 empty($operation->etag) ? [] : ['etag' => $operation->etag],
                                 empty($operation->metadata) ? [] : ['metadata' => $operation->metadata],
-                                empty($operation->consistency) ? [] : [
+                                empty($operation->consistency) || empty($operation->etag) ? [] : [
                                     'options' => [
                                         'consistency' => $operation->consistency->get_consistency(),
                                         'concurrency' => $operation->consistency->get_concurrency(),
@@ -287,7 +305,12 @@ trait HttpStateTrait
             ),
             fn(ResponseInterface $response) => array_merge(
                 ...array_map(
-                       fn($result) => [$result['key'] => ['value' => $result['data'], 'etag' => $result['etag']]],
+                       fn($result) => [
+                           $result['key'] => [
+                               'value' => $result['data'] ?? null,
+                               'etag' => $result['etag'] ?? null
+                           ]
+                       ],
                        $this->deserializer->from_json('array', $response->getBody()->getContents())
                    )
             )

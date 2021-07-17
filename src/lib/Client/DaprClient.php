@@ -7,6 +7,7 @@ use Dapr\Deserialization\DeserializationConfig;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
+use Dapr\State\StateItem;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -275,6 +276,22 @@ abstract class DaprClient
         Consistency|null $consistency = null,
         array $metadata = []
     ): bool;
+
+    /**
+     * @param string $storeName
+     * @param StateItem[] $stateItems
+     * @param array $metadata
+     * @return bool
+     */
+    abstract public function saveBulkState(string $storeName, array $stateItems): bool;
+
+    /**
+     * @param string $storeName
+     * @param StateItem[] $stateItems
+     * @param array $metadata
+     * @return bool
+     */
+    abstract public function saveBulkStateAsync(string $storeName, array $stateItems): PromiseInterface;
 
     /**
      * @template T

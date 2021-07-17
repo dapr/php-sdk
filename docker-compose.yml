@@ -2,25 +2,21 @@
 version: "3"
 services:
   placement:
-    image: daprio/dapr:1.1.0
+    image: daprio/dapr:${DAPR_VERSION}
     command: [ "./placement","-port","50006" ]
   dev:
-    build:
-      dockerfile: images/tests.Dockerfile
-      context: .
+    image: tests:${GITHUB_SHA}
     depends_on:
       - placement
     ports:
     - 9502:80
   dev-caddy:
-    build:
-      dockerfile: images/caddy.Dockerfile
-      context: .
+    image: caddy:${GITHUB_SHA}
     depends_on:
       - dev
     network_mode: service:dev
   dev-daprd:
-    image: daprio/daprd:1.1.0
+    image: daprio/daprd:${DAPR_VERSION}
     command: [ "./daprd","-app-id","dev","-app-port","80","-placement-host-address","placement:50006","-components-path","/components" ]
     volumes:
       - ./components:/components

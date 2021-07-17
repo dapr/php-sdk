@@ -56,10 +56,6 @@ abstract class DaprTests extends TestCase
      */
     public function tearDown(): void
     {
-        foreach ($this->get_client()->responses as $url => $response) {
-            $this->assertEmpty($response, "never called $url");
-        }
-        $this->get_client()->responses = [];
         parent::tearDown();
     }
 
