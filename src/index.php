@@ -479,6 +479,7 @@ $app->get(
         $client->shutdown(afterRequest: false);
 
         while ($client->isDaprHealthy()) {
+            sleep(1);
             error_log('waiting for daprd shutdown...');
         }
 
