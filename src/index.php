@@ -1,5 +1,7 @@
 <?php
 
+// @codeCoverageIgnoreStart
+
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../tests/Fixtures/SimpleActor.php';
 
@@ -435,6 +437,17 @@ $app->post(
 $app->get(
     '/do_tests',
     function (\Dapr\Client\DaprClient $client) {
+        while (true) {
+            sleep(1);
+            if ($client->isDaprHealthy()) {
+                $meta = $client->getMetadata();
+                error_log(print_r($meta, true));
+                if (!empty($meta->actors)) {
+                    break;
+                }
+            }
+        }
+
         $test_results = [
             'test/actors' => null,
             'test/binding' => null,
@@ -461,6 +474,13 @@ $app->get(
                 'status' => $body,
                 'results' => $all_results,
             ];
+        }
+
+        $client->shutdown(afterRequest: false);
+
+        while ($client->isDaprHealthy()) {
+            sleep(1);
+            error_log('waiting for daprd shutdown...');
         }
 
         return new \Nyholm\Psr7\Response($has_failed ? 500 : 200, body: json_encode($test_results));

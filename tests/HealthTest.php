@@ -13,7 +13,7 @@ class HealthTest extends DaprTests
     {
         $container = $this->get_http_client_stack(
             [
-                new Response(200)
+                new Response(204)
             ]
         );
         $client = $this->get_new_client_with_http($container->client);

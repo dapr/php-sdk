@@ -445,6 +445,20 @@ abstract class DaprClient
     abstract public function isDaprHealthy(): bool;
 
     /**
+     * Retrieve metadata from the sidecar
+     *
+     * @return MetadataResponse
+     */
+    abstract public function getMetadata(): MetadataResponse|null;
+
+    /**
+     * Shutdown the Daprd sidecar
+     *
+     * @param bool $afterRequest If true, schedules a php shutdown function, otherwise fires the request immediately.
+     */
+    abstract public function shutdown(bool $afterRequest = true): void;
+
+    /**
      * @param string $token
      * @return null|array{dapr-api-token: string}
      */
