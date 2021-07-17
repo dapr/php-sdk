@@ -452,7 +452,7 @@ $app->get(
             $body = assert_equals($body, 200, $result->getStatusCode(), 'test completed successfully');
             $test_results[$suite] = [
                 'status' => $body,
-                'results' => $result->getBody()->getContents(),
+                'results' => json_decode($result->getBody()->getContents()),
             ];
         }
 
