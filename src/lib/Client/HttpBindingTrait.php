@@ -17,7 +17,7 @@ trait HttpBindingTrait
 {
     public ISerializer $serializer;
     public IDeserializer $deserializer;
-    protected Client $client;
+    protected Client $httpClient;
 
     /**
      * @throws DaprException
