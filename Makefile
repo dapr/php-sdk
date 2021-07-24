@@ -3,7 +3,7 @@ export GITHUB_SHA=latest
 export DAPR_VERSION=1.3.0-rc.1
 
 .PHONY: integration-tests
-integration-tests: build
+integration-tests: build tools
 	docker-compose down -v
 	docker-compose up &
 	sleep 10
