@@ -18,7 +18,7 @@ trait HttpSecretsTrait
 
     public IDeserializer $deserializer;
     public ISerializer $serializer;
-    private Client $httpClient;
+    protected Client $httpClient;
 
     public function getSecret(string $storeName, string $key, array $metadata = []): array|null
     {

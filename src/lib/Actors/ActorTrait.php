@@ -16,6 +16,9 @@ use ReflectionClass;
  */
 trait ActorTrait
 {
+    private \Dapr\Client\DaprClient $client;
+    private ActorReference $reference;
+
     /**
      * Creates a reminder. These are persisted.
      *
@@ -24,15 +27,18 @@ trait ActorTrait
      * @return bool True if successful
      * @throws DaprException
      */
-    public function create_reminder(Reminder $reminder, DaprClient $client): bool
+    public function create_reminder(Reminder $reminder, ?DaprClient $client = null): bool
     {
+        if ($client === null) {
+            return $this->client->createActorReminder($this->_get_actor_reference(), $reminder);
+        }
         // inline function: get name
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new ReflectionClass($this);
+            $class = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
+            if (!empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;
             } else {
                 $type = $class->getShortName();
@@ -54,15 +60,18 @@ trait ActorTrait
      * @return Reminder|null The reminder
      * @throws DaprException
      */
-    public function get_reminder(string $name, DaprClient $client): ?Reminder
+    public function get_reminder(string $name, ?DaprClient $client = null): ?Reminder
     {
+        if ($client === null) {
+            return $this->client->getActorReminder($this->_get_actor_reference(), $name);
+        }
         // inline function: get name
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new ReflectionClass($this);
+            $class = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
+            if (!empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;
             } else {
                 $type = $class->getShortName();
@@ -84,15 +93,18 @@ trait ActorTrait
      * @return bool True if successful
      * @throws DaprException
      */
-    public function delete_reminder(string $name, DaprClient $client): bool
+    public function delete_reminder(string $name, ?DaprClient $client = null): bool
     {
+        if ($client === null) {
+            return $this->client->deleteActorReminder($this->_get_actor_reference(), $name);
+        }
         // inline function: get name
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new ReflectionClass($this);
+            $class = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
+            if (!empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;
             } else {
                 $type = $class->getShortName();
@@ -114,15 +126,18 @@ trait ActorTrait
      * @return bool True if successful
      * @throws DaprException
      */
-    public function create_timer(Timer $timer, DaprClient $client): bool
+    public function create_timer(Timer $timer, ?DaprClient $client = null): bool
     {
+        if ($client === null) {
+            return $this->client->createActorTimer($this->_get_actor_reference(), $timer);
+        }
         // inline function: get name
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new ReflectionClass($this);
+            $class = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
+            if (!empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;
             } else {
                 $type = $class->getShortName();
@@ -144,15 +159,18 @@ trait ActorTrait
      * @return bool True if successful
      * @throws DaprException
      */
-    public function delete_timer(string $name, DaprClient $client): bool
+    public function delete_timer(string $name, ?DaprClient $client = null): bool
     {
+        if ($client === null) {
+            return $this->client->deleteActorTimer($this->_get_actor_reference(), $name);
+        }
         // inline function: get name
         if (isset($this->DAPR_TYPE)) {
             $type = $this->DAPR_TYPE;
         } else {
-            $class      = new ReflectionClass($this);
+            $class = new ReflectionClass($this);
             $attributes = $class->getAttributes(DaprType::class);
-            if ( ! empty($attributes)) {
+            if (!empty($attributes)) {
                 $type = $attributes[0]->newInstance()->type;
             } else {
                 $type = $class->getShortName();

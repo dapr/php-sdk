@@ -2,8 +2,13 @@
 
 namespace Dapr\Actors\Generators;
 
+use Dapr\Actors\ActorReference;
+use Dapr\Actors\Attributes\Delete;
+use Dapr\Actors\Attributes\Get;
+use Dapr\Actors\Attributes\Post;
+use Dapr\Actors\Attributes\Put;
 use Dapr\Actors\Internal\InternalProxy;
-use Dapr\DaprClient;
+use Dapr\Client\DaprClient;
 use DI\FactoryInterface;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
@@ -24,21 +29,32 @@ class DynamicGenerator extends GenerateProxy
     #[Pure] public function __construct(
         string $interface,
         string $dapr_type,
-        FactoryInterface $factory,
-        ContainerInterface $container
+        DaprClient $client
     ) {
-        parent::__construct($interface, $dapr_type, $factory, $container);
+        parent::__construct($interface, $dapr_type, $client);
     }
 
     public function get_proxy(string $id): InternalProxy
     {
-        $current_proxy            = new InternalProxy();
-        $interface                = ClassType::from($this->interface);
-        $methods                  = $this->get_methods($interface);
+        $current_proxy = new InternalProxy();
+        $interface = ClassType::from($this->interface);
+        $methods = $this->get_methods($interface);
         $current_proxy->DAPR_TYPE = $this->dapr_type;
+
+        $reflection = new \ReflectionClass($current_proxy);
+        $client =$reflection->getProperty('client');
+        $client->setAccessible(true);
+        $client->setValue($current_proxy, $this->client);
+        $reference = $reflection->getProperty('reference');
+        $actor_reference = new ActorReference($id, $this->dapr_type);
+        $reference->setAccessible(true);
+        $reference->setValue($current_proxy, $actor_reference);
+
         foreach ($methods as $method) {
             $current_proxy->{$method->getName()} = $this->generate_method($method, $id);
         }
+
+        $current_proxy->_get_actor_reference = fn() => $actor_reference;
 
         return $current_proxy;
     }
@@ -52,25 +68,37 @@ class DynamicGenerator extends GenerateProxy
 
     protected function generate_proxy_method(Method $method, string $id): callable
     {
-        return function (...$params) use ($method, $id) {
-            $serializer   = $this->container->get('dapr.internal.serializer');
-            $client       = $this->container->get(DaprClient::class);
-            $deserializer = $this->container->get('dapr.internal.deserializer');
-            if ( ! empty($params)) {
-                $params = $serializer->as_array($params[0]);
+        $http_method = count($method->getParameters()) == 0 ? 'GET' : 'POST';
+        foreach ($method->getAttributes() as $attribute) {
+            $http_method = match ($attribute->getName()) {
+                Get::class => 'GET',
+                Post::class => 'POST',
+                Put::class => 'PUT',
+                Delete::class => 'DELETE',
+                default => $http_method
+            };
+        }
+        $reference = new ActorReference($id, $this->dapr_type);
+        $actor_method = $method->getName();
+        $return_type = $method->getReturnType();
+
+        return function (...$params) use ($id, $http_method, $reference, $actor_method, $return_type) {
+            /**
+             * @var DaprClient $client
+             */
+            $result = $this->client->invokeActorMethod(
+                $http_method,
+                $reference,
+                $actor_method,
+                $params[0] ?? null,
+                $return_type ?? 'array'
+            );
+
+            if ($return_type) {
+                return $result;
             }
 
-            $result = $client->post(
-                "/actors/{$this->dapr_type}/$id/method/{$method->getName()}",
-                $serializer->as_array($params)
-            );
-
-            $result->data = $deserializer->detect_from_generator_method(
-                $method,
-                $result->data
-            );
-
-            return $result->data;
+            return;
         };
     }
 

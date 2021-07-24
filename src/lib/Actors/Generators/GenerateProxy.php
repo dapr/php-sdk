@@ -3,6 +3,7 @@
 namespace Dapr\Actors\Generators;
 
 use Dapr\Actors\IActor;
+use Dapr\Client\DaprClient;
 use DI\FactoryInterface;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
@@ -21,8 +22,7 @@ abstract class GenerateProxy implements IGenerateProxy
     public function __construct(
         protected string $interface,
         protected string $dapr_type,
-        protected FactoryInterface $factory,
-        protected ContainerInterface $container
+        protected DaprClient $client
     ) {
     }
 

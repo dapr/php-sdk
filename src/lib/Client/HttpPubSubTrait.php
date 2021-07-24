@@ -18,7 +18,7 @@ trait HttpPubSubTrait
 
     public ISerializer $serializer;
     public IDeserializer $deserializer;
-    private Client $client;
+    protected Client $client;
 
     /**
      * @throws DaprException

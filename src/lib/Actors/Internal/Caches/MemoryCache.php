@@ -2,6 +2,8 @@
 
 namespace Dapr\Actors\Internal\Caches;
 
+use Dapr\Actors\ActorReference;
+
 /**
  * Class NoCache
  * @package Dapr\Actors\Internal\Caches
@@ -13,7 +15,7 @@ class MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
-    public function __construct(string $dapr_type, string $actor_id, string $state_name)
+    public function __construct(ActorReference $reference, string $state_name)
     {
     }
 

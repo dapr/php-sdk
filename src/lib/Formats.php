@@ -43,10 +43,10 @@ abstract class Formats
 
     public static function coalesce(DateInterval $interval): bool|DateInterval
     {
-        $from    = new DateTime();
-        $to      = clone $from;
-        $to      = $to->add($interval);
-        $diff    = $to->diff($from, true);
+        $from = new DateTime();
+        $to = clone $from;
+        $to = $to->add($interval);
+        $diff = $to->diff($from, true);
         $diff->h += $diff->d * self::DAY_IN_HOURS;
         $diff->d = 0;
 
@@ -65,14 +65,14 @@ abstract class Formats
             return null;
         }
 
-        $parts    = array_combine(
+        $parts = array_combine(
             preg_split('/[0-9]/', $dapr_interval, 0, PREG_SPLIT_NO_EMPTY),
             preg_split('/[a-z]/', $dapr_interval, 0, PREG_SPLIT_NO_EMPTY)
         );
         $interval = ['PT'];
-        $seconds  = 0.0;
+        $seconds = 0.0;
         foreach ($parts as $time => $value) {
-            $seconds    += match ($time) {
+            $seconds += match ($time) {
                 'ns' => ((float)$value) * self::NANOSECOND_TO_SECOND,
                 'us', 'µs' => ((float)$value) * self::MICROSECOND_TO_SECOND,
                 'ms' => ((float)$value) * self::MILLISECOND_TO_SECOND,
@@ -80,13 +80,13 @@ abstract class Formats
                 default => 0,
             };
             $interval[] = match ($time) {
-                'm' => $value.'M',
-                'h' => $value.'H',
+                'm' => $value . 'M',
+                'h' => $value . 'H',
                 default => null
             };
         }
         if ($seconds > 0) {
-            $interval[] = $seconds.'S';
+            $interval[] = $seconds . 'S';
         }
 
         return new DateInterval(implode('', $interval));

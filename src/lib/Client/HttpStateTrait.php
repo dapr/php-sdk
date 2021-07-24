@@ -22,7 +22,7 @@ trait HttpStateTrait
 
     public IDeserializer $deserializer;
     public ISerializer $serializer;
-    private Client $httpClient;
+    protected Client $httpClient;
 
     public function getState(
         string $storeName,

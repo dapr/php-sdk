@@ -88,11 +88,16 @@ class Deserializer implements IDeserializer
      */
     public function from_value(string $as, mixed $value): mixed
     {
+        if (str_ends_with($as, '[]')) {
+            $array_type = substr($as, 0, strpos($as, '[]'));
+            return $this->from_array_of($array_type, $value);
+        }
+
         if ($deserializer = $this->get_deserializer($as)) {
             return $deserializer->deserialize($value, $this);
         }
 
-        if ( ! class_exists($as)) {
+        if (!class_exists($as)) {
             return $value;
         }
 
@@ -178,6 +183,19 @@ class Deserializer implements IDeserializer
         }
 
         return 'mixed';
+    }
+
+    public function detect_type_name_from_property(ReflectionProperty $property): string
+    {
+        if ($array_of = $this->is_array_of($property)) {
+            return $array_of . '[]';
+        }
+
+        if ($class_name = $this->is_class($property)) {
+            return $class_name;
+        }
+
+        return $this->get_type_from_type($property->getType());
     }
 
     /**

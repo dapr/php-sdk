@@ -2,6 +2,7 @@
 
 namespace Dapr\Actors\Internal\Caches;
 
+use Dapr\Actors\ActorReference;
 use Dapr\State\FileWriter;
 use phpDocumentor\Reflection\File;
 
@@ -16,15 +17,15 @@ class FileCache extends MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
-    public function __construct(private string $dapr_type, private string $actor_id, private string $state_name)
+    public function __construct(private ActorReference $reference, private string $state_name)
     {
-        parent::__construct($this->dapr_type, $this->actor_id, $this->state_name);
-        $base_dir = self::get_base_path($this->dapr_type, $this->actor_id);
+        parent::__construct($this->reference, $this->state_name);
+        $base_dir = self::get_base_path($this->reference->get_actor_type(), $this->reference->get_actor_id());
         if ( ! file_exists($base_dir)) {
             mkdir($base_dir, recursive: true);
         }
-        $this->state_name = mb_ereg_replace("([^\w\s\d\-_~,;\[\]\(\).])", '', $this->state_name);
-        $this->state_name = mb_ereg_replace("([\.]{2,})", '', $this->state_name);
+        $this->state_name = mb_ereg_replace('([^\w\s\d\-_~,;\[\]\(\).])', '', $this->state_name) . '';
+        $this->state_name = mb_ereg_replace('([\.]{2,})', '', $this->state_name) . '';
         $this->cache_file = $base_dir.DIRECTORY_SEPARATOR.$this->state_name.'.actor';
         $this->unserialize_cache();
     }

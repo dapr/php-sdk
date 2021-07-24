@@ -2,6 +2,7 @@
 
 namespace Dapr\Actors\Generators;
 
+use Dapr\Client\DaprClient;
 use Dapr\State\FileWriter;
 use DI\FactoryInterface;
 use JetBrains\PhpStorm\Pure;
@@ -21,10 +22,9 @@ class CachedGenerator extends ExistingOnly
     public function __construct(
         string $interface,
         string $dapr_type,
-        FactoryInterface $factory,
-        ContainerInterface $container
+        DaprClient $client
     ) {
-        parent::__construct($interface, $dapr_type, $factory, $container);
+        parent::__construct($interface, $dapr_type, $client);
         $this->cache_dir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'dapr-proxy-cache'.DIRECTORY_SEPARATOR;
     }
 
@@ -40,10 +40,7 @@ class CachedGenerator extends ExistingOnly
     public function get_proxy(string $id): object
     {
         if ( ! class_exists($this->get_full_class_name())) {
-            $file_generator = $this->factory->make(
-                FileGenerator::class,
-                ['interface' => $this->interface, 'dapr_type' => $this->dapr_type]
-            );
+            $file_generator = new FileGenerator($this->interface, $this->dapr_type, $this->client);
             $file           = $file_generator->generate_file();
             if ( ! is_dir($this->cache_dir)) {
                 mkdir($this->cache_dir);

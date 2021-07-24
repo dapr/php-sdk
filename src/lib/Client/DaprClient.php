@@ -2,11 +2,15 @@
 
 namespace Dapr\Client;
 
+use Dapr\Actors\IActorReference;
+use Dapr\Actors\Reminder;
+use Dapr\Actors\Timer;
 use Dapr\consistency\Consistency;
 use Dapr\Deserialization\DeserializationConfig;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
+use Dapr\State\Internal\Transaction;
 use Dapr\State\StateItem;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -457,6 +461,194 @@ abstract class DaprClient
      * @param bool $afterRequest If true, schedules a php shutdown function, otherwise fires the request immediately.
      */
     abstract public function shutdown(bool $afterRequest = true): void;
+
+    /**
+     * Invoke an actor method
+     *
+     * @param string $httpMethod The HTTP method to use in the invocation
+     * @param IActorReference $actor The actor reference to invoke
+     * @param string $method The method of the actor to call
+     * @param string $as The type to cast the result to using the deserialization config
+     * @return mixed
+     */
+    abstract public function invokeActorMethod(
+        string $httpMethod,
+        IActorReference $actor,
+        string $method,
+        mixed $parameter = null,
+        string $as = 'array'
+    ): mixed;
+
+    /**
+     * Invoke an actor method
+     *
+     * @param string $httpMethod The HTTP method to use in the invocation
+     * @param IActorReference $actor The actor reference to invoke
+     * @param string $method The method of the actor to call
+     * @param string $as The type to cast the result to using the deserialization config
+     * @return PromiseInterface
+     */
+    abstract public function invokeActorMethodAsync(
+        string $httpMethod,
+        IActorReference $actor,
+        string $method,
+        mixed $parameter = null,
+        string $as = 'array'
+    ): PromiseInterface;
+
+    /**
+     * Save a transaction to actor state
+     *
+     * @param IActorReference $actor The actor type
+     * @param Transaction $transaction The transaction to store
+     * @return bool Whether the state was successfully saved
+     */
+    abstract public function saveActorState(IActorReference $actor, Transaction $transaction): bool;
+
+    /**
+     * Save a transaction to actor state
+     *
+     * @param IActorReference $actor The actor type
+     * @param Transaction $transaction The transaction to store
+     * @return PromiseInterface<bool> Whether the state was successfully saved
+     */
+    abstract public function saveActorStateAsync(IActorReference $actor, Transaction $transaction): PromiseInterface;
+
+    /**
+     * Retrieve actor state by key
+     *
+     * @param IActorReference $actor The actor reference
+     * @param string $key The key to retrieve
+     * @param string $as The type to deserialize to
+     * @return mixed
+     */
+    abstract public function getActorState(IActorReference $actor, string $key, string $as = 'array'): mixed;
+
+    /**
+     * Retrieve actor state by key
+     *
+     * @param IActorReference $actor The actor reference
+     * @param string $key The key to retrieve
+     * @param string $as The type to deserialize to
+     * @return mixed
+     */
+    abstract public function getActorStateAsync(
+        IActorReference $actor,
+        string $key,
+        string $as = 'array'
+    ): PromiseInterface;
+
+    /**
+     * Set up an actor reminder.
+     *
+     * @param IActorReference $actor The actor reference
+     * @param string $reminderName The reminder name to update/create
+     * @param \DateTimeImmutable|\DateInterval $dueTime When to schedule the reminder for
+     * @param \DateInterval|int|null $period How often to repeat
+     * @return bool
+     */
+    abstract public function createActorReminder(
+        IActorReference $actor,
+        Reminder $reminder
+    ): bool;
+
+    /**
+     * Set up an actor reminder.
+     *
+     * @param IActorReference $actor The actor reference
+     * @param string $reminderName The reminder name to update/create
+     * @param \DateTimeImmutable|\DateInterval $dueTime When to schedule the reminder for
+     * @param \DateInterval|int|null $period How often to repeat
+     * @return PromiseInterface<bool>
+     */
+    abstract public function createActorReminderAsync(
+        IActorReference $actor,
+        Reminder $reminder
+    ): PromiseInterface;
+
+    /**
+     * Get an actor reminder
+     *
+     * @param IActorReference $actor
+     * @param string $name
+     * @return Reminder
+     */
+    abstract public function getActorReminder(IActorReference $actor, string $name): ?Reminder;
+
+    /**
+     * Get an actor reminder
+     *
+     * @param IActorReference $actor
+     * @param string $name
+     * @return PromiseInterface<Reminder>
+     */
+    abstract public function getActorReminderAsync(IActorReference $actor, string $name): PromiseInterface;
+
+    /**
+     * Delete an actor reminder
+     *
+     * @param IActorReference $actor
+     * @param string $name
+     * @return bool
+     */
+    abstract public function deleteActorReminder(IActorReference $actor, string $name): bool;
+
+    /**
+     * Delete an actor reminder
+     *
+     * @param IActorReference $actor
+     * @param string $name
+     * @return PromiseInterface<bool>
+     */
+    abstract public function deleteActorReminderAsync(IActorReference $actor, string $name): PromiseInterface;
+
+    /**
+     * Create an actor timer
+     *
+     * @param IActorReference $actor
+     * @param string $timerName
+     * @param \DateInterval|\DateTimeImmutable $dueTime
+     * @param int|\DateInterval|null $period
+     * @param string|null $callback
+     * @return bool
+     */
+    abstract public function createActorTimer(
+        IActorReference $actor,
+        Timer $timer
+    ): bool;
+
+    /**
+     * Create an actor timer
+     *
+     * @param IActorReference $actor
+     * @param string $timerName
+     * @param \DateInterval|\DateTimeImmutable $dueTime
+     * @param int|\DateInterval|null $period
+     * @param string|null $callback
+     * @return PromiseInterface<bool>
+     */
+    abstract public function createActorTimerAsync(
+        IActorReference $actor,
+        Timer $timer
+    ): PromiseInterface;
+
+    /**
+     * Delete an actor timer
+     *
+     * @param IActorReference $actor
+     * @param string $name
+     * @return bool
+     */
+    abstract public function deleteActorTimer(IActorReference $actor, string $name): bool;
+
+    /**
+     * Delete an actor timer
+     *
+     * @param IActorReference $actor
+     * @param string $name
+     * @return PromiseInterface<bool>
+     */
+    abstract public function deleteActorTimerAsync(IActorReference $actor, string $name): PromiseInterface;
 
     /**
      * @param string $token

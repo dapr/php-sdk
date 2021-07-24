@@ -2,18 +2,17 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Actors\Internal\Caches\CacheInterface;
 use Dapr\Actors\Internal\Caches\FileCache;
-use Dapr\Actors\Internal\Caches\NoCache;
-use Dapr\Deserialization\IDeserializer;
+use Dapr\Client\DaprClient;
 use Dapr\exceptions\DaprException;
 use Dapr\exceptions\Http\NotFound;
 use Dapr\exceptions\SaveStateFailure;
-use DI\Container;
 use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
 use Exception;
-use Psr\Log\LoggerInterface;
+use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionNamedType;
@@ -28,11 +27,10 @@ use ReflectionNamedType;
 class ActorRuntime
 {
     public function __construct(
-        protected LoggerInterface $logger,
         protected ActorConfig $actor_config,
         protected FactoryInterface $factory,
-        protected Container $container,
-        protected IDeserializer $deserializer,
+        protected ContainerInterface $container,
+        protected DaprClient $client
     ) {
     }
 
@@ -49,7 +47,7 @@ class ActorRuntime
     public function do_method(IActor $actor, string $method, mixed $arg): mixed
     {
         $reflection = new ReflectionClass($actor);
-        $method     = $reflection->getMethod($method);
+        $method = $reflection->getMethod($method);
         if (empty($arg)) {
             return $method->invoke($actor);
         }
@@ -61,18 +59,18 @@ class ActorRuntime
 
         return $method->invokeArgs(
             $actor,
-            [$parameter->getName() => $this->deserializer->detect_from_parameter($parameter, $arg)]
+            [$parameter->getName() => $this->client->deserializer->detect_from_parameter($parameter, $arg)]
         );
     }
 
     public function deactivate_actor(IActor $actor, string $dapr_type): void
     {
-        $id                 = $actor->get_id();
-        $activation_tracker = hash('sha256', $dapr_type.$id);
+        $id = $actor->get_id();
+        $activation_tracker = hash('sha256', $dapr_type . $id);
         $activation_tracker = rtrim(
-                                  sys_get_temp_dir(),
-                                  DIRECTORY_SEPARATOR
-                              ).DIRECTORY_SEPARATOR.'dapr_'.$activation_tracker;
+                sys_get_temp_dir(),
+                DIRECTORY_SEPARATOR
+            ) . DIRECTORY_SEPARATOR . 'dapr_' . $activation_tracker;
 
         $is_activated = file_exists($activation_tracker);
 
@@ -86,21 +84,20 @@ class ActorRuntime
     /**
      * Resolve an actor, then calls your callback with the actor before committing any state changes
      *
-     * @param string $dapr_type The dapr type to resolve
-     * @param string $id The id of the actor to resolve
+     * @param ActorReference $reference
      * @param callable $loan A callback that takes an IActor
      *
      * @return mixed The result of you callback
      * @throws NotFound
      * @throws SaveStateFailure
      */
-    public function resolve_actor(string $dapr_type, string $id, callable $loan): mixed
+    public function resolve_actor(ActorReference $reference, callable $loan): mixed
     {
         try {
-            $reflection = $this->locate_actor($dapr_type);
+            $reflection = $this->locate_actor($reference);
             $this->validate_actor($reflection);
-            $states = $this->get_states($reflection, $dapr_type, $id);
-            $actor  = $this->get_actor($reflection, $dapr_type, $id, $states);
+            $states = $this->get_states($reflection, $reference, $this->client);
+            $actor = $this->get_actor($reflection, $reference, $states);
             // @codeCoverageIgnoreStart
         } catch (Exception $exception) {
             throw new NotFound('Actor could not be located', previous: $exception);
@@ -123,18 +120,17 @@ class ActorRuntime
     /**
      * Locates an actor implementation
      *
-     * @param string $dapr_type The dapr type to locate
-     *
+     * @param ActorReference $reference The actor reference
      * @return ReflectionClass
      * @throws NotFound
      * @throws ReflectionException
      */
-    protected function locate_actor(string $dapr_type): ReflectionClass
+    protected function locate_actor(ActorReference $reference): ReflectionClass
     {
-        $type = $this->actor_config->get_actor_type_from_dapr_type($dapr_type);
-        if ( ! class_exists($type)) {
+        $type = $this->actor_config->get_actor_type_from_dapr_type($reference->get_actor_type());
+        if (!class_exists($type)) {
             // @codeCoverageIgnoreStart
-            $this->logger->critical('Unable to locate an actor for {t}', ['t' => $type]);
+            $this->client->logger->critical('Unable to locate an actor for {t}', ['t' => $type]);
             throw new NotFound();
             // @codeCoverageIgnoreEnd
         }
@@ -156,7 +152,7 @@ class ActorRuntime
         }
 
         // @codeCoverageIgnoreStart
-        $this->logger->critical('Actor does not implement the IActor interface');
+        $this->client->logger->critical('Actor does not implement the IActor interface');
         throw new NotFound();
         // @codeCoverageIgnoreEnd
     }
@@ -165,18 +161,19 @@ class ActorRuntime
      * Retrieves an array of states for a located actor
      *
      * @param ReflectionClass $reflection The class we're loading states for
-     * @param string $dapr_type The dapr type
-     * @param string $id The id
-     *
+     * @param ActorReference $reference
      * @return array
-     * @throws ReflectionException
      * @throws DependencyException
      * @throws NotFoundException
+     * @throws ReflectionException
      */
-    protected function get_states(ReflectionClass $reflection, string $dapr_type, string $id): array
-    {
+    protected function get_states(
+        ReflectionClass $reflection,
+        ActorReference $reference,
+        DaprClient $client
+    ): array {
         $constructor = $reflection->getMethod('__construct');
-        $states      = [];
+        $states = [];
         foreach ($constructor->getParameters() as $parameter) {
             $type = $parameter->getType();
             if ($type instanceof ReflectionNamedType) {
@@ -185,10 +182,16 @@ class ActorRuntime
                     $reflected_type = new ReflectionClass($type_name);
                     if ($reflected_type->isSubclassOf(ActorState::class)) {
                         $state = $this->container->make($type_name);
-                        $this->begin_transaction($state, $reflected_type, $dapr_type, $id);
+                        $this->begin_transaction(
+                            $state,
+                            $reflected_type,
+                            $reference,
+                            $client,
+                            $this->get_cache_for_actor($reference, $type_name)
+                        );
 
                         $states[$parameter->name] = $state;
-                        $this->logger?->debug('Found state {t}', ['t' => $type_name]);
+                        $this->client->logger?->debug('Found state {t}', ['t' => $type_name]);
                     }
                 }
             }
@@ -211,16 +214,18 @@ class ActorRuntime
     protected function begin_transaction(
         ActorState $state,
         ReflectionClass $reflected_type,
-        string $dapr_type,
-        string $actor_id,
+        ActorReference $reference,
+        DaprClient $client,
+        CacheInterface $cache,
         ?ReflectionClass $original = null
     ): void {
         if ($reflected_type->name !== ActorState::class) {
             $this->begin_transaction(
                 $state,
                 $reflected_type->getParentClass(),
-                $dapr_type,
-                $actor_id,
+                $reference,
+                $client,
+                $cache,
                 $original ?? $reflected_type
             );
 
@@ -228,7 +233,12 @@ class ActorRuntime
         }
         $begin_transaction = $reflected_type->getMethod('begin_transaction');
         $begin_transaction->setAccessible(true);
-        $begin_transaction->invoke($state, $dapr_type, $actor_id);
+        $begin_transaction->invoke($state, $reference, $client, $cache);
+    }
+
+    protected function get_cache_for_actor(ActorReference $reference, string $type_name): CacheInterface
+    {
+        return $this->factory->make(CacheInterface::class, ['reference' => $reference, 'state_name' => $type_name]);
     }
 
     /**
@@ -243,23 +253,23 @@ class ActorRuntime
      * @throws DependencyException
      * @throws NotFoundException
      */
-    protected function get_actor(ReflectionClass $reflection, string $dapr_type, string $id, array $states): IActor
+    protected function get_actor(ReflectionClass $reflection, ActorReference $reference, array $states): IActor
     {
-        $states['id'] = $id;
-        $this->container->set(ActorReference::class, new ActorReference($id, $dapr_type));
-        $actor              = $this->factory->make($reflection->getName(), $states);
-        $activation_tracker = hash('sha256', $dapr_type.$id);
+        $states['id'] = $reference->get_actor_id();
+        $this->container->set(ActorReference::class, $reference);
+        $actor = $this->factory->make($reflection->getName(), $states);
+        $activation_tracker = hash('sha256', $reference->get_actor_type() . $reference->get_actor_id());
         $activation_tracker = rtrim(
-                                  sys_get_temp_dir(),
-                                  DIRECTORY_SEPARATOR
-                              ).DIRECTORY_SEPARATOR.'dapr_'.$activation_tracker;
+                sys_get_temp_dir(),
+                DIRECTORY_SEPARATOR
+            ) . DIRECTORY_SEPARATOR . 'dapr_' . $activation_tracker;
 
         $is_activated = file_exists($activation_tracker);
 
-        if ( ! $is_activated) {
-            $this->logger?->info(
+        if (!$is_activated) {
+            $this->client->logger?->info(
                 'Activating {type}||{id}',
-                ['type' => $dapr_type, 'id' => $id]
+                ['type' => $reference->get_actor_type(), 'id' => $reference->get_actor_id()]
             );
             touch($activation_tracker);
             $actor->on_activation();

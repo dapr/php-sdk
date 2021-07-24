@@ -6,46 +6,39 @@
 
 namespace Dapr\Proxies;
 
+use Dapr\Actors\ActorReference;
 use Dapr\Actors\ActorTrait;
 use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\IActor;
-use Dapr\DaprClient;
+use Dapr\Client\DaprClient;
 
 #[DaprType('TestActor')]
-class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
+final class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 {
 	use ActorTrait;
 
 	public string $id;
-	public $DAPR_TYPE = 'TestActor';
+	public string $DAPR_TYPE = 'TestActor';
+	private ActorReference $reference;
 
 
 	#[\Dapr\Deserialization\Attributes\ArrayOf('string')]
 	public function a_function(#[\Dapr\Deserialization\Attributes\AsClass('SimpleObject')] $value): array
 	{
 		$data = $value;
-		$type = 'TestActor';
-		$id = $this->get_id();
 		$current_method = 'a_function';
-		$result = $this->client->post(
-		  "/actors/$type/$id/method/$current_method",
-		  $this->serializer->as_array($data)
-		);
-		$result->data = $this->deserializer->detect_from_method((new \ReflectionClass($this))->getMethod('a_function'), $result->data);
-		return $result->data;
+		$http_method = 'POST';
+		$result = $this->client->invokeActorMethod($http_method, $this->_get_actor_reference(), $current_method, $data ?? null, 'array');
+		return $result;
 	}
 
 
 	public function empty_func()
 	{
-		$type = 'TestActor';
-		$id = $this->get_id();
 		$current_method = 'empty_func';
-		$result = $this->client->post(
-		  "/actors/$type/$id/method/$current_method",
-		  null);
-		$result->data = $this->deserializer->detect_from_method((new \ReflectionClass($this))->getMethod('empty_func'), $result->data);
-		return $result->data;
+		$http_method = 'GET';
+		$result = $this->client->invokeActorMethod($http_method, $this->_get_actor_reference(), $current_method, $data ?? null, 'array');
+		return $result;
 	}
 
 
@@ -85,10 +78,13 @@ class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 	}
 
 
-	public function __construct(
-		private DaprClient $client,
-		private \Dapr\Serialization\ISerializer $serializer,
-		private \Dapr\Deserialization\IDeserializer $deserializer,
-	) {
+	public function __construct(private DaprClient $client)
+	{
+	}
+
+
+	private function _get_actor_reference(): ActorReference
+	{
+		return $this->reference ??= new ActorReference($this->id, $this->DAPR_TYPE);
 	}
 }
