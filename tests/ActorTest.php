@@ -173,7 +173,7 @@ class ActorTest extends DaprTests
 
         if ($mode === ProxyFactory::ONLY_EXISTING) {
             // make sure the actor has been loaded
-            $this->get_actor_generator(ProxyFactory::GENERATED_CACHED, ITestActor::class, $type)->get_proxy($id);
+            $this->get_actor_generator(ProxyFactory::GENERATED_CACHED, ITestActor::class, $type, $this->get_new_client())->get_proxy($id);
         }
         $stack = $this->get_http_client_stack(
             [
@@ -195,7 +195,6 @@ class ActorTest extends DaprTests
             ]
         );
         $client = $this->get_new_client_with_http($stack->client);
-        $this->container->set(\Dapr\Client\DaprClient::class, $client);
 
         $get_last_request = function () use ($stack) {
             static $id = 0;
@@ -205,7 +204,7 @@ class ActorTest extends DaprTests
         /**
          * @var ITestActor|IActor $proxy
          */
-        $proxy = $this->get_actor_generator($mode, ITestActor::class, $type)->get_proxy($id);
+        $proxy = $this->get_actor_generator($mode, ITestActor::class, $type, $client)->get_proxy($id);
         $this->assertSame($id, $proxy->get_id());
 
         $reminder = $proxy->get_reminder('reminder');
@@ -289,9 +288,13 @@ class ActorTest extends DaprTests
      * @throws DependencyException
      * @throws NotFoundException
      */
-    private function get_actor_generator(int $mode, string $interface, string $type): IGenerateProxy
-    {
-        $factory = new ProxyFactory($this->container, $mode);
+    private function get_actor_generator(
+        int $mode,
+        string $interface,
+        string $type,
+        \Dapr\Client\DaprClient $client
+    ): IGenerateProxy {
+        $factory = new ProxyFactory($mode, $client);
 
         return $factory->get_generator($interface, $type);
     }
@@ -310,7 +313,9 @@ class ActorTest extends DaprTests
         /**
          * @var ITestActor $proxy
          */
-        $proxy = $this->get_actor_generator($mode, ITestActor::class, 'TestActor')->get_proxy($id);
+        $proxy = $this->get_actor_generator($mode, ITestActor::class, 'TestActor', $this->get_new_client())->get_proxy(
+            $id
+        );
         $this->expectException(LogicException::class);
         $proxy->on_activation();
     }
@@ -329,7 +334,9 @@ class ActorTest extends DaprTests
         /**
          * @var ITestActor $proxy
          */
-        $proxy = $this->get_actor_generator($mode, ITestActor::class, 'TestActor')->get_proxy($id);
+        $proxy = $this->get_actor_generator($mode, ITestActor::class, 'TestActor', $this->get_new_client())->get_proxy(
+            $id
+        );
         $this->expectException(LogicException::class);
         $proxy->on_deactivation();
     }
@@ -349,7 +356,9 @@ class ActorTest extends DaprTests
         /**
          * @var ITestActor|IActor $proxy
          */
-        $proxy = $this->get_actor_generator($mode, ITestActor::class, 'TestActor')->get_proxy($id);
+        $proxy = $this->get_actor_generator($mode, ITestActor::class, 'TestActor', $this->get_new_client())->get_proxy(
+            $id
+        );
         $this->expectException(LogicException::class);
         $proxy->remind('', new Reminder('', new DateInterval('PT10S'), ''));
     }
@@ -360,19 +369,21 @@ class ActorTest extends DaprTests
      */
     public function testCachedGeneratorGenerates()
     {
-        $cache_dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid() . DIRECTORY_SEPARATOR;
-        $this->createBuilder([CachedGenerator::class => autowire()->method('set_cache_dir', $cache_dir)]);
+        $cache_dir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'dapr-proxy-cache'.DIRECTORY_SEPARATOR;
         $cache = $cache_dir . '/dapr_proxy_GCached';
         if (file_exists($cache)) {
             unlink($cache);
-            rmdir($cache_dir);
         }
         $this->assertFalse(file_exists($cache), 'cache should be deleted');
-        $proxy = $this->get_actor_generator(ProxyFactory::GENERATED_CACHED, ITestActor::class, 'GCached');
+        $proxy = $this->get_actor_generator(
+            ProxyFactory::GENERATED_CACHED,
+            ITestActor::class,
+            'GCached',
+            $this->get_new_client()
+        );
         $proxy->get_proxy('hi');
         $this->assertTrue(file_exists($cache), 'cache should exist');
         unlink($cache);
-        rmdir($cache_dir);
     }
 
     /**

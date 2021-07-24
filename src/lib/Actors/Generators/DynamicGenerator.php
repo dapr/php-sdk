@@ -29,10 +29,9 @@ class DynamicGenerator extends GenerateProxy
     #[Pure] public function __construct(
         string $interface,
         string $dapr_type,
-        FactoryInterface $factory,
-        ContainerInterface $container
+        DaprClient $client
     ) {
-        parent::__construct($interface, $dapr_type, $factory, $container);
+        parent::__construct($interface, $dapr_type, $client);
     }
 
     public function get_proxy(string $id): InternalProxy
@@ -45,7 +44,7 @@ class DynamicGenerator extends GenerateProxy
         $reflection = new \ReflectionClass($current_proxy);
         $client =$reflection->getProperty('client');
         $client->setAccessible(true);
-        $client->setValue($current_proxy, $this->container->get(DaprClient::class));
+        $client->setValue($current_proxy, $this->client);
         $reference = $reflection->getProperty('reference');
         $actor_reference = new ActorReference($id, $this->dapr_type);
         $reference->setAccessible(true);
@@ -87,8 +86,7 @@ class DynamicGenerator extends GenerateProxy
             /**
              * @var DaprClient $client
              */
-            $client = $this->container->get(DaprClient::class);
-            $result = $client->invokeActorMethod(
+            $result = $this->client->invokeActorMethod(
                 $http_method,
                 $reference,
                 $actor_method,

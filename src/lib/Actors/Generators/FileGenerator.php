@@ -20,7 +20,6 @@ use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\PhpFile;
 use Nette\PhpGenerator\Type;
-use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionException;
 
@@ -34,13 +33,12 @@ use ReflectionException;
 class FileGenerator extends GenerateProxy
 {
     #[Pure] public function __construct(
-        protected string $interface,
-        protected string $dapr_type,
-        FactoryInterface $factory,
-        ContainerInterface $container,
+        string $interface,
+        string $dapr_type,
+        DaprClient $client,
         private array $usings = []
     ) {
-        parent::__construct($interface, $dapr_type, $factory, $container);
+        parent::__construct($interface, $dapr_type, $client);
     }
 
     /**
@@ -85,7 +83,12 @@ class FileGenerator extends GenerateProxy
                 eval($namespace);
             }
         }
-        $proxy = $this->factory->make($this->get_full_class_name());
+        $reflection = new ReflectionClass($this->get_full_class_name());
+
+        /**
+         * @var IActor $proxy
+         */
+        $proxy = $reflection->newInstance($this->client);
         $proxy->id = $id;
 
         return $proxy;

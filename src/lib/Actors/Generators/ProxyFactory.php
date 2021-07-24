@@ -2,8 +2,8 @@
 
 namespace Dapr\Actors\Generators;
 
+use Dapr\Client\DaprClient;
 use DI\DependencyException;
-use DI\FactoryInterface;
 use DI\NotFoundException;
 use InvalidArgumentException;
 
@@ -24,10 +24,9 @@ class ProxyFactory
     /**
      * ProxyFactory constructor.
      *
-     * @param FactoryInterface $factory
      * @param int $mode
      */
-    public function __construct(private FactoryInterface $factory, private int $mode)
+    public function __construct(private int $mode, private DaprClient $client)
     {
     }
 
@@ -44,10 +43,10 @@ class ProxyFactory
         $params = ['interface' => $interface, 'dapr_type' => $dapr_type];
 
         return match ($this->mode) {
-            ProxyFactory::DYNAMIC => $this->factory->make(DynamicGenerator::class, $params),
-            ProxyFactory::GENERATED_CACHED => $this->factory->make(CachedGenerator::class, $params),
-            ProxyFactory::GENERATED => $this->factory->make(FileGenerator::class, $params),
-            ProxyFactory::ONLY_EXISTING => $this->factory->make(ExistingOnly::class, $params),
+            ProxyFactory::DYNAMIC => new DynamicGenerator($interface, $dapr_type, $this->client),
+            ProxyFactory::GENERATED_CACHED => new CachedGenerator($interface, $dapr_type, $this->client),
+            ProxyFactory::GENERATED => new FileGenerator($interface, $dapr_type, $this->client),
+            ProxyFactory::ONLY_EXISTING => new ExistingOnly($interface, $dapr_type, $this->client),
             default => throw new InvalidArgumentException('mode must be a supported mode'),
         };
     }

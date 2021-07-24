@@ -18,12 +18,12 @@ class ActorReferenceTest extends DaprTests
     {
         $this->expectException(ReflectionException::class);
         $reference = new ActorReference('id', 'type');
-        $reference->bind('no_exist_interface', new ProxyFactory($this->container, ProxyFactory::GENERATED));
+        $reference->bind('no_exist_interface', new ProxyFactory(ProxyFactory::GENERATED, $this->get_new_client()));
     }
 
     public function testExtractActorFromDynamicProxy()
     {
-        $factory   = new ProxyFactory($this->container, ProxyFactory::DYNAMIC);
+        $factory   = new ProxyFactory(ProxyFactory::DYNAMIC, $this->get_new_client());
         $actor     = $factory->get_generator(ITestActor::class, 'TestActor')->get_proxy('id');
         $reference = ActorReference::get($actor);
         $this->assertEquals(
@@ -34,7 +34,7 @@ class ActorReferenceTest extends DaprTests
 
     public function testExtractActorFromGeneratedProxy()
     {
-        $factory   = new ProxyFactory($this->container, ProxyFactory::GENERATED);
+        $factory   = new ProxyFactory(ProxyFactory::GENERATED, $this->get_new_client());
         $actor     = $factory->get_generator(ITestActor::class, 'TestActor')->get_proxy('id');
         $reference = ActorReference::get($actor);
         $this->assertEquals(
@@ -48,7 +48,7 @@ class ActorReferenceTest extends DaprTests
         $reference     = new ActorReference('id', 'TestActor');
         $actor         = $reference->bind(
             ITestActor::class,
-            new ProxyFactory($this->container, ProxyFactory::GENERATED)
+            new ProxyFactory(ProxyFactory::GENERATED, $this->get_new_client())
         );
         $new_reference = ActorReference::get($actor);
         $this->assertEquals($reference, $new_reference);
