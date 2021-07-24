@@ -88,8 +88,7 @@ return [
         ->constructorParameter('drain_timeout', get('dapr.actors.drain_timeout'))
         ->constructorParameter('drain_enabled', get('dapr.actors.drain_enabled')),
     ActorRuntime::class => autowire()
-        ->constructorParameter('logger', get('dapr.logger'))
-        ->constructorParameter('deserializer', get('dapr.internal.deserializer')),
+        ->constructorParameter('client', get(\Dapr\Client\DaprClient::class)),
     ActorState::class => autowire()->constructorParameter('logger', get('dapr.logger')),
     ActorProxy::class => autowire()->constructorParameter('logger', get('dapr.logger')),
     ApplicationJson::class => autowire(),
@@ -143,6 +142,7 @@ return [
     TransactionalState::class => autowire()->constructorParameter('logger', get('dapr.logger')),
 
     // default application settings
+    \Dapr\Actors\Internal\Caches\CacheInterface::class => autowire(\Dapr\Actors\Internal\Caches\MemoryCache::class),
     'dapr.pubsub.default' => 'pubsub',
     'dapr.actors.proxy.generation' => ProxyFactory::GENERATED,
     'dapr.subscriptions' => [],

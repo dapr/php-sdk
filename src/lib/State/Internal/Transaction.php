@@ -51,6 +51,11 @@ class Transaction
         );
     }
 
+    public function is_empty(): bool
+    {
+        return empty($this->transaction);
+    }
+
     /**
      * Upsert a value in a transaction
      *
@@ -60,10 +65,10 @@ class Transaction
     public function upsert(string $key, mixed $value): void
     {
         $this->transaction[$key] = [
-            'order'     => $this->counter++,
+            'order' => $this->counter++,
             'operation' => 'upsert',
-            'request'   => [
-                'key'   => $key,
+            'request' => [
+                'key' => $key,
                 'value' => $value,
             ],
         ];
@@ -77,9 +82,9 @@ class Transaction
     public function delete(string $key): void
     {
         $this->transaction[$key] = [
-            'order'     => $this->counter++,
+            'order' => $this->counter++,
             'operation' => 'delete',
-            'request'   => [
+            'request' => [
                 'key' => $key,
             ],
         ];

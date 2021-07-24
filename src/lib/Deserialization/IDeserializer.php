@@ -66,6 +66,14 @@ interface IDeserializer
     public function detect_from_property(ReflectionProperty $property, mixed $data): mixed;
 
     /**
+     * Return the detected type from the reflected property
+     *
+     * @param ReflectionProperty $property
+     * @return string
+     */
+    public function detect_type_name_from_property(ReflectionProperty $property): string;
+
+    /**
      * Deserializes based on a method return type (such as when returning from an actor).
      *
      * @param ReflectionMethod $method The method to detect the type of

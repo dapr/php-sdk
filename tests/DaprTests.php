@@ -133,6 +133,17 @@ abstract class DaprTests extends TestCase
         return $container;
     }
 
+    protected function get_last_request(MockedHttpClientContainer $stack): \GuzzleHttp\Psr7\Request {
+        static $map = null;
+        if($map === null) {
+            $map = new WeakMap();
+        }
+        $current = $map[$stack] ?? 0;
+        $request = $stack->history[$current++]['request'];
+        $map[$stack] = $current;
+        return $request;
+    }
+
     protected function deserialize(string $json)
     {
         return json_decode($json, true);

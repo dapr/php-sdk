@@ -2,6 +2,7 @@
 
 namespace Dapr\State;
 
+use Dapr\Actors\ActorReference;
 use Dapr\Actors\Internal\Caches\KeyNotFound;
 use Dapr\Actors\Internal\Caches\MemoryCache;
 use Dapr\Client\DaprClient;
@@ -41,7 +42,7 @@ abstract class TransactionalState
 
         $this->stateManager = new StateManager($this->client);
         $this->reflectionClass = new \ReflectionClass($this);
-        $this->cache = new MemoryCache('', '', '');
+        $this->cache = new MemoryCache(new ActorReference('',''), '');
     }
 
     /**

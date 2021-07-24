@@ -2,6 +2,8 @@
 
 namespace Dapr\Actors\Internal\Caches;
 
+use Dapr\Actors\ActorReference;
+
 /**
  * Interface CacheInterface
  * @package Dapr\Actors\Internal\Caches
@@ -11,11 +13,10 @@ interface CacheInterface
     /**
      * CacheInterface constructor.
      *
-     * @param string $dapr_type The dapr type
-     * @param string $actor_id The actor id
+     * @param ActorReference $reference
      * @param string $state_name The name of the state type
      */
-    public function __construct(string $dapr_type, string $actor_id, string $state_name);
+    public function __construct(ActorReference $reference, string $state_name);
 
     /**
      * Retrieve a key from the cache

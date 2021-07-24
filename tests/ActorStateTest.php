@@ -1,14 +1,19 @@
 <?php
 
+use Dapr\Actors\ActorReference;
 use Dapr\Actors\ActorState;
+use Dapr\Actors\Internal\Caches\CacheInterface;
+use Dapr\Actors\Internal\Caches\MemoryCache;
 use Dapr\Actors\Internal\KeyResponse;
+use Dapr\Client\DaprClient;
 use Dapr\exceptions\DaprException;
 use DI\Container;
 use DI\DependencyException;
 use DI\NotFoundException;
+use GuzzleHttp\Psr7\Response;
 use JetBrains\PhpStorm\Pure;
 
-require_once __DIR__.'/DaprTests.php';
+require_once __DIR__ . '/DaprTests.php';
 
 /**
  * Class ActorStateTest
@@ -22,7 +27,9 @@ class ActorStateTest extends DaprTests
      */
     public function testSaveEmptyTransaction()
     {
-        $state = $this->get_started_state('type', uniqid());
+        $stack = $this->get_http_client_stack([]);
+        $client = $this->get_new_client_with_http($stack->client);
+        $state = $this->get_started_state('type', uniqid(), $client);
         $state->save_state();
         $this->assertTrue(true); // no exception thrown
     }
@@ -34,10 +41,15 @@ class ActorStateTest extends DaprTests
      * @return ActorState
      * @throws ReflectionException
      */
-    private function get_started_state(string $type, string $id): ActorState
+    private function get_started_state(string $type, string $id, DaprClient $client): ActorState
     {
         $state = $this->get_state();
-        $this->begin_transaction($state, $type, $id);
+        $this->begin_transaction(
+            $state,
+            new ActorReference($id, $type),
+            $client,
+            new MemoryCache(new ActorReference($type, $id), 'test')
+        );
 
         return $state;
     }
@@ -61,13 +73,17 @@ class ActorStateTest extends DaprTests
      *
      * @throws ReflectionException
      */
-    private function begin_transaction(ActorState $state, string $type, string $id)
-    {
+    private function begin_transaction(
+        ActorState $state,
+        ActorReference $reference,
+        DaprClient $client,
+        CacheInterface $cache
+    ) {
         $reflection = new ReflectionClass($state);
         $reflection = $reflection->getParentClass();
-        $method     = $reflection->getMethod('begin_transaction');
+        $method = $reflection->getMethod('begin_transaction');
         $method->setAccessible(true);
-        $method->invoke($state, $type, $id);
+        $method->invoke($state, $reference, $client, $cache);
     }
 
     /**
@@ -78,43 +94,47 @@ class ActorStateTest extends DaprTests
      */
     public function testSave()
     {
-        $state        = $this->get_started_state('actor', 'id');
+        $stack = $this->get_http_client_stack([new Response(204), new Response(204)]);
+        $client = $this->get_new_client_with_http($stack->client);
+        $state = $this->get_started_state('actor', 'id', $client);
         $state->state = 'ok';
 
-        $this->get_client()->register_post(
-            "/actors/actor/id/state",
-            204,
-            '',
-            [
-                [
-                    'operation' => 'upsert',
-                    'request'   => [
-                        'key'   => 'state',
-                        'value' => 'ok',
-                    ],
-                ],
-            ]
-        );
-
         $state->save_state();
+        $request = $this->get_last_request($stack);
+        $this->assertRequestUri('/v1.0/actors/actor/id/state', $request);
+        $this->assertRequestBody(
+            json_encode(
+                [
+                    [
+                        'operation' => 'upsert',
+                        'request' => [
+                            'key' => 'state',
+                            'value' => 'ok',
+                        ],
+                    ],
+                ]
+            ),
+            $request
+        );
 
         unset($state->state);
 
-        $this->get_client()->register_post(
-            "/actors/actor/id/state",
-            204,
-            '',
-            [
-                [
-                    'operation' => 'delete',
-                    'request'   => [
-                        'key' => 'state',
-                    ],
-                ],
-            ]
-        );
-
         $state->save_state();
+        $request = $this->get_last_request($stack);
+        $this->assertRequestUri('/v1.0/actors/actor/id/state', $request);
+        $this->assertRequestBody(
+            json_encode(
+                [
+                    [
+                        'operation' => 'delete',
+                        'request' => [
+                            'key' => 'state',
+                        ],
+                    ],
+                ]
+            ),
+            $request
+        );
     }
 
     /**
@@ -122,7 +142,7 @@ class ActorStateTest extends DaprTests
      */
     public function testSaveInvalidProp()
     {
-        $state = $this->get_started_state('type', uniqid());
+        $state = $this->get_started_state('type', uniqid(), $this->get_new_client());
         $this->expectException(InvalidArgumentException::class);
         $state->no_prop = true;
     }
@@ -132,17 +152,17 @@ class ActorStateTest extends DaprTests
      */
     public function testLoadingValue()
     {
-        $id    = uniqid();
-        $state = $this->get_started_state('type', $id);
-
-        $this->get_client()->register_get(
-            "/actors/type/$id/state/state",
-            KeyResponse::SUCCESS,
-            'hello world'
-        );
+        $stack = $this->get_http_client_stack([new Response(KeyResponse::SUCCESS, body: '"hello world"')]);
+        $client = $this->get_new_client_with_http($stack->client);
+        $id = uniqid();
+        $state = $this->get_started_state('type', $id, $client);
 
         $this->assertSame('hello world', $state->state);
         $this->assertSame('hello world', $state->state);
+
+        $request = $this->get_last_request($stack);
+        $this->assertRequestUri("/v1.0/actors/type/$id/state/state", $request);
+        $this->assertRequestMethod('GET', $request);
     }
 
     /**
@@ -150,13 +170,16 @@ class ActorStateTest extends DaprTests
      */
     public function testLoadingNoValue()
     {
-        $id    = uniqid();
-        $state = $this->get_started_state('type', $id);
-
-        $this->get_client()->register_get("/actors/type/$id/state/state", KeyResponse::KEY_NOT_FOUND, '');
+        $stack = $this->get_http_client_stack([new Response(KeyResponse::KEY_NOT_FOUND)]);
+        $client = $this->get_new_client_with_http($stack->client);
+        $id = uniqid();
+        $state = $this->get_started_state('type', $id, $client);
 
         $this->assertSame('initial', $state->state);
         $this->assertSame('initial', $state->state);
+        $request = $this->get_last_request($stack);
+        $this->assertRequestMethod('GET', $request);
+        $this->assertRequestUri("/v1.0/actors/type/$id/state/state", $request);
     }
 
     /**
@@ -164,10 +187,10 @@ class ActorStateTest extends DaprTests
      */
     public function testLoadingNoActor()
     {
-        $id    = uniqid();
-        $state = $this->get_started_state('nope', $id);
-
-        $this->get_client()->register_get("/actors/nope/$id/state/state", KeyResponse::ACTOR_NOT_FOUND, '');
+        $stack = $this->get_http_client_stack([new Response(KeyResponse::ACTOR_NOT_FOUND)]);
+        $client = $this->get_new_client_with_http($stack->client);
+        $id = uniqid();
+        $state = $this->get_started_state('nope', $id, $client);
 
         $this->expectException(DaprException::class);
 
@@ -179,18 +202,24 @@ class ActorStateTest extends DaprTests
      */
     public function testIsSet()
     {
-        $id    = uniqid();
-        $state = $this->get_started_state('type', $id);
-
-        $this->get_client()->register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, 'test');
+        $stack = $this->get_http_client_stack(
+            [new Response(KeyResponse::SUCCESS, body: '"test"'), new Response(KeyResponse::SUCCESS, body: 'null')]
+        );
+        $client = $this->get_new_client_with_http($stack->client);
+        $id = uniqid();
+        $state = $this->get_started_state('type', $id, $client);
 
         $this->assertTrue(isset($state->state));
         $this->assertTrue(isset($state->state));
+        $request = $this->get_last_request($stack);
+        $this->assertRequestUri("/v1.0/actors/type/$id/state/state", $request);
+        $this->assertRequestMethod('GET', $request);
 
         $state->roll_back();
 
-        $this->get_client()->register_get("/actors/type/$id/state/state", KeyResponse::SUCCESS, null);
-
         $this->assertFalse(isset($state->state));
+        $request = $this->get_last_request($stack);
+        $this->assertRequestMethod('GET', $request);
+        $this->assertRequestUri("/v1.0/actors/type/$id/state/state", $request);
     }
 }

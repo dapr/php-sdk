@@ -1,6 +1,7 @@
 <?php
 
 use Dapr\Actors\ActorConfig;
+use Dapr\Actors\ActorReference;
 use Dapr\Actors\ActorRuntime;
 use Dapr\Actors\Attributes\DaprType;
 use Dapr\Actors\Generators\CachedGenerator;
@@ -45,7 +46,7 @@ class ActorTest extends DaprTests
     {
         $id = uniqid();
         $this->register_actor('TestActor', ActorClass::class);
-        $this->assertState(
+        $assert = $this->assertState(
             [
                 ['upsert' => ['value', 'new value']],
             ],
@@ -53,11 +54,14 @@ class ActorTest extends DaprTests
         );
         $runtime = $this->container->get(ActorRuntime::class);
         $result = $runtime->resolve_actor(
-            'TestActor',
-            $id,
+            new ActorReference(
+                $id,
+                'TestActor'
+            ),
             fn($actor) => $runtime->do_method($actor, 'a_function', 'new value')
         );
         $this->assertSame(['new value'], $result);
+        $assert();
     }
 
     /**
@@ -109,7 +113,18 @@ class ActorTest extends DaprTests
                 ];
             }
         }
-        $this->get_client()->register_post("/actors/TestActor/$id/state", 201, [], $return);
+        $stack = $this->get_http_client_stack(
+            [
+                new Response(201)
+            ]
+        );
+        $client = $this->get_new_client_with_http($stack->client);
+        $this->container->set(\Dapr\Client\DaprClient::class, $client);
+        return function () use ($stack, $id, $return) {
+            $request = $this->get_last_request($stack);
+            $this->assertRequestUri("/v1.0/actors/TestActor/$id/state", $request);
+            $this->assertRequestBody(json_encode($return), $request);
+        };
     }
 
     /**
@@ -123,7 +138,7 @@ class ActorTest extends DaprTests
     {
         $id = uniqid();
         $this->register_actor(ActorClass::class);
-        $this->assertState(
+        $assert = $this->assertState(
             [
                 ['upsert' => ['value', 'new value']],
             ],
@@ -131,12 +146,12 @@ class ActorTest extends DaprTests
         );
         $runtime = $this->container->get(ActorRuntime::class);
         $result = $runtime->resolve_actor(
-            'TestActor',
-            $id,
+            new ActorReference($id, 'TestActor'),
             fn($actor) => $runtime->do_method($actor, 'a_function', 'new value')
         );
         $this->assertSame(['new value'], $result);
-        $runtime->resolve_actor('TestActor', $id, fn($actor) => $runtime->deactivate_actor($actor, 'TestActor'));
+        $runtime->resolve_actor(new ActorReference($id, 'TestActor'), fn($actor) => $runtime->deactivate_actor($actor, 'TestActor'));
+        $assert();
     }
 
     #[ArrayShape([
@@ -173,7 +188,12 @@ class ActorTest extends DaprTests
 
         if ($mode === ProxyFactory::ONLY_EXISTING) {
             // make sure the actor has been loaded
-            $this->get_actor_generator(ProxyFactory::GENERATED_CACHED, ITestActor::class, $type, $this->get_new_client())->get_proxy($id);
+            $this->get_actor_generator(
+                ProxyFactory::GENERATED_CACHED,
+                ITestActor::class,
+                $type,
+                $this->get_new_client()
+            )->get_proxy($id);
         }
         $stack = $this->get_http_client_stack(
             [
@@ -369,7 +389,7 @@ class ActorTest extends DaprTests
      */
     public function testCachedGeneratorGenerates()
     {
-        $cache_dir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'dapr-proxy-cache'.DIRECTORY_SEPARATOR;
+        $cache_dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'dapr-proxy-cache' . DIRECTORY_SEPARATOR;
         $cache = $cache_dir . '/dapr_proxy_GCached';
         if (file_exists($cache)) {
             unlink($cache);

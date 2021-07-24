@@ -3,12 +3,15 @@
 namespace Dapr\Client;
 
 use Dapr\Actors\IActorReference;
+use Dapr\Actors\Internal\Caches\KeyNotFound;
+use Dapr\Actors\Internal\KeyResponse;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Serialization\ISerializer;
 use Dapr\State\Internal\Transaction;
 use GuzzleHttp\Client;
+use GuzzleHttp\Promise\FulfilledPromise;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -66,6 +69,10 @@ trait HttpActorTrait
 
     public function saveActorStateAsync(IActorReference $actor, Transaction $transaction): PromiseInterface
     {
+        if ($transaction->is_empty()) {
+            return new FulfilledPromise(true);
+        }
+
         $options = ['body' => $this->serializer->as_json($transaction->get_transaction())];
         return $this->handlePromise(
             $this->httpClient->postAsync(
@@ -85,7 +92,10 @@ trait HttpActorTrait
     {
         return $this->handlePromise(
             $this->httpClient->getAsync("/v1.0/actors/{$actor->get_actor_type()}/{$actor->get_actor_id()}/state/$key"),
-            fn(ResponseInterface $response) => $this->deserializer->from_json($as, $response->getBody()->getContents())
+            fn(ResponseInterface $response) => match ($response->getStatusCode()) {
+                KeyResponse::SUCCESS => $this->deserializer->from_json($as, $response->getBody()->getContents()),
+                KeyResponse::KEY_NOT_FOUND => throw new KeyNotFound(),
+            }
         );
     }
 
@@ -182,7 +192,9 @@ trait HttpActorTrait
     public function deleteActorTimerAsync(IActorReference $actor, string $name): PromiseInterface
     {
         return $this->handlePromise(
-            $this->httpClient->deleteAsync("/v1.0/actors/{$actor->get_actor_type()}/{$actor->get_actor_id()}/timers/$name"),
+            $this->httpClient->deleteAsync(
+                "/v1.0/actors/{$actor->get_actor_type()}/{$actor->get_actor_id()}/timers/$name"
+            ),
             fn(ResponseInterface $response) => $response->getStatusCode() === 204
         );
     }

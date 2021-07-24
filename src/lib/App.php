@@ -3,6 +3,7 @@
 namespace Dapr;
 
 use Dapr\Actors\ActorConfig;
+use Dapr\Actors\ActorReference;
 use Dapr\Actors\ActorRuntime;
 use Dapr\Actors\HealthCheck;
 use Dapr\Actors\IActor;
@@ -226,8 +227,7 @@ class App
                 ActorRuntime $runtime
             ) {
                 $runtime->resolve_actor(
-                    $actor_type,
-                    $actor_id,
+                    new ActorReference($actor_id, $actor_type),
                     fn(IActor $actor) => $runtime->deactivate_actor($actor, $actor_type)
                 );
             }
@@ -247,22 +247,19 @@ class App
                 $arg = json_decode($request->getBody()->getContents(), true);
                 if ($method_name === 'remind') {
                     $runtime->resolve_actor(
-                        $actor_type,
-                        $actor_id,
+                        new ActorReference($actor_id, $actor_type),
                         fn(IActor $actor) => $actor->remind($reminder_name, Reminder::from_api($reminder_name, $arg))
                     );
                 } elseif ($method_name === 'timer') {
                     return $runtime->resolve_actor(
-                        $actor_type,
-                        $actor_id,
+                        new ActorReference($actor_id, $actor_type),
                         fn(IActor $actor) => $response->withBody(
                             $this->serialize_as_stream($runtime->do_method($actor, $arg['callback'], $arg['data']))
                         )
                     );
                 } else {
                     return $runtime->resolve_actor(
-                        $actor_type,
-                        $actor_id,
+                        new ActorReference($actor_id, $actor_type),
                         fn(IActor $actor) => $response->withBody(
                             $this->serialize_as_stream($runtime->do_method($actor, $method_name, $arg))
                         )

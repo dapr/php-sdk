@@ -4,19 +4,12 @@ namespace Dapr\Actors;
 
 use Dapr\Actors\Internal\Caches\CacheInterface;
 use Dapr\Actors\Internal\Caches\KeyNotFound;
-use Dapr\Actors\Internal\Caches\MemoryCache;
-use Dapr\Actors\Internal\Caches\NoCache;
-use Dapr\Actors\Internal\KeyResponse;
-use Dapr\DaprClient;
-use Dapr\Deserialization\IDeserializer;
+use Dapr\Client\DaprClient;
 use Dapr\exceptions\DaprException;
 use Dapr\State\Internal\Transaction;
 use DI\DependencyException;
-use DI\FactoryInterface;
 use DI\NotFoundException;
 use InvalidArgumentException;
-use Psr\Container\ContainerInterface;
-use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
@@ -34,15 +27,12 @@ abstract class ActorState
      * @var string[] Where values came from, to determine whether to load the value from the store.
      */
     private Transaction $transaction;
-    private LoggerInterface $logger;
-    private IDeserializer $deserializer;
     private ReflectionClass $reflection;
     private DaprClient $client;
-    private string $actor_id;
-    private string $dapr_type;
+    private ActorReference $reference;
     private CacheInterface $cache;
 
-    public function __construct(private ContainerInterface $container, private FactoryInterface $factory)
+    public function __construct()
     {
     }
 
@@ -55,19 +45,15 @@ abstract class ActorState
      */
     public function save_state(): void
     {
-        $this->logger->debug(
+        $this->client->logger->debug(
             'Committing transaction for {t}||{i}',
             ['t' => $this->dapr_type, 'i' => $this->actor_id]
         );
-        $operations = $this->transaction->get_transaction();
-        if (empty($operations)) {
-            return;
-        }
 
-        $this->client->post("/actors/{$this->dapr_type}/{$this->actor_id}/state", $operations);
+        $this->client->saveActorState($this->reference, $this->transaction);
         $this->cache->flush_cache();
 
-        $this->begin_transaction($this->dapr_type, $this->actor_id);
+        $this->begin_transaction($this->reference, $this->client, $this->cache);
     }
 
     /**
@@ -79,31 +65,22 @@ abstract class ActorState
      * @throws DependencyException
      * @throws NotFoundException
      */
-    private function begin_transaction(string $dapr_type, string $actor_id)
+    private function begin_transaction(ActorReference $reference, DaprClient $client, CacheInterface $cache)
     {
-        $this->dapr_type    = $dapr_type;
-        $this->actor_id     = $actor_id;
-        $this->reflection   = new ReflectionClass($this);
-        $this->logger       = $this->container->get(LoggerInterface::class);
-        $this->deserializer = $this->container->get(IDeserializer::class);
-        $this->client       = $this->container->get(DaprClient::class);
+        $this->reference = $reference;
+        $this->reflection = new ReflectionClass($this);
+        $this->client = $client;
 
         foreach ($this->reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             unset($this->{$property->name});
         }
-        $this->transaction = $this->factory->make(Transaction::class);
-        $this->logger->debug(
+        $this->transaction = new Transaction($client->serializer, $client->deserializer);
+        $client->logger->debug(
             'Starting a new transaction for {t}||{i}',
             ['t' => $this->dapr_type, 'i' => $this->actor_id]
         );
 
-        try {
-            $cache_type = $this->container->get('dapr.actors.cache');
-        } catch (DependencyException | NotFoundException) {
-            $this->logger->warning('No cache type found, turning off actor state cache. Set `dapr.actors.cache`');
-            $cache_type = MemoryCache::class;
-        }
-        $this->cache = new $cache_type($dapr_type, $actor_id, get_class($this));
+        $this->cache = $cache;
     }
 
     /**
@@ -113,11 +90,8 @@ abstract class ActorState
     {
         // have to reset the cache, since we don't know the state because the transaction was rolled back
         $this->cache->reset();
-        $this->logger->debug('Rolled back transaction');
-        try {
-            $this->transaction = $this->factory->make(Transaction::class);
-        } catch (DependencyException | NotFoundException) {
-        }
+        $this->client->logger->debug('Rolled back transaction');
+        $this->transaction = new Transaction($this->client->serializer, $this->client->deserializer);
     }
 
     /**
@@ -150,9 +124,9 @@ abstract class ActorState
      */
     public function __set(string $key, mixed $value): void
     {
-        if ( ! $this->reflection->hasProperty($key)) {
+        if (!$this->reflection->hasProperty($key)) {
             throw new InvalidArgumentException(
-                "$key on ".get_class($this)." is not defined and thus will not be stored."
+                "$key on " . get_class($this) . " is not defined and thus will not be stored."
             );
         }
         $this->cache->set_key($key, $value);
@@ -169,18 +143,18 @@ abstract class ActorState
      */
     private function _load_key(string $key): mixed
     {
-        $state    = $this->client->get("/actors/{$this->dapr_type}/{$this->actor_id}/state/$key");
         $property = $this->reflection->getProperty($key);
+        $as = $this->client->deserializer->detect_type_name_from_property($property);
 
-        $value = match ($state->code) {
-            KeyResponse::SUCCESS => $this->deserializer->detect_from_property($property, $state->data),
-            KeyResponse::KEY_NOT_FOUND => $property->hasDefaultValue() ? $property->getDefaultValue() : null,
-            KeyResponse::ACTOR_NOT_FOUND => throw new DaprException('Actor not found!')
-        };
+        try {
+            $state = $this->client->getActorState($this->reference, $key, $as);
+        } catch (KeyNotFound) {
+            $state = $property->hasDefaultValue() ? $property->getDefaultValue() : null;
+        }
 
-        $this->cache->set_key($key, $value);
+        $this->cache->set_key($key, $state);
 
-        return $value;
+        return $state;
     }
 
     /**
