@@ -86,11 +86,11 @@ $app->get(
             data: ['amount' => 2],
             period: new DateInterval('PT10M')
         );
-        $actor->create_reminder($reminder, $client);
+        $actor->create_reminder($reminder);
         $logger->critical('Created reminder');
         sleep(2);
         $body = assert_equals($body, 3, $actor->get_count(), 'Reminder should increment');
-        $read_reminder = $actor->get_reminder('increment', $client);
+        $read_reminder = $actor->get_reminder('increment');
         $logger->critical('Got reminder');
         $body = assert_equals(
             $body,
@@ -106,15 +106,15 @@ $app->get(
             callback: 'increment',
             data: 2
         );
-        $actor->create_timer($timer, $client);
+        $actor->create_timer($timer);
         $logger->critical('Created timer');
         sleep(2);
         $body = assert_equals($body, 5, $actor->get_count(), 'Timer should increment');
 
-        $actor->delete_timer('increment', $client);
-        $actor->delete_reminder('increment', $client);
-        $actor->delete_reminder('nope', $client);
-        $actor->delete_timer('nope', $client);
+        $actor->delete_timer('increment');
+        $actor->delete_reminder('increment');
+        $actor->delete_reminder('nope');
+        $actor->delete_timer('nope');
         $logger->critical('Cleaned up');
 
         $object = new SimpleObject();
