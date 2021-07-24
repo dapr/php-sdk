@@ -2,8 +2,7 @@
 export GITHUB_SHA=latest
 export DAPR_VERSION=1.3.0-rc.1
 
-PHIVE=$(shell which phive)
-PHIVE?=.phive/phive
+PHIVE=$(shell which phive || .phive/phive)
 
 .PHONY: integration-tests
 integration-tests: build tools
