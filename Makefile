@@ -42,5 +42,5 @@ $(PHIVE):
 	mv phive.phar $(PHIVE)
 
 tools: .phive/phars.xml $(PHIVE)
-	rm -rf tools
+	rm -rf tools && echo $(PHIVE)
 	$(PHIVE) install --trust-gpg-keys 12CE0F1D262429A5,4AA394086372C20A
