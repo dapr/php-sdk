@@ -28,3 +28,7 @@ build-tests: vendor/autoload.php
 .PHONY: build-caddy
 build-caddy: vendor/autoload.php
 	docker build -t caddy:latest -f images/caddy.Dockerfile .
+
+tools: .phive/phars.xml
+	rm -rf tools
+	phive install --trust-gpg-keys

@@ -26,9 +26,7 @@
     "guzzlehttp/guzzle": "^7.3"
   },
   "require-dev": {
-    "ext-xdebug": "*",
-    "phpunit/phpunit": "^9",
-    "vimeo/psalm": "^4.7"
+    "ext-xdebug": "*"
   },
   "autoload": {
     "psr-4": {
