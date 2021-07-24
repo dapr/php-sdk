@@ -16,8 +16,10 @@ jobs:
         with:
           php-version: 8.0
           extensions: xdebug
-      - name: Validate composer.json and composer.lock
-        run: composer validate && make tools
+      - name: Validate composer.json and install tools
+        run: |
+          composer validate
+          make tools
 
       - name: Cache Composer packages
         id: composer-cache
