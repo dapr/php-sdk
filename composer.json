@@ -35,7 +35,7 @@
     }
   },
   "scripts": {
-    "test": "./vendor/bin/phpunit --testdox tests --coverage-clover coverage.xml tests --whitelist src",
+    "test": "./tools/phpunit --testdox tests --coverage-clover coverage.xml tests --whitelist src",
     "start": [
       "COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose build --pull",
       "docker-compose up -d"
@@ -50,6 +50,6 @@
     "integration-tests": [
       "curl localhost:9502/do_tests"
     ],
-    "lint": "./vendor/bin/psalm"
+    "lint": "./tools/psalm"
   }
 }
