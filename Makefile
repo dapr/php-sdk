@@ -43,4 +43,4 @@ $(PHIVE):
 
 tools: .phive/phars.xml $(PHIVE)
 	rm -rf tools
-	$(PHIVE) install --trust-gpg-keys
+	$(PHIVE) install --trust-gpg-keys 12CE0F1D262429A5,4AA394086372C20A
