@@ -16,8 +16,10 @@ jobs:
         with:
           php-version: 8.0
           extensions: xdebug
-      - name: Validate composer.json and composer.lock
-        run: composer validate
+      - name: Validate composer.json and install tools
+        run: |
+          composer validate
+          make tools
 
       - name: Cache Composer packages
         id: composer-cache
@@ -50,7 +52,7 @@ jobs:
           php-version: 8.0
           extensions: xdebug
       - name: Validate composer.json and composer.lock
-        run: composer validate
+        run: composer validate && make tools
 
       - name: Cache Composer packages
         id: composer-cache
@@ -129,7 +131,7 @@ jobs:
     timeout-minutes: 5
     strategy:
       matrix:
-        dapr-version: [ 1.3.0-rc.1, 1.2.0, 1.2.1, 1.2.2 ]
+        dapr-version: [ 1.3.0-rc.4, 1.2.0, 1.2.1, 1.2.2 ]
     steps:
       - name: Download Caddy Image
         uses: actions/download-artifact@v2

@@ -27,8 +27,7 @@
   },
   "require-dev": {
     "ext-xdebug": "*",
-    "phpunit/phpunit": "^9",
-    "vimeo/psalm": "^4.7"
+    "phpunit/phpunit": "^9"
   },
   "autoload": {
     "psr-4": {
@@ -52,6 +51,6 @@
     "integration-tests": [
       "curl localhost:9502/do_tests"
     ],
-    "lint": "./vendor/bin/psalm"
+    "lint": "./tools/psalm"
   }
 }

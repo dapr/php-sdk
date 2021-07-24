@@ -2,8 +2,10 @@
 export GITHUB_SHA=latest
 export DAPR_VERSION=1.3.0-rc.1
 
+PHIVE=$(shell which phive || echo .phive/phive)
+
 .PHONY: integration-tests
-integration-tests: build
+integration-tests: build tools
 	docker-compose down -v
 	docker-compose up &
 	sleep 10
@@ -28,3 +30,16 @@ build-tests: vendor/autoload.php
 .PHONY: build-caddy
 build-caddy: vendor/autoload.php
 	docker build -t caddy:latest -f images/caddy.Dockerfile .
+
+$(PHIVE):
+	wget -O phive.phar "https://phar.io/releases/phive.phar"
+	wget -O phive.phar.asc "https://phar.io/releases/phive.phar.asc"
+	gpg --keyserver hkps://keys.openpgp.org --recv-keys 0x9D8A98B29B2D5D79
+	gpg --verify phive.phar.asc phive.phar
+	rm phive.phar.asc
+	chmod +x phive.phar
+	mv phive.phar $(PHIVE)
+
+tools: .phive/phars.xml $(PHIVE)
+	rm -rf tools && echo $(PHIVE)
+	$(PHIVE) install --trust-gpg-keys 12CE0F1D262429A5,4AA394086372C20A
