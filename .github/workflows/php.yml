@@ -17,7 +17,7 @@ jobs:
           php-version: 8.0
           extensions: xdebug
       - name: Validate composer.json and composer.lock
-        run: composer validate
+        run: composer validate && make tools
 
       - name: Cache Composer packages
         id: composer-cache
@@ -50,7 +50,7 @@ jobs:
           php-version: 8.0
           extensions: xdebug
       - name: Validate composer.json and composer.lock
-        run: composer validate
+        run: composer validate && make tools
 
       - name: Cache Composer packages
         id: composer-cache
