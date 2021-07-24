@@ -2,7 +2,11 @@
 
 namespace Dapr\Actors;
 
+use Dapr\Deserialization\Deserializers\IDeserialize;
+use Dapr\Deserialization\IDeserializer;
 use Dapr\Formats;
+use Dapr\Serialization\ISerializer;
+use Dapr\Serialization\Serializers\ISerialize;
 use DateInterval;
 use JetBrains\PhpStorm\ArrayShape;
 
@@ -13,7 +17,7 @@ use JetBrains\PhpStorm\ArrayShape;
  *
  * @package Dapr\Actors
  */
-class Reminder
+class Reminder implements ISerialize, IDeserialize
 {
     /**
      * Reminder constructor.
@@ -27,7 +31,8 @@ class Reminder
         public string $name,
         public DateInterval $due_time,
         public mixed $data,
-        public ?DateInterval $period = null
+        public ?DateInterval $period = null,
+        public int $repetitions = -1
     ) {
     }
 
@@ -53,13 +58,40 @@ class Reminder
         );
     }
 
+    public static function deserialize(mixed $value, IDeserializer $deserializer): mixed
+    {
+        return new Reminder(
+            '',
+            Formats::from_dapr_interval($value['dueTime']),
+            json_decode($value['data'] ?? []),
+            Formats::from_dapr_interval($value['period'] ?? '')
+        );
+    }
+
     #[ArrayShape(['dueTime' => "string", 'period' => "string", 'data' => "false|string"])]
     public function to_array(): array
     {
         return [
             'dueTime' => Formats::normalize_interval($this->due_time),
-            'period'  => Formats::normalize_interval($this->period),
-            'data'    => json_encode($this->data),
+            'period' => Formats::normalize_interval($this->period),
+            'data' => json_encode($this->data),
+        ];
+    }
+
+    public function serialize(mixed $value, ISerializer $serializer): mixed
+    {
+        if ($this->repetitions >= 0) {
+            return [
+                'dueTime' => Formats::normalize_interval($this->due_time),
+                'period' => "R{$this->repetitions}/" . $serializer->as_array($this->period),
+                'data' => $serializer->as_json($this->data),
+            ];
+        }
+
+        return [
+            'dueTime' => Formats::normalize_interval($this->due_time),
+            'period' => Formats::normalize_interval($this->period),
+            'data' => $serializer->as_json($this->data)
         ];
     }
 }

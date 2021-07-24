@@ -573,7 +573,7 @@ abstract class DaprClient
      * @param string $name
      * @return Reminder
      */
-    abstract public function getActorReminder(IActorReference $actor, string $name): Reminder;
+    abstract public function getActorReminder(IActorReference $actor, string $name): ?Reminder;
 
     /**
      * Get an actor reminder

@@ -31,7 +31,7 @@ trait HttpActorTrait
         mixed $parameter = null,
         string $as = 'array'
     ): mixed {
-        return $this->invokeActorMethodAsync($httpMethod, $actor, $method, $as)->wait(true);
+        return $this->invokeActorMethodAsync($httpMethod, $actor, $method, $parameter, $as)->wait(true);
     }
 
     public function invokeActorMethodAsync(
@@ -111,7 +111,7 @@ trait HttpActorTrait
         );
     }
 
-    public function getActorReminder(IActorReference $actor, string $name): Reminder
+    public function getActorReminder(IActorReference $actor, string $name): ?Reminder
     {
         return $this->getActorReminderAsync($actor, $name)->wait(true);
     }
@@ -122,10 +122,18 @@ trait HttpActorTrait
             $this->httpClient->getAsync(
                 "/v1.0/actors/{$actor->get_actor_type()}/{$actor->get_actor_id()}/reminders/$name"
             ),
-            fn(ResponseInterface $response) => $this->deserializer->from_json(
+            fn(ResponseInterface $response) => $response->getStatusCode() === 200 ? $this->deserializer->from_json(
                 Reminder::class,
                 $response->getBody()->getContents()
-            )
+            ) : null
+        )->then(
+            function (?Reminder $reminder) use ($name) {
+                if ($reminder === null) {
+                    return null;
+                }
+                $reminder->name = $name;
+                return $reminder;
+            }
         );
     }
 
@@ -174,7 +182,7 @@ trait HttpActorTrait
     public function deleteActorTimerAsync(IActorReference $actor, string $name): PromiseInterface
     {
         return $this->handlePromise(
-            $this->httpClient->deleteAsync("/v1.0/{$actor->get_actor_type()}/{$actor->get_actor_id()}/timers/$name"),
+            $this->httpClient->deleteAsync("/v1.0/actors/{$actor->get_actor_type()}/{$actor->get_actor_id()}/timers/$name"),
             fn(ResponseInterface $response) => $response->getStatusCode() === 204
         );
     }
