@@ -2,10 +2,12 @@
 
 namespace Dapr\PubSub;
 
+use Dapr\Client\DaprClient;
 use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
 use JetBrains\PhpStorm\Deprecated;
+use Psr\Container\ContainerInterface;
 
 /**
  * Class Publish
@@ -18,10 +20,14 @@ class Publish
      * Publish constructor.
      *
      * @param string $pubsub
-     * @param FactoryInterface|null $container
+     * @param FactoryInterface $factory
+     * @param ContainerInterface $container
      */
-    public function __construct(private string $pubsub, private FactoryInterface $container)
-    {
+    public function __construct(
+        private string $pubsub,
+        private FactoryInterface $factory,
+        private ContainerInterface $container
+    ) {
     }
 
     /**
@@ -33,6 +39,13 @@ class Publish
      */
     public function topic(string $topic): Topic
     {
-        return $this->container->make(Topic::class, ['pubsub' => $this->pubsub, 'topic' => $topic]);
+        return $this->factory->make(
+            Topic::class,
+            [
+                'pubsub' => $this->pubsub,
+                'topic' => $topic,
+                'client' => $this->container->get(\Dapr\DaprClient::class)
+            ]
+        );
     }
 }
