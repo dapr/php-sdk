@@ -5,6 +5,7 @@ namespace Dapr;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\exceptions\DaprException;
 use Dapr\Middleware\Defaults\Tracing;
+use JetBrains\PhpStorm\Deprecated;
 use JetBrains\PhpStorm\Pure;
 use Psr\Log\LoggerInterface;
 
@@ -12,6 +13,7 @@ use Psr\Log\LoggerInterface;
  * Helper functions for accessing the dapr api.
  * @package Dapr
  */
+#[Deprecated(since: '1.2.0', replacement: \Dapr\Client\DaprClient::class, reason: 'New & better client')]
 class DaprClient
 {
     // temp hack to allow custom headers
