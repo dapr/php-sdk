@@ -38,7 +38,8 @@ class ActorConfigTest extends DaprTests
         $serializer = $this->container->get(ISerializer::class);
         $config = new ActorConfig(
             [ITestActor::class],
-            reentrantConfig: new \Dapr\Actors\ReentrantConfig(12)
+            reentrantConfig: new \Dapr\Actors\ReentrantConfig(12),
+            remindersStoragePartitions: 1
         );
         $this->assertSame(
             [
@@ -46,7 +47,8 @@ class ActorConfigTest extends DaprTests
                 'reentrancy' => [
                     'enabled' => true,
                     'maxStackDepth' => 12
-                ]
+                ],
+                'remindersStoragePartitions' => 1
             ],
             $serializer->as_array($config)
         );
