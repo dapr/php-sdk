@@ -112,6 +112,7 @@ jobs:
           - php-secrets-http
           - php-secret-client-service
           - php-secret-client-http
+          - sail-app
         include:
           - image: caddy
             dockerfile: images/caddy.Dockerfile
@@ -167,8 +168,18 @@ jobs:
             context: examples/secrets
             args: |
               SERVICE=client
+          - image: sail-app
+            context: examples/laravel/vendor/laravel/sail/runtimes/8.0
+            dockerfile: Dockerfile
+            args: |
+              WWWGROUP=1000
     steps:
       - uses: actions/checkout@v2
+      - uses: shivammathur/setup-php@2.9.0
+        with:
+          php-version: 8.0
+      - name: Install vendor
+        run: composer install
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
@@ -263,6 +274,7 @@ jobs:
         example:
           - actor
           - secrets
+          - laravel
     steps:
       - uses: actions/checkout@v2
       - uses: shivammathur/setup-php@2.9.0
