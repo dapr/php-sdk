@@ -18,7 +18,6 @@ jobs:
       - name: Update examples
         env:
           GIT_BRANCH: ${{ github.head_ref || 'main' }}
-          GIT_SHA: ${{ github.sha || '' }}
         run:
           php update-examples.php
       - name: Commit examples
