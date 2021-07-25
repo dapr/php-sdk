@@ -20,7 +20,7 @@ services:
     ports:
       - 8080:80
   client-http:
-    image: ${DOCKER_USER}/php-client-http:${GIT_SHA}
+    image: php-client-http:${GIT_SHA}
     depends_on:
       - client-service
     network_mode: service:client-service

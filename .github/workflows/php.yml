@@ -85,6 +85,7 @@ jobs:
           - php-actor-service
           - php-actor-http
           - php-client-service
+          - php-client-http
         include:
           - image: caddy
             dockerfile: images/caddy.Dockerfile
@@ -107,6 +108,12 @@ jobs:
           - image: php-client-service
             dockerfile: examples/images/service.Dockerfile
             target: production
+            context: examples/actor
+            args: |
+              SERVICE=client
+          - image: php-client-http
+            dockerfile: examples/images/caddy.Dockerfile
+            target: base
             context: examples/actor
             args: |
               SERVICE=client

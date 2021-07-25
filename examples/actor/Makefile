@@ -22,7 +22,7 @@ service/client-service: images/opcache.ini images/opcache.ini
 
 .PHONY: service/client-http
 service/client-http: images/Caddyfile
-	docker build --pull --build-arg SERICE=client -f ../images/caddy.Dockerfile --target base -t ${DOCKER_USER}/php-client-http:${GIT_SHA} .
+	docker build --pull --build-arg SERICE=client -f ../images/caddy.Dockerfile --target base -t php-client-http:${GIT_SHA} .
 
 .PHONY: start
 start:
