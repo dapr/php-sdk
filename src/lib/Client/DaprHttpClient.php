@@ -3,6 +3,7 @@
 namespace Dapr\Client;
 
 use Dapr\Deserialization\IDeserializer;
+use Dapr\Middleware\Defaults\ActorToken;
 use Dapr\Serialization\ISerializer;
 use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
@@ -45,6 +46,10 @@ class DaprHttpClient extends DaprClient
 
         if ($this->getDaprToken() !== null) {
             $options['headers']['dapr-api-token'] = $this->getDaprToken();
+        }
+
+        if (!empty(ActorToken::$token)) {
+            $options['headers']['Dapr-Reentrancy-Id'] = &ActorToken::$token;
         }
 
         $this->httpClient = new Client($options);
