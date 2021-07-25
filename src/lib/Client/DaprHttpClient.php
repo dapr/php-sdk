@@ -37,7 +37,7 @@ class DaprHttpClient extends DaprClient
             'base_uri' => $this->baseHttpUri,
             'allow_redirects' => false,
             'headers' => [
-                'User-Agent' => 'DaprPHPSDK/v2.0',
+                'User-Agent' => 'DaprPHPSDK/v1.2',
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json'
             ]
