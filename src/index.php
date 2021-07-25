@@ -55,7 +55,7 @@ $app = App::create(
         ),
         'dapr.actors' => [SimpleActor::class],
     ]
-)
+)->enableDefinitionCache()->enableCompilation(sys_get_temp_dir())
 );
 
 $app->get(
@@ -465,15 +465,16 @@ $app->get(
             $body = [];
             $body = assert_equals($body, 200, $result->getStatusCode(), 'test completed successfully');
             $all_results = json_decode($result->getBody()->getContents(), true);
-            foreach ($all_results as $test => $assertion) {
-                if (!$has_failed && ($assertion === null || (is_string($assertion) && str_contains($assertion, '❌')))) {
-                    $has_failed = true;
-                }
-            }
             $test_results[$suite] = [
                 'status' => $body,
                 'results' => $all_results,
             ];
+        }
+
+        $test_results = json_encode($test_results);
+
+        if (str_contains($test_results, '❌')) {
+            $has_failed = true;
         }
 
         $client->shutdown(afterRequest: false);
@@ -483,7 +484,7 @@ $app->get(
             error_log('waiting for daprd shutdown...');
         }
 
-        return new \Nyholm\Psr7\Response($has_failed ? 500 : 200, body: json_encode($test_results));
+        return new \Nyholm\Psr7\Response($has_failed ? 500 : 200, body: $test_results);
     }
 );
 

@@ -23,9 +23,6 @@ use ReflectionProperty;
  */
 abstract class ActorState
 {
-    /**
-     * @var string[] Where values came from, to determine whether to load the value from the store.
-     */
     private Transaction $transaction;
     private ReflectionClass $reflection;
     private DaprClient $client;

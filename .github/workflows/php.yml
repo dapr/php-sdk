@@ -7,6 +7,27 @@ on:
     branches: [ main ]
 
 jobs:
+  update-examples:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+      - uses: shivammathur/setup-php@2.9.0
+        with:
+          php-version: 8.0
+      - name: Update examples
+        env:
+          GIT_BRANCH: ${{ github.head_ref || 'main' }}
+        run:
+          php update-examples.php
+      - name: Commit examples
+        uses: quizlet/commit-changes@v0.2.3
+        with:
+          message: Update examples
+          glob-patterns: |
+            **/composer.json
+            **/composer.lock
+          branch: ${{ github.head_ref || 'main' }}
   unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -77,9 +98,16 @@ jobs:
     needs:
       - lint
       - unit-tests
+      - update-examples
     strategy:
       matrix:
-        image: [ 'caddy', 'tests' ]
+        image:
+          - caddy
+          - tests
+          - php-actor-service
+          - php-actor-http
+          - php-client-service
+          - php-client-http
         include:
           - image: caddy
             dockerfile: images/caddy.Dockerfile
@@ -87,6 +115,30 @@ jobs:
           - image: tests
             dockerfile: images/tests.Dockerfile
             target: production
+          - image: php-actor-service
+            dockerfile: examples/images/service.Dockerfile
+            target: production
+            context: examples/actor
+            args: |
+              SERVICE=actor
+          - image: php-actor-http
+            dockerfile: examples/images/caddy.Dockerfile
+            target: base
+            context: examples/actor
+            args: |
+              SERVICE=actor
+          - image: php-client-service
+            dockerfile: examples/images/service.Dockerfile
+            target: production
+            context: examples/actor
+            args: |
+              SERVICE=client
+          - image: php-client-http
+            dockerfile: examples/images/caddy.Dockerfile
+            target: base
+            context: examples/actor
+            args: |
+              SERVICE=client
     steps:
       - uses: actions/checkout@v2
       - name: Set up Docker Buildx
@@ -109,7 +161,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          context: ./
+          context: ${{ matrix.context || './' }}
           file: ${{ matrix.dockerfile }}
           push: false
           pull: true
@@ -119,6 +171,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=local,src=/tmp/.${{ matrix.image }}-cache
           cache-to: type=local,mode=max,dest=/tmp/.${{ matrix.image }}-cache
+          build-args: ${{ matrix.args || '' }}
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
@@ -167,3 +220,47 @@ jobs:
             docker-compose logs dev
             exit 1
           fi
+  examples:
+    runs-on: ubuntu-latest
+    needs:
+      - build-integration-test-containers
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        dapr-version:
+          - 1.3.0-rc.4
+          - 1.2.0
+          - 1.2.1
+          - 1.2.2
+        example:
+          - actor
+        include:
+          - example: actor
+    steps:
+      - uses: actions/checkout@v2
+      - uses: shivammathur/setup-php@2.9.0
+        with:
+          php-version: 8.0
+      - name: Download images
+        uses: actions/download-artifact@v2
+        with:
+          path: /tmp/images
+      - name: Import images
+        run: |
+          ls -lah /tmp/images
+          for f in /tmp/images/*/*.tar; do
+            cat $f | docker load
+          done
+      - name: Start services
+        env:
+          DAPR_VERSION: ${{ matrix.dapr-version }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          cd examples/${{ matrix.example }}
+          docker-compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
+      - name: Wait for stability
+        run: sleep 10
+      - name: Run tests
+        run: |
+          cd examples/${{ matrix.example }}
+          php test.php

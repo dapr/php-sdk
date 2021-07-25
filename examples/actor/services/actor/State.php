@@ -3,6 +3,7 @@
 /**
  * Class State
  */
-class State extends \Dapr\Actors\ActorState {
-    public int $count = 0;
+class State extends \Dapr\Actors\ActorState
+{
+	public int $count = 0;
 }

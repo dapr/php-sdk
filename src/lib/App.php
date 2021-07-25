@@ -30,7 +30,6 @@ use Invoker\ParameterResolver\Container\TypeHintContainerResolver;
 use Invoker\ParameterResolver\DefaultValueResolver;
 use Invoker\ParameterResolver\ResolverChain;
 use Invoker\ParameterResolver\TypeHintResolver;
-use JetBrains\PhpStorm\Pure;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
@@ -39,6 +38,8 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Throwable;
@@ -47,7 +48,7 @@ use Throwable;
  * Class App
  * @package Dapr
  */
-class App
+class App implements MiddlewareInterface
 {
     /**
      * App constructor.
@@ -61,7 +62,7 @@ class App
      * @param ServerRequestCreator $creator
      * @param SapiEmitter $emitter
      */
-    #[Pure] public function __construct(
+    public function __construct(
         protected ContainerInterface $container,
         protected FactoryInterface $factory,
         protected ISerializer $serializer,
@@ -89,13 +90,13 @@ class App
     {
         if ($container === null) {
             $builder = new ContainerBuilder();
-            $builder->addDefinitions(__DIR__.'/../config.php');
+            $builder->addDefinitions(__DIR__ . '/../config.php');
             if ($configure !== null) {
                 $configure($builder);
             }
             $container = $builder->build();
         }
-        $app         = $container->get(App::class);
+        $app = $container->get(App::class);
         $error_level = match ($container->get('dapr.log.level')) {
             LogLevel::DEBUG, LogLevel::INFO, LogLevel::NOTICE => E_ALL,
             LogLevel::WARNING => E_ALL ^ E_NOTICE ^ E_USER_NOTICE,
@@ -112,9 +113,9 @@ class App
                         $app->serialize_as_stream(
                             [
                                 'errorCode' => 'Exception',
-                                'message'   => (E_WARNING & $err_no ? 'WARNING' : (E_NOTICE & $err_no ? 'NOTICE' : (E_ERROR & $err_no ? 'ERROR' : 'OTHER'))).': '.$err_str,
-                                'file'      => $err_file,
-                                'line'      => $err_line,
+                                'message' => (E_WARNING & $err_no ? 'WARNING' : (E_NOTICE & $err_no ? 'NOTICE' : (E_ERROR & $err_no ? 'ERROR' : 'OTHER'))) . ': ' . $err_str,
+                                'file' => $err_file,
+                                'line' => $err_line,
                             ]
                         )
                     );
@@ -125,30 +126,6 @@ class App
         );
 
         return $app;
-    }
-
-    /**
-     * @param mixed $data
-     *
-     * @return StreamInterface
-     */
-    private function serialize_as_stream(mixed $data): StreamInterface
-    {
-        return $this->psr17Factory->createStream($this->serializer->as_json($data));
-    }
-
-    protected function apply_response_middleware(ResponseInterface $response): ResponseInterface
-    {
-        $middlewares = $this->container->get('dapr.http.middleware.response');
-        foreach ($middlewares as $middleware) {
-            if ($middleware instanceof IResponseMiddleware) {
-                $response = $middleware->response($response);
-            } else {
-                throw new \LogicException('Response middleware must implement \Dapr\Middleware\IResponseMiddleware');
-            }
-        }
-
-        return $response;
     }
 
     /**
@@ -196,7 +173,7 @@ class App
     {
         $this->add_dapr_routes($this);
         try {
-            $request  ??= $this->creator->fromGlobals();
+            $request ??= $this->creator->fromGlobals();
             $response = $this->handleRequest($this->apply_request_middleware($request));
         } catch (NotFound $exception) {
             $response = $this->psr17Factory->createResponse(404)->withAddedHeader('Content-Type', 'application/json');
@@ -301,6 +278,16 @@ class App
         $this->routeCollector->addRoute('PUT', $route, $callback);
     }
 
+    /**
+     * @param mixed $data
+     *
+     * @return StreamInterface
+     */
+    private function serialize_as_stream(mixed $data): StreamInterface
+    {
+        return $this->psr17Factory->createStream($this->serializer->as_json($data));
+    }
+
     public function get(string $route, callable $callback): void
     {
         $this->routeCollector->addRoute('GET', $route, $callback);
@@ -343,10 +330,10 @@ class App
                 return $response->withStatus(405)->withAddedHeader('Allow', implode(',', $allowed_methods));
             case Dispatcher::FOUND:
                 $parameters += $route_info[2];
-                $callback   = $route_info[1];
+                $callback = $route_info[1];
 
                 $actual_response = $response;
-                $response        = $this->run($callback, $parameters);
+                $response = $this->run($callback, $parameters);
 
                 if ($response instanceof ResponseInterface) {
                     return $response;
@@ -418,5 +405,40 @@ class App
         }
 
         return $request;
+    }
+
+    protected function apply_response_middleware(ResponseInterface $response): ResponseInterface
+    {
+        $middlewares = $this->container->get('dapr.http.middleware.response');
+        foreach ($middlewares as $middleware) {
+            if ($middleware instanceof IResponseMiddleware) {
+                $response = $middleware->response($response);
+            } else {
+                throw new \LogicException('Response middleware must implement \Dapr\Middleware\IResponseMiddleware');
+            }
+        }
+
+        return $response;
+    }
+
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    {
+        $this->add_dapr_routes($this);
+        try {
+            $response = $this->handleRequest($this->apply_request_middleware($request));
+        } catch (NotFound $exception) {
+            return $this->apply_response_middleware($handler->handle($request));
+        } catch (Throwable $exception) {
+            $response = $this->psr17Factory->createResponse(500)->withBody(
+                $this->psr17Factory->createStream($this->serializer->as_json($exception))
+            )->withHeader('Content-Type', 'application/json');
+            $this->logger->critical('Failed due to {exception}', ['exception' => $exception]);
+        }
+
+        if ($response->getStatusCode() === 404) {
+            return $this->apply_response_middleware($handler->handle($request));
+        }
+
+        return $this->apply_response_middleware($response);
     }
 }

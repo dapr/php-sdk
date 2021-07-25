@@ -1,7 +1,7 @@
 FROM php:8.0-fpm AS base
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 RUN apt-get update && apt-get install -y wget git unzip && apt-get clean
-RUN install-php-extensions curl zip && mkdir -p /tests
+RUN install-php-extensions curl zip apcu && mkdir -p /tests
 WORKDIR /tests
 
 FROM base AS vendor
