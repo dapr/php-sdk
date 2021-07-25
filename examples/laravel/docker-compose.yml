@@ -2,12 +2,7 @@
 version: '3'
 services:
     laravel.test:
-        build:
-            context: ./vendor/laravel/sail/runtimes/8.0
-            dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
-        image: sail-8.0/app
+        image: sail-app:${GIT_SHA}
         ports:
             - '${APP_PORT:-80}:80'
         environment:
@@ -31,12 +26,7 @@ services:
           - redis
         network_mode: service:laravel.test
     laravel.api:
-        build:
-          context: ./vendor/laravel/sail/runtimes/8.0
-          dockerfile: Dockerfile
-          args:
-            WWWGROUP: '${WWWGROUP}'
-        image: sail-8.0/app
+        image: sail-app:${GIT_SHA}
         environment:
           WWWUSER: '${WWWUSER}'
           LARAVEL_SAIL: 1
