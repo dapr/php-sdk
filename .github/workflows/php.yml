@@ -170,7 +170,7 @@ jobs:
               SERVICE=client
           - image: sail-app
             context: examples/laravel/vendor/laravel/sail/runtimes/8.0
-            dockerfile: Dockerfile
+            dockerfile: examples/laravel/vendor/laravel/sail/runtimes/8.0/Dockerfile
             args: |
               WWWGROUP=1000
             pre-built: |
@@ -195,11 +195,6 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.image }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.image }}-
-      - uses: shivammathur/setup-php@2.9.0
-        with:
-          php-version: 8.0
-      - name: Validate composer.json and composer.lock
-        run: composer validate
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
