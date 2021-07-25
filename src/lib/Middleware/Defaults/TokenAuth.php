@@ -26,7 +26,7 @@ class TokenAuth implements IRequestMiddleware
             throw new NotFound();
         }
 
-        if (!hash_equals($token, $request->hasHeader('dapr-api-token')[0])) {
+        if (!hash_equals($token, $request->getHeader('dapr-api-token')[0] ?? '')) {
             throw new NotFound();
         }
 
