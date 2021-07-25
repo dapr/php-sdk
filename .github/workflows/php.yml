@@ -25,6 +25,7 @@ jobs:
         with:
           message: Update examples
           glob-patterns: '*'
+          branch: ${{ github.head_ref || 'main' }}
   unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 5
