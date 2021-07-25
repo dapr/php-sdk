@@ -1,11 +1,27 @@
 SHELL := /bin/bash
 
+export GIT_SHA=$(shell git rev-parse HEAD)
 include .env
 export $(shell sed 's/=.*//' .env)
 
 .PHONY: deps
-deps: images/fpm.conf images/opcache.ini images/xdebug.ini images/Caddyfile docker-compose.yml
-	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose build
+deps: php-secrets-service php-secrets-http docker-compose.yml php-secret-client-http php-secret-client-service
+
+.PHONY: php-secrets-service
+php-secrets-service: images/fpm.conf images/opcache.ini
+	docker build -f ../images/service.Dockerfile -t php-secrets-service:$(GIT_SHA) --pull --build-arg SERVICE=secrets --target production .
+
+.PHONY: php-secrets-http
+php-secrets-http: images/Caddyfile
+	docker build -f ../images/caddy.Dockerfile -t php-secrets-http:$(GIT_SHA) --pull --build-arg SERVICE=secrets --target base .
+
+.PHONY: php-secret-client-service
+php-secret-client-service: images/fpm.conf images/opcache.ini
+	docker build -f ../images/service.Dockerfile -t php-secret-client-service:$(GIT_SHA) --pull --build-arg SERVICE=client --target production .
+
+.PHONY: php-secret-client-http
+php-secret-client-http: images/Caddyfile
+	docker build -f ../images/caddy.Dockerfile -t php-secret-client-http:$(GIT_SHA) --pull --build-arg SERVICE=client --target base .
 
 .PHONY: start
 start:
@@ -14,6 +30,10 @@ start:
 .PHONY: stop
 stop:
 	docker-compose -f docker-compose.yml -f ../docker-compose.common.yml stop
+
+.PHONY: logs
+logs:
+	docker-compose -f docker-compose.yml -f ../docker-compose.common.yml logs
 
 .PHONY: clean
 clean: stop
