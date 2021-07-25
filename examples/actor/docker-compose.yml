@@ -16,7 +16,7 @@ services:
       - actor-http
     network_mode: service:actor-service
   client-service:
-    image: ${DOCKER_USER}/php-client-service:${GIT_SHA}
+    image: php-client-service:${GIT_SHA}
     ports:
       - 8080:80
   client-http:

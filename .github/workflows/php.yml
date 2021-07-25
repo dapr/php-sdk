@@ -84,6 +84,7 @@ jobs:
           - tests
           - php-actor-service
           - php-actor-http
+          - php-client-service
         include:
           - image: caddy
             dockerfile: images/caddy.Dockerfile
@@ -103,6 +104,12 @@ jobs:
             context: examples/actor
             args: |
               SERVICE=actor
+          - image: php-client-service
+            dockerfile: examples/images/service.Dockerfile
+            target: production
+            context: examples/actor
+            args: |
+              SERVICE=client
     steps:
       - uses: actions/checkout@v2
       - name: Set up Docker Buildx

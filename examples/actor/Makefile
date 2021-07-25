@@ -18,7 +18,7 @@ service/actor-http: images/Caddyfile
 
 .PHONY: service/client-service
 service/client-service: images/opcache.ini images/opcache.ini
-	docker build --pull --build-arg SERVICE=client -f ../images/service.Dockerfile --target production -t ${DOCKER_USER}/php-client-service:${GIT_SHA} .
+	docker build --pull --build-arg SERVICE=client -f ../images/service.Dockerfile --target production -t php-client-service:${GIT_SHA} .
 
 .PHONY: service/client-http
 service/client-http: images/Caddyfile
