@@ -10,6 +10,7 @@ use Dapr\Actors\Generators\ExistingOnly;
 use Dapr\Actors\Generators\FileGenerator;
 use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Actors\Internal\Caches\FileCache;
+use Dapr\Actors\Internal\Caches\MemoryCache;
 use Dapr\App;
 use Dapr\DaprClient;
 use Dapr\Deserialization\DeserializationConfig;
@@ -89,14 +90,11 @@ return [
         ->constructorParameter('drain_enabled', get('dapr.actors.drain_enabled')),
     ActorRuntime::class => autowire()
         ->constructorParameter('client', get(\Dapr\Client\DaprClient::class)),
-    ActorState::class => autowire()->constructorParameter('logger', get('dapr.logger')),
     ActorProxy::class => autowire()->constructorParameter('logger', get('dapr.logger')),
     ApplicationJson::class => autowire(),
     App::class => autowire()
         ->constructorParameter('logger', get('dapr.logger'))
         ->constructorParameter('serializer', get('dapr.internal.serializer')),
-    CachedGenerator::class => autowire(),
-    DynamicGenerator::class => autowire(),
     DaprClient::class => autowire()
         ->constructorParameter('port', get('dapr.port'))
         ->constructorParameter('logger', get('dapr.logger')),
@@ -104,8 +102,6 @@ return [
         'deserializers',
         get('dapr.deserializers.custom')
     ),
-    ExistingOnly::class => autowire(),
-    FileGenerator::class => autowire(),
     IDeserializer::class => autowire(Deserializer::class)->constructorParameter(
         'logger',
         get('dapr.logger')
@@ -117,11 +113,9 @@ return [
         get('dapr.actors.proxy.generation')
     ),
     Psr17Factory::class => autowire(),
-    Publish::class => autowire()->constructorParameter('pubsub', get('dapr.pubsub.default')),
     RouteCollector::class => autowire()
         ->constructorParameter('routeParser', create(Std::class))
         ->constructorParameter('dataGenerator', create(GroupCountBased::class)),
-    SecretManager::class => autowire()->constructorParameter('logger', get('dapr.logger')),
     SerializationConfig::class => autowire()->constructorParameter('serializers', get('dapr.serializers.custom')),
     ServerRequestCreator::class => create()->constructor(
         get(Psr17Factory::class),
@@ -134,15 +128,10 @@ return [
         'subscriptions',
         get('dapr.subscriptions')
     ),
-    Topic::class => autowire()
-        ->constructorParameter('logger', get('dapr.logger'))
-        ->constructorParameter('client', get(DaprClient::class)),
     Tracing::class => autowire(),
     Transaction::class => autowire(),
-    TransactionalState::class => autowire()->constructorParameter('logger', get('dapr.logger')),
 
     // default application settings
-    \Dapr\Actors\Internal\Caches\CacheInterface::class => autowire(\Dapr\Actors\Internal\Caches\MemoryCache::class),
     'dapr.pubsub.default' => 'pubsub',
     'dapr.actors.proxy.generation' => ProxyFactory::GENERATED,
     'dapr.subscriptions' => [],

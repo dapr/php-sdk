@@ -238,7 +238,10 @@ class ActorRuntime
 
     protected function get_cache_for_actor(ActorReference $reference, string $type_name): CacheInterface
     {
-        return $this->factory->make(CacheInterface::class, ['reference' => $reference, 'state_name' => $type_name]);
+        return $this->factory->make(
+            $this->container->get('dapr.actors.cache'),
+            ['reference' => $reference, 'state_name' => $type_name]
+        );
     }
 
     /**
