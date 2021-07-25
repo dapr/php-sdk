@@ -3,7 +3,7 @@ services:
   actor-service:
     image: php-actor-service:${GIT_SHA}
   actor-http:
-    image: ${DOCKER_USER}/php-actor-http:${GIT_SHA}
+    image: php-actor-http:${GIT_SHA}
     depends_on:
       - actor-service
     network_mode: service:actor-service

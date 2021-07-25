@@ -79,7 +79,11 @@ jobs:
       - unit-tests
     strategy:
       matrix:
-        image: [ 'caddy', 'tests', 'php-actor-service' ]
+        image:
+          - caddy
+          - tests
+          - php-actor-service
+          - php-actor-http
         include:
           - image: caddy
             dockerfile: images/caddy.Dockerfile
@@ -90,6 +94,12 @@ jobs:
           - image: php-actor-service
             dockerfile: examples/images/service.Dockerfile
             target: production
+            context: examples/actor
+            args: |
+              SERVICE=actor
+          - image: php-actor-http
+            dockerfile: examples/images/caddy.Dockerfile
+            target: base
             context: examples/actor
             args: |
               SERVICE=actor

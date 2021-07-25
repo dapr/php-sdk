@@ -14,7 +14,7 @@ service/actor-service: images/opcache.ini images/fpm.conf
 
 .PHONY: service/actor-http
 service/actor-http: images/Caddyfile
-	docker build --pull --build-arg SERVICE=actor -f ../images/caddy.Dockerfile --target base -t ${DOCKER_USER}/php-actor-http:${GIT_SHA} .
+	docker build --pull --build-arg SERVICE=actor -f ../images/caddy.Dockerfile --target base -t php-actor-http:${GIT_SHA} .
 
 .PHONY: service/client-service
 service/client-service: images/opcache.ini images/opcache.ini
