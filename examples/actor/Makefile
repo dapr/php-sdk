@@ -35,11 +35,10 @@ stop:
 .PHONY: clean
 clean: stop
 	docker-compose -f docker-compose.yml -f ../docker-compose.common.yml rm -f
-	rm -rf images
 
-.PHONY: push
-push: deps
-	docker-compose push
+.PHONY: logs
+logs:
+	docker-compose -f docker-compose.yml -f ../docker-compose.common.yml logs
 
 images/fpm.conf: ../images/fpm.conf
 	mkdir -p images
