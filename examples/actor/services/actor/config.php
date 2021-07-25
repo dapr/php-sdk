@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'dapr.actors' => [Counter::class],
+	'dapr.actors' => [Counter::class],
 ];
