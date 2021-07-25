@@ -1,7 +1,8 @@
 <?php
 
 $examples = [
-    'actor'
+    'actor',
+    'secrets',
 ];
 
 $branch = getenv('GIT_BRANCH') ?: trim(`git rev-parse --abbrev-ref HEAD`);
