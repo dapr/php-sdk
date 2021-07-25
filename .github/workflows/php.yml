@@ -173,13 +173,16 @@ jobs:
             dockerfile: Dockerfile
             args: |
               WWWGROUP=1000
+            pre-built: |
+              cd examples/laravel
+              composer install
     steps:
       - uses: actions/checkout@v2
       - uses: shivammathur/setup-php@2.9.0
         with:
           php-version: 8.0
-      - name: Install vendor
-        run: composer install
+      - name: Run Prebuild hook
+        run: ${{ matrix.pre-built }}
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
