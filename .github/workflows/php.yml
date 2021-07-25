@@ -18,13 +18,16 @@ jobs:
       - name: Update examples
         env:
           GIT_BRANCH: ${{ github.head_ref || 'main' }}
+          GIT_SHA: ${{ github.sha || '' }}
         run:
           php update-examples.php
       - name: Commit examples
         uses: quizlet/commit-changes@v0.2.3
         with:
           message: Update examples
-          glob-patterns: '*'
+          glob-patterns: |
+            **/composer.json
+            **/composer.lock
           branch: ${{ github.head_ref || 'main' }}
   unit-tests:
     runs-on: ubuntu-latest

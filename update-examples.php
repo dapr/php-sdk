@@ -5,6 +5,7 @@ $examples = [
 ];
 
 $branch = getenv('GIT_BRANCH') ?: trim(`git rev-parse --abbrev-ref HEAD`);
+$sha = getenv('GIT_SHA') ?: '';
 $home = __DIR__;
 
 foreach ($examples as $example) {
@@ -13,7 +14,10 @@ foreach ($examples as $example) {
     if ($php_sdk === null) {
         continue;
     }
-    $composer->require->{'dapr/php-sdk'} = "dev-$branch";
+    if (!empty($sha)) {
+        $sha = "#$sha";
+    }
+    $composer->require->{'dapr/php-sdk'} = "dev-$branch$sha";
     file_put_contents(
         "examples/$example/composer.json",
         json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_LINE_TERMINATORS) . "\n"
