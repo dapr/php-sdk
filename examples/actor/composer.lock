@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dapr/php-sdk.git",
-                "reference": "7545aac593b9ba930cf28162e9033afcff207867"
+                "reference": "60c1ff66fc404cad2708e7b7029d0bb854873f40"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/7545aac593b9ba930cf28162e9033afcff207867",
-                "reference": "7545aac593b9ba930cf28162e9033afcff207867",
+                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/60c1ff66fc404cad2708e7b7029d0bb854873f40",
+                "reference": "60c1ff66fc404cad2708e7b7029d0bb854873f40",
                 "shasum": ""
             },
             "require": {
@@ -64,7 +64,7 @@
                 "issues": "https://github.com/dapr/php-sdk/issues",
                 "source": "https://github.com/dapr/php-sdk/tree/update/secrets-example"
             },
-            "time": "2021-07-25T17:52:54+00:00"
+            "time": "2021-07-25T18:02:21+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",
