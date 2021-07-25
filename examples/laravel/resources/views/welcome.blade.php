@@ -55,7 +55,7 @@
 
                             <div class="ml-12">
                                 <div class="mt-2 text-gray-600 dark:text-gray-400 text-lg">
-                                    {{$page_views}}
+                                    views: {{$page_views}}
                                 </div>
                             </div>
                         </div>
@@ -68,7 +68,7 @@
 
                             <div class="ml-12">
                                 <div class="mt-2 text-gray-600 dark:text-gray-400 text-sm">
-                                    {{$last_name_seen ?? 'go to /welcome/{name} to see a name here'}}
+                                    name: {{$last_name_seen ?? 'go to /welcome/{name} to see a name here'}}
                                 </div>
                             </div>
                         </div>

@@ -9,7 +9,7 @@ front-end client and the `laravel.api` runs as an API server; but they're both t
 
 1. Install PHP 8.0+
 1. Run `composer install`
-1. Run `./vendor/bin/sail up`
+1. Run `DAPR_VERSION=1.2.0 ./vendor/bin/sail up` or whichever version of a dapr sidecar is most current
 2. Go to [http://localhost](http://localhost)
 3. Go to [http://localhost/welcome/name](http://localhost/welcome/name) changing the `name` part of the uri to a
    different string

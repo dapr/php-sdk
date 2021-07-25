@@ -296,7 +296,11 @@ jobs:
           GIT_SHA: ${{ github.sha }}
         run: |
           cd examples/${{ matrix.example }}
-          docker-compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
+          if [ -f start.php ]; then
+            php start.php
+          else
+            docker-compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
+          fi
       - name: Wait for stability
         run: sleep 10
       - name: Run tests
