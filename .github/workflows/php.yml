@@ -79,7 +79,7 @@ jobs:
       - unit-tests
     strategy:
       matrix:
-        image: [ 'caddy', 'tests' ]
+        image: [ 'caddy', 'tests', 'php-actor-service' ]
         include:
           - image: caddy
             dockerfile: images/caddy.Dockerfile
@@ -87,6 +87,12 @@ jobs:
           - image: tests
             dockerfile: images/tests.Dockerfile
             target: production
+          - image: php-actor-service
+            dockerfile: examples/images/service.Dockerfile
+            target: production
+            context: examples/actor
+            args:
+              SERVICE: actor
     steps:
       - uses: actions/checkout@v2
       - name: Set up Docker Buildx
@@ -109,7 +115,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          context: ./
+          context: ${{ matrix.context || './' }}
           file: ${{ matrix.dockerfile }}
           push: false
           pull: true
@@ -119,6 +125,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=local,src=/tmp/.${{ matrix.image }}-cache
           cache-to: type=local,mode=max,dest=/tmp/.${{ matrix.image }}-cache
+          args: ${{ matrix.args || '{}' }}
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
