@@ -222,4 +222,7 @@ jobs:
           path: /tmp/images
       - name: Import images
         run: |
-          docker load --input /tmp/images/*/*.tar
+          ls -lah /tmp/images
+          for f in /tmp/images/*/*.tar; do
+            cat $f | docker load
+          done
