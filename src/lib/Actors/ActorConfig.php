@@ -125,7 +125,7 @@ class ActorConfig implements ISerialize
             $this->idle_timeout ? ['actorIdleTimeout' => Formats::normalize_interval($this->idle_timeout)] : [],
             $this->scan_interval ? ['actorScanInterval' => Formats::normalize_interval($this->scan_interval)] : [],
             $this->drain_timeout ? [
-                'actorOngoingCallTimeout' => Formats::normalize_interval(
+                'drainOngoingCallTimeout' => Formats::normalize_interval(
                     $this->drain_timeout
                 )
             ] : [],
