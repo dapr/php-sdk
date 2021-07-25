@@ -198,3 +198,28 @@ jobs:
             docker-compose logs dev
             exit 1
           fi
+  examples:
+    runs-on: ubuntu-latest
+    needs:
+      - build-integration-test-containers
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        dapr-version:
+          - 1.3.0-rc.4
+          - 1.2.0
+          - 1.2.1
+          - 1.2.2
+        example:
+          - actor
+        include:
+          - example: actor
+            images: ''
+    steps:
+      - name: Download images
+        uses: actions/download-artifact@v2
+        with:
+          path: /tmp/images
+      - name: Import images
+        run: |
+          docker load --input /tmp/images/*/*.tar
