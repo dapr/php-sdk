@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dapr/php-sdk.git",
-                "reference": "25e44b140e161238e6e83f4af6f0f820110796bf"
+                "reference": "fcbe2c26a077338032fd4c2ac02edf0024c6c851"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/25e44b140e161238e6e83f4af6f0f820110796bf",
-                "reference": "25e44b140e161238e6e83f4af6f0f820110796bf",
+                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/fcbe2c26a077338032fd4c2ac02edf0024c6c851",
+                "reference": "fcbe2c26a077338032fd4c2ac02edf0024c6c851",
                 "shasum": ""
             },
             "require": {
@@ -64,7 +64,7 @@
                 "issues": "https://github.com/dapr/php-sdk/issues",
                 "source": "https://github.com/dapr/php-sdk/tree/add/psr-middleware"
             },
-            "time": "2021-07-25T16:01:40+00:00"
+            "time": "2021-07-25T16:57:51+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",
