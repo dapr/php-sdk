@@ -92,7 +92,7 @@ jobs:
             target: production
             context: examples/actor
             args:
-              SERVICE: actor
+              - SERVICE=actor
     steps:
       - uses: actions/checkout@v2
       - name: Set up Docker Buildx
@@ -125,7 +125,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           cache-from: type=local,src=/tmp/.${{ matrix.image }}-cache
           cache-to: type=local,mode=max,dest=/tmp/.${{ matrix.image }}-cache
-          args: ${{ matrix.args || '{}' }}
+          build-args: ${{ matrix.args || '[]' }}
       - name: upload artifact
         uses: actions/upload-artifact@v2
         with:
