@@ -214,7 +214,6 @@ jobs:
           - actor
         include:
           - example: actor
-            images: ''
     steps:
       - name: Download images
         uses: actions/download-artifact@v2
@@ -226,3 +225,11 @@ jobs:
           for f in /tmp/images/*/*.tar; do
             cat $f | docker load
           done
+      - name: Start services
+        env:
+          DAPR_VERSION: ${{ matrix.dapr-version }}
+        run: |
+          cd examples/${{ matrix.example }}
+          docker-compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
+      - name: Wait for stability
+        run: sleep 10
