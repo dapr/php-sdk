@@ -3,32 +3,23 @@
 use Dapr\Actors\ActorConfig;
 use Dapr\Actors\ActorProxy;
 use Dapr\Actors\ActorRuntime;
-use Dapr\Actors\ActorState;
-use Dapr\Actors\Generators\CachedGenerator;
-use Dapr\Actors\Generators\DynamicGenerator;
-use Dapr\Actors\Generators\ExistingOnly;
-use Dapr\Actors\Generators\FileGenerator;
 use Dapr\Actors\Generators\ProxyFactory;
 use Dapr\Actors\Internal\Caches\FileCache;
-use Dapr\Actors\Internal\Caches\MemoryCache;
 use Dapr\App;
 use Dapr\DaprClient;
 use Dapr\Deserialization\DeserializationConfig;
 use Dapr\Deserialization\Deserializer;
 use Dapr\Deserialization\IDeserializer;
 use Dapr\Middleware\Defaults\Response\ApplicationJson;
+use Dapr\Middleware\Defaults\TokenAuth;
 use Dapr\Middleware\Defaults\Tracing;
-use Dapr\PubSub\Publish;
 use Dapr\PubSub\Subscriptions;
-use Dapr\PubSub\Topic;
-use Dapr\SecretManager;
 use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\SerializationConfig;
 use Dapr\Serialization\Serializer;
 use Dapr\State\IManageState;
 use Dapr\State\Internal\Transaction;
 use Dapr\State\StateManager;
-use Dapr\State\TransactionalState;
 use FastRoute\DataGenerator\GroupCountBased;
 use FastRoute\RouteCollector;
 use FastRoute\RouteParser\Std;
@@ -128,6 +119,7 @@ return [
         'subscriptions',
         get('dapr.subscriptions')
     ),
+    TokenAuth::class => autowire(),
     Tracing::class => autowire(),
     Transaction::class => autowire(),
 
@@ -141,7 +133,7 @@ return [
     'dapr.actors.drain_timeout' => null,
     'dapr.actors.drain_enabled' => null,
     'dapr.actors.cache' => FileCache::class,
-    'dapr.http.middleware.request' => [get(Tracing::class)],
+    'dapr.http.middleware.request' => [get(Tracing::class), get(TokenAuth::class)],
     'dapr.http.middleware.response' => [get(ApplicationJson::class), get(Tracing::class)],
     'dapr.port' => env('DAPR_HTTP_PORT', "3500"),
     'dapr.serializers.custom' => [],
