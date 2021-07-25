@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "722a2300c623eaffd5b85e182c4641ce",
+    "content-hash": "f62751a00357727997b69122948cb824",
     "packages": [
         {
             "name": "dapr/php-sdk",
-            "version": "dev-add/psr-middleware",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dapr/php-sdk.git",
-                "reference": "fcbe2c26a077338032fd4c2ac02edf0024c6c851"
+                "reference": "8b6470ff0e182e287585af36f8384fb51c98a66a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/fcbe2c26a077338032fd4c2ac02edf0024c6c851",
-                "reference": "fcbe2c26a077338032fd4c2ac02edf0024c6c851",
+                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/8b6470ff0e182e287585af36f8384fb51c98a66a",
+                "reference": "8b6470ff0e182e287585af36f8384fb51c98a66a",
                 "shasum": ""
             },
             "require": {
@@ -42,6 +42,7 @@
                 "ext-xdebug": "*",
                 "phpunit/phpunit": "^9"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -62,9 +63,9 @@
             "description": "Dapr Implementation in PHP",
             "support": {
                 "issues": "https://github.com/dapr/php-sdk/issues",
-                "source": "https://github.com/dapr/php-sdk/tree/add/psr-middleware"
+                "source": "https://github.com/dapr/php-sdk/tree/main"
             },
-            "time": "2021-07-25T16:57:51+00:00"
+            "time": "2021-07-25T17:04:31+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",

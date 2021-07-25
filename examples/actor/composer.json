@@ -3,6 +3,6 @@
     "license": "MIT",
     "description": "A basic example demonstrating actors",
     "require": {
-        "dapr/php-sdk": "dev-add/psr-middleware"
+        "dapr/php-sdk": "dev-main"
     }
 }
