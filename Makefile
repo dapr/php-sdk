@@ -9,7 +9,7 @@ integration-tests: build tools
 	docker-compose down -v
 	docker-compose up &
 	sleep 10
-	curl --silent --output /tmp/test-results.json --write-out "%{http_code}" http://localhost:9502/do_tests
+	curl --silent --output /tmp/test-results.json --write-out "%{http_code}" -H 'dapr-api-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c' http://localhost:9502/do_tests
 	docker-compose down -v
 	cat /tmp/test-results.json | jq .
 
