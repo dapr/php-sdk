@@ -19,12 +19,9 @@ class DaprHttpClient extends DaprClient
     use HttpPubSubTrait;
     use HttpBindingTrait;
     use HttpActorTrait;
+    use HttpTokenTrait;
 
     protected Client $httpClient;
-
-    protected function getHttpClient(): Client {
-        return $this->httpClient;
-    }
 
     public function __construct(
         private string $baseHttpUri,
@@ -36,17 +33,21 @@ class DaprHttpClient extends DaprClient
         if (str_ends_with($this->baseHttpUri, '/')) {
             $this->baseHttpUri = rtrim($this->baseHttpUri, '/');
         }
-        $this->httpClient = new Client(
-            [
-                'base_uri' => $this->baseHttpUri,
-                'allow_redirects' => false,
-                'headers' => [
-                    'User-Agent' => 'DaprPHPSDK/v2.0',
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json'
-                ]
+        $options = [
+            'base_uri' => $this->baseHttpUri,
+            'allow_redirects' => false,
+            'headers' => [
+                'User-Agent' => 'DaprPHPSDK/v1.2',
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json'
             ]
-        );
+        ];
+
+        if ($this->getDaprToken() !== null) {
+            $options['headers']['dapr-api-token'] = $this->getDaprToken();
+        }
+
+        $this->httpClient = new Client($options);
     }
 
     public function isDaprHealthy(): bool
@@ -81,5 +82,10 @@ class DaprHttpClient extends DaprClient
         }
 
         $shutdown();
+    }
+
+    protected function getHttpClient(): Client
+    {
+        return $this->httpClient;
     }
 }
