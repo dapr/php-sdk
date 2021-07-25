@@ -36,7 +36,8 @@ class ActorConfig implements ISerialize
         protected DateInterval|null $scan_interval = null,
         protected DateInterval|null $drain_timeout = null,
         protected bool|null $drain_enabled = null,
-        protected ReentrantConfig|null $reentrantConfig = null
+        protected ReentrantConfig|null $reentrantConfig = null,
+        protected int|null $remindersStoragePartitions = null
     ) {
     }
 
@@ -135,7 +136,8 @@ class ActorConfig implements ISerialize
                     ['enabled' => true],
                     $this->reentrantConfig->max_stack_depth ? ['maxStackDepth' => $this->reentrantConfig->max_stack_depth] : []
                 )
-            ] : []
+            ] : [],
+            $this->remindersStoragePartitions === null ? [] : ['remindersStoragePartitions' => $this->remindersStoragePartitions],
         );
     }
 }
