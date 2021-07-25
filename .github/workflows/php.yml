@@ -17,10 +17,13 @@ jobs:
           php-version: 8.0
       - name: Update examples
         env:
-          GIT_SHA: ${{ github.sha }}
+          GIT_BRANCH: ${{ github.head_ref || 'main' }}
         run:
           php update-examples.php
-      - name:
+      - name: Commit examples
+        uses: quizlet/commit-changes@v0.2.3
+        with:
+          message: Update examples
   unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 5

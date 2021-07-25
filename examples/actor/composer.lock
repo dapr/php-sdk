@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b3531c91b17554dd66f991e57bb9b2ce",
+    "content-hash": "854e51abcedf3e38693eaa2d2a417996",
     "packages": [
         {
             "name": "dapr/php-sdk",
@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dapr/php-sdk.git",
-                "reference": "b29cdbea5a84c05157c5f8a3ec3644d3e89824fe"
+                "reference": "264d60cc9758fdff8d8edb0434ace192b9dfd1dc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/b29cdbea5a84c05157c5f8a3ec3644d3e89824fe",
-                "reference": "b29cdbea5a84c05157c5f8a3ec3644d3e89824fe",
+                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/264d60cc9758fdff8d8edb0434ace192b9dfd1dc",
+                "reference": "264d60cc9758fdff8d8edb0434ace192b9dfd1dc",
                 "shasum": ""
             },
             "require": {
