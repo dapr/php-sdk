@@ -7,7 +7,6 @@ $examples = [
 
 $branch = getenv('GIT_BRANCH') ?: trim(`git rev-parse --abbrev-ref HEAD`);
 $sha = getenv('GIT_SHA') ?: '';
-$home = __DIR__;
 
 foreach ($examples as $example) {
     $composer = json_decode(file_get_contents("examples/$example/composer.json"));
@@ -25,4 +24,5 @@ foreach ($examples as $example) {
     );
     chdir("examples/$example");
     echo `composer update`;
+    chdir(__DIR__);
 }
