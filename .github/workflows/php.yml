@@ -262,8 +262,7 @@ jobs:
           - 1.2.2
         example:
           - actor
-        include:
-          - example: actor
+          - secrets
     steps:
       - uses: actions/checkout@v2
       - uses: shivammathur/setup-php@2.9.0
