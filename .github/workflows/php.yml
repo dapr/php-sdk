@@ -7,27 +7,6 @@ on:
     branches: [ main ]
 
 jobs:
-  update-examples:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v2
-      - uses: shivammathur/setup-php@2.9.0
-        with:
-          php-version: 8.0
-      - name: Update examples
-        env:
-          GIT_BRANCH: ${{ github.head_ref || 'main' }}
-        run:
-          php update-examples.php
-      - name: Commit examples
-        uses: quizlet/commit-changes@v0.2.3
-        with:
-          message: Update examples
-          glob-patterns: |
-            **/composer.json
-            **/composer.lock
-          branch: ${{ github.head_ref || 'main' }}
   unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -98,7 +77,6 @@ jobs:
     needs:
       - lint
       - unit-tests
-      - update-examples
     strategy:
       matrix:
         image:
@@ -181,6 +159,11 @@ jobs:
       - uses: shivammathur/setup-php@2.9.0
         with:
           php-version: 8.0
+      - name: Update examples
+        env:
+          GIT_BRANCH: ${{ github.head_ref || 'main' }}
+        run:
+          php update-examples.php
       - name: Run Prebuild hook
         run: ${{ matrix.pre-built }}
       - name: Set up Docker Buildx
@@ -278,6 +261,11 @@ jobs:
       - uses: shivammathur/setup-php@2.9.0
         with:
           php-version: 8.0
+      - name: Update examples
+        env:
+          GIT_BRANCH: ${{ github.head_ref || 'main' }}
+        run:
+          php update-examples.php
       - name: Download images
         uses: actions/download-artifact@v2
         with:
