@@ -3,6 +3,6 @@
     "license": "MIT",
     "description": "A basic example demonstrating actors",
     "require": {
-        "dapr/php-sdk": "dev-main"
+        "dapr/php-sdk": "dev-update/secrets-example"
     }
 }

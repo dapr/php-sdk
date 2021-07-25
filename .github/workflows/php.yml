@@ -108,6 +108,10 @@ jobs:
           - php-actor-http
           - php-client-service
           - php-client-http
+          - php-secrets-service
+          - php-secrets-http
+          - php-secret-client-service
+          - php-secret-client-http
         include:
           - image: caddy
             dockerfile: images/caddy.Dockerfile
@@ -137,6 +141,30 @@ jobs:
             dockerfile: examples/images/caddy.Dockerfile
             target: base
             context: examples/actor
+            args: |
+              SERVICE=client
+          - image: php-secrets-service
+            dockerfile: examples/images/service.Dockerfile
+            target: production
+            context: examples/secrets
+            args: |
+              SERVICE=secrets
+          - image: php-secrets-http
+            dockerfile: examples/images/caddy.Dockerfile
+            target: base
+            context: examples/secrets
+            args: |
+              SERVICE=secrets
+          - image: php-secret-client-service
+            dockerfile: examples/images/service.Dockerfile
+            target: production
+            context: examples/secrets
+            args: |
+              SERVICE=client
+          - image: php-secret-client-http
+            dockerfile: examples/images/caddy.Dockerfile
+            target: base
+            context: examples/secrets
             args: |
               SERVICE=client
     steps:
@@ -234,8 +262,7 @@ jobs:
           - 1.2.2
         example:
           - actor
-        include:
-          - example: actor
+          - secrets
     steps:
       - uses: actions/checkout@v2
       - uses: shivammathur/setup-php@2.9.0
