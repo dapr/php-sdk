@@ -13,6 +13,9 @@ integration-tests: build tools
 	docker-compose down -v
 	cat /tmp/test-results.json | jq .
 
+.PHONY: stop
+	docker-compose down -v
+
 composer.lock: composer.json
 	composer update
 
