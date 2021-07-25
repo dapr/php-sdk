@@ -216,6 +216,9 @@ jobs:
           - example: actor
     steps:
       - uses: actions/checkout@v2
+      - uses: shivammathur/setup-php@2.9.0
+        with:
+          php-version: 8.0
       - name: Download images
         uses: actions/download-artifact@v2
         with:
@@ -235,3 +238,7 @@ jobs:
           docker-compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
       - name: Wait for stability
         run: sleep 10
+      - name: Run tests
+        run: |
+          cd examples/${{ matrix.example }}
+          php test.php
