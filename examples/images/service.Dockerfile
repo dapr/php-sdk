@@ -2,9 +2,7 @@ FROM php:8.0-fpm AS base
 ENV VERSION=1
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 RUN apt-get update && apt-get install -y wget git unzip && apt-get clean && rm -rf /var/cache/apt/lists
-RUN install-php-extensions curl intl zip sodium opcache xdebug @composer && mkdir -p /app && \
-    cd $(php -d 'display_errors=stderr' -r 'echo ini_get("extension_dir");') && \
-    mkdir -p /php-disabled && mv xdebug.so /php-disabled && mv $PHP_INI_DIR/conf.d/docker-php-ext-xdebug.ini /php-disabled
+RUN install-php-extensions curl intl zip sodium opcache apcu @composer && mkdir -p /app
 WORKDIR /app
 
 FROM base AS vendor
