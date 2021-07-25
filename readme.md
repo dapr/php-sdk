@@ -1,5 +1,7 @@
 # Using this library
 
+[![PHP Composer](https://github.com/dapr/php-sdk/actions/workflows/php.yml/badge.svg)](https://github.com/dapr/php-sdk/actions/workflows/php.yml)
+
 This library is licensed with the MIT license.
 
 Add the library to your `composer.json`:
