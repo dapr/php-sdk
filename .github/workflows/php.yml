@@ -228,6 +228,7 @@ jobs:
       - name: Start services
         env:
           DAPR_VERSION: ${{ matrix.dapr-version }}
+          GIT_SHA: ${{ github.sha }}
         run: |
           cd examples/${{ matrix.example }}
           docker-compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
