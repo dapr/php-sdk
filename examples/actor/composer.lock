@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "800c689f93c2ff0b51c45ac78820c18f",
+    "content-hash": "722a2300c623eaffd5b85e182c4641ce",
     "packages": [
         {
             "name": "dapr/php-sdk",
@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dapr/php-sdk.git",
-                "reference": "ecf5090bdb4174b52a54678204be00fa3de830c2"
+                "reference": "aaefb24596dd2cc01abd8ca8f2da7f5a69898932"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/ecf5090bdb4174b52a54678204be00fa3de830c2",
-                "reference": "ecf5090bdb4174b52a54678204be00fa3de830c2",
+                "url": "https://api.github.com/repos/dapr/php-sdk/zipball/aaefb24596dd2cc01abd8ca8f2da7f5a69898932",
+                "reference": "aaefb24596dd2cc01abd8ca8f2da7f5a69898932",
                 "shasum": ""
             },
             "require": {
@@ -64,7 +64,7 @@
                 "issues": "https://github.com/dapr/php-sdk/issues",
                 "source": "https://github.com/dapr/php-sdk/tree/add/psr-middleware"
             },
-            "time": "2021-07-25T15:45:30+00:00"
+            "time": "2021-07-25T15:47:57+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",
