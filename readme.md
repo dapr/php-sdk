@@ -11,6 +11,42 @@ Add the library to your `composer.json`:
 Some basic documentation is below, more documentation can be
 found [in the docs](https://docs.dapr.io/developing-applications/sdks/php/);
 
+# Migrating to 1.2
+
+In preparation for gRPC support in this SDK, there's now a new DaprClient in `\Dapr\Client\DaprClient`. Please update
+your code to use the new client.
+
+There shouldn't be many changes to your code to upgrade to 1.2+ from a prior version. Namely, there are some
+deprecations:
+
+## Deprecations
+
+The following have been deprecated and will be removed in 1.4+.
+
+### \Dapr\SecretManager has been deprecated
+
+Simply use the new client instead.
+
+### \Dapr\Client has been deprecated
+
+Simply use the new client: `\Dapr\Client\DaprClient`.
+
+### \Dapr\PubSub\Publish has been deprecated
+
+Simply instantiate `\Dapr\PubSub\Topic` directly or use the new client directly.
+
+## Fallbacks and Upgrades
+
+### \Dapr\State\StateManager
+
+This class has been upgraded to use the new client. It shouldn't require any changes to your code, however, the old
+behavior can be utilized with `\Dapr\State\StateManagerOld`.
+
+### \Dapr\State\TransactionalState
+
+This class has been upgrade to use the new client. It shouldn't require any changes to your code, however, the old
+behavior can be utilized with `\Dapr\State\TransactionalStateOld`.
+
 # Creating a Dapr Client
 
 ```php
@@ -217,9 +253,21 @@ use Dapr\Actors\ActorProxy;
 $app->start();
 ```
 
+You can also call an actor without an interface:
+
+```php
+$client->invokeActorMethod(
+    httpMethod: 'GET', 
+    actor: new \Dapr\Actors\ActorReference(id: 'id', actor_type: 'Counter'), 
+    method: 'increment', 
+    parameter: 1
+ );
+```
+
 ## Actor Limitations
 
-1. There's no re-entrance to an actor, this can cause deadlocks if you're not careful.
+1. There's no re-entrance to an actor, by default. You'll need to enable it in the `ActorConfig`
+   and [in Dapr](https://docs.dapr.io/operations/support/support-preview-features/).
 2. By design, static functions don't work.
 3. There's overhead cost in calling "getter" functions.
 
@@ -232,16 +280,22 @@ implemented in this SDK.
 
 ## Publishing
 
-In order to publish an event, you just instantiate the `Publish` object with the `FactoryInterface`:
+In order to publish an event, you just instantiate the `Topic` object:
 
 ```php
 <?php
 $app = \Dapr\App::create();
-$app->get('/publish', function(\DI\FactoryInterface $factory) {
-    $publisher = $factory->make(\Dapr\PubSub\Publish::class, ['pubsub' => 'redis-pubsub']);
-    $publisher->topic('my-topic')->publish(['message' => 'arrive at dawn']);
+$app->get('/publish', function(\Dapr\Client\DaprClient $client) {
+    $topic = new \Dapr\PubSub\Topic(pubsub: 'pubsub', topic: 'topic', client: $client);
+    $topic->publish(['message' => 'arrive at dawn']);
 });
 $app->start();
+```
+
+or you can use the new client like:
+
+```php
+$client->publishEvent(pubsubName: 'pubsub', topicName: 'topic', data: ['message' => 'arrive at dawn'], contentType: 'application/json');
 ```
 
 ## Subscribing
@@ -286,11 +340,7 @@ $client = \Dapr\Client\DaprClient::clientBuilder()
 
 # Development
 
-Simply run `composer start` on a machine where `dapr init` has already been run. This will start the daprd service on
-the current open terminal. Then navigate to [http://localhost:9502/do_tests](http://localhost:9502/do_tests) to let the
-integration tests run.
-
-# Tests
+## Tests
 
 Simply run `composer test` to run the unit tests. You can lint using `composer lint`.
 
@@ -301,12 +351,7 @@ You need [`docker-compose`](https://docs.docker.com/compose/gettingstarted/) and
 Build and start the environment, then run the integration tests and clean up.
 
 ```bash
-# clean up any existing environment
-docker-compose down -v
-# build and deploy the containers
-composer start
-# run and display the test rusults
-composer integration-tests | jq .
+make
 ```
 
 You should see output like:
