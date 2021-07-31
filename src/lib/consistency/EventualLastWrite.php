@@ -9,6 +9,12 @@ namespace Dapr\consistency;
  */
 class EventualLastWrite extends Consistency
 {
+    public static function instance(): EventualLastWrite
+    {
+        static $instance;
+        return $instance ??= new EventualLastWrite();
+    }
+
     public function get_consistency(): string
     {
         return self::EVENTUAL;

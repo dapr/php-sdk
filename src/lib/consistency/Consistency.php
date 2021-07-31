@@ -21,7 +21,9 @@ abstract class Consistency
      *
      * @return string
      */
-    public abstract function get_consistency(): string;
+    abstract public function get_consistency(): string;
 
-    public abstract function get_concurrency(): string;
+    abstract public function get_concurrency(): string;
+
+    abstract public static function instance(): Consistency;
 }
