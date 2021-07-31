@@ -8,7 +8,26 @@ Add the library to your `composer.json`:
 
 > composer require dapr/php-sdk
 
-Some basic documentation is below, more documentation can be found [in the docs](https://docs.dapr.io/developing-applications/sdks/php/);
+Some basic documentation is below, more documentation can be
+found [in the docs](https://docs.dapr.io/developing-applications/sdks/php/);
+
+# Creating a Dapr Client
+
+```php
+$client = \Dapr\Client\DaprClient::clientBuilder()->build();
+```
+
+## Using the Middleware
+
+The `App` object also implements a PSR-15 compatible middleware which implements the actor routes and subscribe routes
+for you.
+
+```php
+$app = \Dapr\App::create(configure: [
+    // custom configuration
+]);
+use_middleware($app);
+```
 
 # Accessing Secrets
 
@@ -17,19 +36,25 @@ You can access secrets easily:
 ```php
 <?php
 
-$app = Dapr\App::create();
-$app->get('/a-secret/{name}', function(string $name, \Dapr\SecretManager $secretManager) {
-    return $secretManager->retrieve(secret_store: 'my-secret-store', name: $name);
-});
-$app->get('/a-secret', function(\Dapr\SecretManager $secretManager) {
-    return $secretManager->all(secret_store: 'my-secret-store');
-});
-$app->start();
+// retrieve a single secret
+$client->getSecret(storeName: 'kubernetes', key: 'test');
+
+// retrieve all secrets
+$client->getBulkSecret(storeName: 'kubernetes');
 ```
 
 # Accessing State
 
-State is just Plain Old PHP Objects (POPO's) with an attribute:
+There are several ways to access state. You can access state directly via the client or abstract access via an object.
+
+## Accessing State Directly
+
+```php
+['value' => $value, 'etag' => $etag] = $client->getStateAndEtag(storeName: 'statestore', key: 'key', asType: SomeClass::class, consistency: \Dapr\consistency\EventualLastWrite::instance());
+$value = $client->getState(storeName: 'statestore', key: 'key', asType: 'string',consistency: \Dapr\consistency\StrongFirstWrite::instance())
+```
+
+## Abstract via Object
 
 ```php
 <?php
@@ -47,9 +72,9 @@ class MyState {
     public array $complex_type;
     
     /**
-      * @var Exception 
+      * @var SomeObject 
       */
-    public Exception $object_type;
+    public SomeObject $object_type;
     
     /**
      * @var int 
@@ -82,7 +107,19 @@ $app->start();
 ## Transactional State
 
 You can also use transactional state to interact with state objects by extending `TransactionalState` with our state
-objects.
+objects or commit transactions directly.
+
+### Directly with the client
+
+```php
+$transaction = [
+    \Dapr\Client\StateTransactionRequest::upsert(key: 'key', value: $client->serializer->as_json($new_value)),
+    \Dapr\Client\StateTransactionRequest::delete(key: 'key');
+];
+$client->executeStateTransaction(storeName: 'statestore', operations: $transaction);
+```
+
+### Abstracted via an Object
 
 ```php
 #[\Dapr\State\Attributes\StateStore('statestore', \Dapr\consistency\StrongFirstWrite::class)]
@@ -238,6 +275,15 @@ $app->get('/', function(\Dapr\Serialization\ISerializer $serializer) {
 $app->start();
 ```
 
+## Using the new client
+
+```php
+$client = \Dapr\Client\DaprClient::clientBuilder()
+    ->withDeserializationConfig($configuration)
+    ->withSerializationConfig($configuration)
+    ->build()
+```
+
 # Development
 
 Simply run `composer start` on a machine where `dapr init` has already been run. This will start the daprd service on
@@ -264,6 +310,7 @@ composer integration-tests | jq .
 ```
 
 You should see output like:
+
 ```json
 {
   "/test/actors": {

@@ -9,6 +9,12 @@ namespace Dapr\consistency;
  */
 class StrongFirstWrite extends Consistency
 {
+    public static function instance(): StrongFirstWrite
+    {
+        static $instance;
+        return $instance ??= new StrongFirstWrite();
+    }
+
     public function get_consistency(): string
     {
         return self::STRONG;

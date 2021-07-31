@@ -10,6 +10,12 @@ namespace Dapr\consistency;
  */
 class EventualFirstWrite extends Consistency
 {
+    public static function instance(): EventualFirstWrite
+    {
+        static $instance;
+        return $instance ??= new EventualFirstWrite();
+    }
+
     public function get_consistency(): string
     {
         return self::EVENTUAL;
