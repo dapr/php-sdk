@@ -1,4 +1,4 @@
-FROM php:8.0-apache
+FROM php:8.1-rc-apache
 
 RUN a2enmod rewrite
 RUN pecl install xdebug && docker-php-ext-enable xdebug

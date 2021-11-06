@@ -1,4 +1,4 @@
-FROM php:8.0-fpm AS base
+FROM php:8.1-rc-fpm AS base
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 RUN apt-get update && apt-get install -y wget git unzip && apt-get clean
 RUN install-php-extensions curl zip apcu && mkdir -p /tests
