@@ -76,7 +76,8 @@ $app->run(function (TransactionObject $object ) {
 });
 ```
 
-{{% /codetab %}} {{% codetab %}}
+{{% /codetab %}}
+{{% codetab %}}
 
 ```php
 <?php
