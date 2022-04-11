@@ -30,5 +30,7 @@ services:
     depends_on:
       - client-http
     network_mode: service:client-service
+    volumes:
+      - ./components:/components
   redis:
     image: 'redis:alpine'
