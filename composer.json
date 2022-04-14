@@ -29,7 +29,8 @@
     "php-di/php-di": "^6.3",
     "psr/log": "^1.1|^2.0|^3.0",
     "psr/http-server-middleware": ">=1.0.1",
-    "jetbrains/phpstorm-attributes": "1.0"
+    "jetbrains/phpstorm-attributes": "1.0",
+    "cloudevents/sdk-php": "^1.0"
   },
   "require-dev": {
     "ext-xdebug": "*",
