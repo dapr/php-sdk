@@ -7,6 +7,8 @@ use Dapr\DaprClient;
 use Dapr\exceptions\DaprException;
 use JetBrains\PhpStorm\Deprecated;
 use Psr\Log\LoggerInterface;
+use CloudEvents\V1\CloudEventInterface;
+use CloudEvents\Serializers\JsonSerializer;
 
 /**
  * Class Topic
@@ -25,7 +27,7 @@ class Topic
     /**
      * Publish an event to the topic
      *
-     * @param CloudEvent|mixed $event The event to publish
+     * @param CloudEventInterface|CloudEvent|mixed $event The event to publish
      * @param array|null $metadata Additional metadata to pass to the component
      * @param string $content_type The header to include in the publish request. Ignored when $event is a CloudEvent
      *
@@ -38,13 +40,17 @@ class Topic
         } elseif ($this->client instanceof NewClient) {
             $this->client->logger->debug('Sending {event} to {topic}', ['event' => $event, 'topic' => $this->topic]);
         }
-        if ($event instanceof CloudEvent) {
+        if ($event instanceof CloudEvent || $event instanceof CloudEventInterface) {
             $content_type = 'application/cloudevents+json';
             $this->client->extra_headers = [
                 'Content-Type: application/cloudevents+json',
             ];
 
-            $event = $event->to_array();
+            if ($event instanceof CloudEvent) {
+                $event = $event->to_array();
+            } elseif ($event instanceof CloudEventInterface) {
+                $event = json_decode(JsonSerializer::create()->serializeStructured($event), true);
+            }
         }
 
         if ($this->client instanceof DaprClient) {

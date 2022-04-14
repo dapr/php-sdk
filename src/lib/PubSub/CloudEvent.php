@@ -8,12 +8,15 @@ use DateTime;
 use Exception;
 use InvalidArgumentException;
 use JetBrains\PhpStorm\ArrayShape;
+use JetBrains\PhpStorm\Deprecated;
 use LogicException;
 
 /**
  * Class CloudEvent
  * @package Dapr\PubSub
+ * @deprecated 1.3.0 Replaced by cloudevents/sdk-php
  */
+#[Deprecated(since: '1.3.0', replacement: \CloudEvents\V1\CloudEvent::class)]
 class CloudEvent implements IDeserialize
 {
     /**
