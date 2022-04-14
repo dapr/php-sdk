@@ -21,29 +21,25 @@ For more information about publish/subscribe, check out [the howto]({{< ref howt
 
 ## Data content type
 
-The PHP SDK allows setting the data content type either when constructing a custom cloud event, or when publishing raw
-data.
+The PHP SDK allows setting the data content type either when constructing a custom cloud event, or when publishing raw data.
 
 {{< tabs CloudEvent "Raw" >}}
 
-{{% codetab %}}
+To create a custom CloudEvent please take a look at the official documentation of [`cloudevents/sdk-php`](https://github.com/cloudevents/sdk-php/blob/602cd26557e5522060531b3103450b34b678be1c/README.md).
 
-```php
-<?php
-$event = new \Dapr\PubSub\CloudEvent();
-$event->data = $xml;
-$event->data_content_type = 'application/xml';
-```
+To publish a CloudEvent:
 
-{{% /codetab %}}
 {{% codetab %}}
 
 ```php
 <?php
 /**
- * @var \Dapr\Client\DaprClient $daprClient 
+ * @var \Dapr\Client\DaprClient $daprClient
+ * @var \Dapr\PubSub\Topic $daprTopic
+ * @var \CloudEvents\V1\CloudEventInterface $cloudEvent
  */
-$daprClient->publishEvent(pubsubName: 'pubsub', topicName: 'my-topic', data: $raw_data, contentType: 'application/octet-stream');
+$daprTopic = new Topic(pubsub: 'pubsub', topic: 'my-topic', $daprClient);
+$daprTopic->publish($cloudEvent);
 ```
 
 {{% alert title="Binary data" color="warning" %}}
