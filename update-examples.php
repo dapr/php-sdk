@@ -6,6 +6,7 @@ $examples = [
     'laravel'
 ];
 
+$remote = getenv('GIT_REMOTE') ?: trim(`git config --get remote.origin.url`);
 $branch = getenv('GIT_BRANCH') ?: trim(`git rev-parse --abbrev-ref HEAD`);
 $sha = getenv('GIT_SHA') ?: '';
 
@@ -18,6 +19,10 @@ foreach ($examples as $example) {
     if (!empty($sha)) {
         $sha = "#$sha";
     }
+    $composer->repositories[] = [
+        "type" => "vcs",
+        "url" => $remote,
+    ];
     $composer->require->{'dapr/php-sdk'} = "dev-$branch$sha";
     file_put_contents(
         "examples/$example/composer.json",
