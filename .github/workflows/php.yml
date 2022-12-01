@@ -204,7 +204,7 @@ jobs:
     timeout-minutes: 5
     strategy:
       matrix:
-        dapr-version: [ 1.5.2, 1.6.1, 1.7.0, 1.9.1 ]
+        dapr-version: [ 1.5.2, 1.6.1, 1.7.0, 1.9.1, 1.9.4 ]
     steps:
       - name: Download Caddy Image
         uses: actions/download-artifact@v2
@@ -251,6 +251,8 @@ jobs:
           - 1.5.2
           - 1.6.1
           - 1.7.0
+          - 1.9.1
+          - 1.9.4
         example:
           - actor
           - secrets
