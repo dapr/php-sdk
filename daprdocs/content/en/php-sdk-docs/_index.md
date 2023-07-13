@@ -5,6 +5,11 @@ linkTitle: "PHP"
 weight: 1000 
 description: PHP SDK packages for developing Dapr applications 
 no_list: true
+cascade:
+  github_repo: https://github.com/dapr/php-sdk
+  github_subdir: daprdocs/content/en/php-sdk-docs
+  path_base_for_github_subdir: content/en/developing-applications/sdks/php/
+  github_branch: main
 ---
 
 Dapr offers an SDK to help with the development of PHP applications. Using it, you can create PHP clients, servers, and virtual actors with Dapr.
