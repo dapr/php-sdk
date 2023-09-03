@@ -3,6 +3,7 @@
 use Dapr\PubSub\CloudEvent;
 use Dapr\PubSub\Publish;
 use Dapr\PubSub\Topic;
+use CloudEvents\V1\CloudEvent as NewCloudEvent;
 use DI\DependencyException;
 use DI\NotFoundException;
 
@@ -103,6 +104,60 @@ class PublishTest extends DaprTests
         $this->assertRequestHasHeaders(['Content-Type' => 'application/cloudevents+json'], $request);
         $this->assertRequestBody(
             '{"id":"id","source":"source","specversion":"1.0","type":"type","datacontenttype":"application\/json","subject":"subject","time":"2020-12-12T20:47:00+00:00Z","data":{"my":"event"}}',
+            $request
+        );
+    }
+
+    /**
+     * @throws DependencyException
+     * @throws NotFoundException
+     */
+    public function testNewCloudEventPublish()
+    {
+        $container = $this->get_http_client_stack([new \GuzzleHttp\Psr7\Response(204)]);
+        $client = $this->get_new_client_with_http($container->client);
+
+        $event = new NewCloudEvent(
+            'id',
+            'source',
+            'type',
+            ['my' => 'event'],
+            'application/json',
+            null,
+            'subject',
+            new DateTimeImmutable('2020-12-12T20:47:00+00:00Z'),
+        );
+
+        $topic = new Topic('pubsub', 'test', $client);
+        $topic->publish($event);
+
+        $publisher = $this->container->make(Publish::class, ['pubsub' => 'pubsub']);
+        $this->get_client()->register_post(
+            '/publish/pubsub/topic',
+            200,
+            null,
+            [
+                'specversion' => '1.0',
+                'id' => 'id',
+                'source' => 'source',
+                'type' => 'type',
+                'datacontenttype' => 'application/json',
+                'subject' => 'subject',
+                'time' => '2020-12-12T20:47:00Z',
+                'data' => [
+                    'my' => 'event',
+                ],
+            ]
+        );
+        $publisher->topic('topic')->publish($event);
+
+        $request = $container->history[0]['request'];
+        $this->assertRequestMethod('POST', $request);
+        $this->assertRequestUri('/v1.0/publish/pubsub/test', $request);
+        $this->assertRequestQueryString('', $request);
+        $this->assertRequestHasHeaders(['Content-Type' => 'application/cloudevents+json'], $request);
+        $this->assertRequestBody(
+            '{"specversion":"1.0","id":"id","source":"source","type":"type","datacontenttype":"application\/json","subject":"subject","time":"2020-12-12T20:47:00Z","data":{"my":"event"}}',
             $request
         );
     }

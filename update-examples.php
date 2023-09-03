@@ -18,6 +18,11 @@ foreach ($examples as $example) {
     if (!empty($sha)) {
         $sha = "#$sha";
     }
+
+    $composer->repositories[] = [
+        'type' => 'path',
+        'url' => '../..',
+    ];
     $composer->require->{'dapr/php-sdk'} = "dev-$branch$sha";
     file_put_contents(
         "examples/$example/composer.json",
