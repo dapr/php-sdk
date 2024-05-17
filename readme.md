@@ -1,6 +1,19 @@
 # Using this library
 
-[![PHP Composer](https://github.com/dapr/php-sdk/actions/workflows/php.yml/badge.svg)](https://github.com/dapr/php-sdk/actions/workflows/php.yml)
+[![Build Status][actions-badge]][actions-url] [![License: Apache 2.0][license-badge]][license-url] [![Good First Issues][gfi-badge]][gfi-url] [![discord][discord-badge]][discord-url] [![YouTube][youtube-badge]][youtube-link] [![X/Twitter][x-badge]][x-link]
+
+[license-badge]: https://img.shields.io/github/license/dapr/php-sdk?style=flat&label=License&logo=github
+[license-url]: https://github.com/dapr/php-sdk/blob/master/LICENSE
+[actions-badge]: https://img.shields.io/github/actions/workflow/status/dapr/php-sdk/.github%2Fworkflows%2Fphp.yml?branch=main&label=Build&logo=github
+[actions-url]: https://github.com/dapr/php-sdk/actions/workflows/php.yml
+[gfi-badge]:https://img.shields.io/github/issues-search/dapr/php-sdk?query=type%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22&label=Good%20first%20issues&style=flat&logo=github
+[gfi-url]:https://github.com/dapr/php-sdk/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
+[discord-badge]: https://img.shields.io/discord/778680217417809931?label=Discord&style=flat&logo=discord
+[discord-url]: http://bit.ly/dapr-discord
+[youtube-badge]:https://img.shields.io/youtube/channel/views/UCtpSQ9BLB_3EXdWAUQYwnRA?style=flat&label=YouTube%20views&logo=youtube
+[youtube-link]:https://youtube.com/@daprdev
+[x-badge]:https://img.shields.io/twitter/follow/daprdev?logo=x&style=flat
+[x-link]:https://twitter.com/daprdev
 
 This library is licensed with the MIT license.
 
