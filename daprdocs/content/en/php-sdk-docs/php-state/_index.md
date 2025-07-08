@@ -8,7 +8,7 @@ no_list: true
 ---
 
 Dapr offers a great modular approach to using state in your application. The best way to learn the basics is to visit
-[the howto]({{< ref howto-get-save-state.md >}}).
+[the howto]({{% ref howto-get-save-state.md %}}).
 
 ## Metadata
 
@@ -26,7 +26,7 @@ $app->run(
 $app->run(fn(\Dapr\Client\DaprClient $daprClient) => $daprClient->saveState(storeName: 'statestore', key: 'key', value: 'value', metadata: ['port' => '112']))
 ```
 
-This is an example of how you might pass the port metadata to [Cassandra]({{< ref setup-cassandra.md >}}).
+This is an example of how you might pass the port metadata to [Cassandra]({{% ref setup-cassandra.md %}}).
 
 Every state operation allows passing metadata.
 
@@ -58,9 +58,9 @@ the load on the state store at the expense of performance. The default is `10`.
 Hardcoded key names are useful, but why not make state objects more reusable? When committing a transaction or saving an
 object to state, you can pass a prefix that is applied to every key in the object.
 
-{{< tabs "Transaction prefix" "StateManager prefix" >}}
+{{< tabpane text=true >}}
 
-{{% codetab %}}
+{{% tab header="Transaction prefix" %}}
 
 ```php
 <?php
@@ -76,8 +76,8 @@ $app->run(function (TransactionObject $object ) {
 });
 ```
 
-{{% /codetab %}}
-{{% codetab %}}
+{{% /tab %}}
+{{% tab header="StateManager prefix" %}}
 
 ```php
 <?php
@@ -94,6 +94,6 @@ $app->run(function(\Dapr\State\StateManager $stateManager) {
 });
 ```
 
-{{% /codetab %}}
+{{% /tab %}}
 
-{{< /tabs >}}
+{{< /tabpane >}}

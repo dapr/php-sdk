@@ -17,16 +17,16 @@ $app->post('/publish', function(\Dapr\Client\DaprClient $daprClient) {
 });
 ```
 
-For more information about publish/subscribe, check out [the howto]({{< ref howto-publish-subscribe.md >}}).
+For more information about publish/subscribe, check out [the howto]({{% ref howto-publish-subscribe.md %}}).
 
 ## Data content type
 
 The PHP SDK allows setting the data content type either when constructing a custom cloud event, or when publishing raw
 data.
 
-{{< tabs CloudEvent "Raw" >}}
+{{< tabpane text=true >}}
 
-{{% codetab %}}
+{{% tab header="CloudEvent" %}}
 
 ```php
 <?php
@@ -35,8 +35,8 @@ $event->data = $xml;
 $event->data_content_type = 'application/xml';
 ```
 
-{{% /codetab %}}
-{{% codetab %}}
+{{% /tab %}}
+{{% tab header="Raw" %}}
 
 ```php
 <?php
@@ -52,9 +52,9 @@ Only `application/octet-steam` is supported for binary data.
 
 {{% /alert %}}
 
-{{% /codetab %}}
+{{% /tab %}}
 
-{{< /tabs >}}
+{{< /tabpane >}}
 
 ## Receiving cloud events
 

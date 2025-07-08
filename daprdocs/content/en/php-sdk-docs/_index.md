@@ -113,4 +113,4 @@ Congratulations, you've created your first Dapr service! I'm excited to see what
 ## More Information
 
 - [Packagist](https://packagist.org/packages/dapr/php-sdk)
-- [Dapr SDK serialization]({{< ref sdk-serialization.md >}})
+- [Dapr SDK serialization]({{% ref sdk-serialization.md %}})
