@@ -17,9 +17,9 @@ With actors, there are two things we're interested in while the actor is under t
 1. The returned result based on an initial state
 2. The resulting state based on the initial state
 
-{{< tabs "integration test with TestClient" "unit test" >}}
+{{< tabpane text=true >}}
 
-{{% codetab %}}
+{{% tab header="integration test with TestClient" %}}
 
 Here's an example test a very simple actor that updates its state and returns a specific value:
 
@@ -112,8 +112,8 @@ class TheTest extends \PHPUnit\Framework\TestCase
 }
 ```
 
-{{% /codetab %}}
-{{% codetab %}}
+{{% /tab %}}
+{{% tab header="unit test" %}}
 
 ```php
 <?php
@@ -162,18 +162,18 @@ class TheTest extends \PHPUnit\Framework\TestCase
 }
 ```
 
-{{% /codetab %}}
+{{% /tab %}}
 
-{{< /tabs >}}
+{{< /tabpane >}}
 
 ## Testing Transactions
 
 When building on transactions, you'll likely want to test how a failed transaction is handled. In order to do that, you
 need to inject failures and ensure the transaction matches what you expect.
 
-{{< tabs "integration test with TestClient" "unit test" >}}
+{{< tabpane text=true >}}
 
-{{% codetab %}}
+{{% tab header="integration test with TestClient" %}}
 
 ```php
 <?php
@@ -214,7 +214,7 @@ class TheTest extends \PHPUnit\Framework\TestCase {
     public function testTransactionFailure() {
         $client = $this->getClient();
 
-        // create a response from {{< ref state_api >}}
+        // create a response from {{% ref state_api %}}
         $client->register_post('/state/statestore/bulk', code: 200, response_data: [
             [
                 'key' => 'value',
@@ -247,8 +247,8 @@ class TheTest extends \PHPUnit\Framework\TestCase {
 }
 ```
 
-{{% /codetab %}}
-{{% codetab %}}
+{{% /tab %}}
+{{% tab header="unit test" %}}
 
 ```php
 <?php
@@ -280,6 +280,6 @@ class TheTest extends \PHPUnit\Framework\TestCase {
 }
 ```
 
-{{% /codetab %}}
+{{% /tab %}}
 
-{{< /tabs >}}
+{{< /tabpane >}}
