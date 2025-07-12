@@ -228,7 +228,7 @@ jobs:
           STATUSCODE=$(curl --silent --output /tmp/test-results.json --write-out "%{http_code}" -H 'dapr-api-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c' http://localhost:9502/do_tests)
           cat /tmp/test-results.json | jq -C .
           if test $STATUSCODE -ne 200; then
-            docker-compose logs dev
+            docker compose logs dev
             exit 1
           fi
   examples:

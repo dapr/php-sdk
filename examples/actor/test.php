@@ -10,7 +10,7 @@ $urls = [
 $failed = false;
 
 for ($i = 0; $i < 5; $i++) {
-	$logs = `GIT_SHA=t docker-compose logs actor-daprd`;
+	$logs = `GIT_SHA=t docker compose logs actor-daprd`;
 	if (str_contains($logs, 'placement tables updated, version: 1')) {
 		echo "Running Tests!\n";
 		break;
