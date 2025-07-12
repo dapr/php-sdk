@@ -70,7 +70,7 @@ abstract class GenerateProxy implements IGenerateProxy
 	 */
 	protected function get_methods(ClassType|InterfaceType $interface): array
 	{
-		return [...$interface->getMethods(), ...ClassType::from(IActor::class)->getMethods()];
+		return [...$interface->getMethods(), ...InterfaceType::from(IActor::class)->getMethods()];
 	}
 
 	protected function get_full_class_name(): string

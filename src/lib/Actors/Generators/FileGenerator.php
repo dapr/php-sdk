@@ -78,7 +78,7 @@ class FileGenerator extends GenerateProxy
 	public function generate_file(): PhpFile
 	{
 		// configure class
-		$implementing = ClassType::from($this->interface);
+		$implementing = InterfaceType::from($this->interface);
 		$interface = new ClassType($this->get_short_class_name());
 		$interface->addImplement($this->interface);
 		$interface->addProperty('id')->setPublic()->setType(Type::String);
