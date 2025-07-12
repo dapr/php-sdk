@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@2.9.0
         with:
-          php-version: 8.0
+          php-version: 8.4
           extensions: xdebug
       - name: Validate composer.json and install tools
         run: |
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@2.9.0
         with:
           php-version: 8.0
@@ -155,7 +155,7 @@ jobs:
               cd examples/laravel
               composer install
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@2.9.0
         with:
           php-version: 8.0
@@ -204,7 +204,7 @@ jobs:
     timeout-minutes: 5
     strategy:
       matrix:
-        dapr-version: [ 1.5.2, 1.6.1, 1.7.0 ]
+        dapr-version: [ 1.15.0 ]
     steps:
       - name: Download Caddy Image
         uses: actions/download-artifact@v2
@@ -223,7 +223,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: shivammathur/setup-php@2.9.0
         with:
-          php-version: 8.0
+          php-version: 8.4
       - name: Validate composer.json and composer.lock
         run: composer validate
       - name: Integration Environment Startup
@@ -248,18 +248,16 @@ jobs:
     strategy:
       matrix:
         dapr-version:
-          - 1.5.2
-          - 1.6.1
-          - 1.7.0
+          - 1.15.0
         example:
           - actor
           - secrets
           - laravel
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@2.9.0
         with:
-          php-version: 8.0
+          php-version: 8.4
       - name: Update examples
         env:
           GIT_BRANCH: ${{ github.head_ref || 'main' }}
