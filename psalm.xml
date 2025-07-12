@@ -29,5 +29,6 @@
         <UnusedMethodCall errorLevel="suppress"/>
         <UnnecessaryVarAnnotation errorLevel="suppress"/>
         <InaccessibleProperty errorLevel="suppress"/>
+        <NamedArgumentNotAllowed errorLevel="suppress"/>
     </issueHandlers>
 </psalm>

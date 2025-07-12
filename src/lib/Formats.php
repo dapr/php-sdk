@@ -46,7 +46,11 @@ abstract class Formats
         $from = new DateTime();
         $to = clone $from;
         $to = $to->add($interval);
-        return $to->diff($from, true);
+        $diff = $to->diff($from, true);
+        $diff->h += $diff->d * self::DAY_IN_HOURS;
+        $diff->d = 0;
+
+        return $diff;
     }
 
     /**
