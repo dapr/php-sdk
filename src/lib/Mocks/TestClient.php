@@ -24,7 +24,7 @@ class TestClient extends DaprClient
     /**
      * Asserts that the sidecar isn't shutdown
      */
-    private function fail_if_shutdown() {
+    private function fail_if_shutdown(): void {
         Assert::assertFalse($this->is_shutdown, 'The sidecar was previously shutdown.');
     }
 

@@ -33,7 +33,7 @@ class CachedGenerator extends ExistingOnly
      *
      * @param string $dir
      */
-    public function set_cache_dir(string $dir) {
+    public function set_cache_dir(string $dir): void {
         $this->cache_dir = $dir;
     }
 

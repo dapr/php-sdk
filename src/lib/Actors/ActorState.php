@@ -62,7 +62,7 @@ abstract class ActorState
      * @throws DependencyException
      * @throws NotFoundException
      */
-    private function begin_transaction(ActorReference $reference, DaprClient $client, CacheInterface $cache)
+    private function begin_transaction(ActorReference $reference, DaprClient $client, CacheInterface $cache): void
     {
         $this->reference = $reference;
         $this->reflection = new ReflectionClass($this);

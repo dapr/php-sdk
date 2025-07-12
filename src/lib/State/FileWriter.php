@@ -12,6 +12,8 @@ class FileWriter
     /**
      * @param string $filename The filename to write to
      * @param string $contents The contents of the file to write
+     *
+     * @return void
      */
     public static function write(string $filename, string $contents)
     {
