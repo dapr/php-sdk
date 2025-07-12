@@ -77,12 +77,13 @@ class TestClient extends DaprClient
 
     /**
      * @param $url
-     * @param $body
+     * @param false|string $body
      *
      * @never-returns
+     *
      * @throws Exception
      */
-    private function not_registered($url, $body): void
+    private function not_registered(string $url, string|false $body): void
     {
         [$method, $url] = explode(' ', $url);
         throw new Exception(

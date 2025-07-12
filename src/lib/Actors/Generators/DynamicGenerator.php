@@ -9,12 +9,10 @@ use Dapr\Actors\Attributes\Post;
 use Dapr\Actors\Attributes\Put;
 use Dapr\Actors\Internal\InternalProxy;
 use Dapr\Client\DaprClient;
-use DI\FactoryInterface;
 use JetBrains\PhpStorm\Pure;
 use LogicException;
-use Nette\PhpGenerator\ClassType;
+use Nette\PhpGenerator\InterfaceType;
 use Nette\PhpGenerator\Method;
-use Psr\Container\ContainerInterface;
 
 /**
  * Class DynamicGenerator
@@ -26,86 +24,89 @@ use Psr\Container\ContainerInterface;
 class DynamicGenerator extends GenerateProxy
 {
 
-    #[Pure] public function __construct(
-        string $interface,
-        string $dapr_type,
-        DaprClient $client
-    ) {
-        parent::__construct($interface, $dapr_type, $client);
-    }
+	#[Pure]
+	public function __construct(
+		string $interface,
+		string $dapr_type,
+		DaprClient $client,
+	) {
+		parent::__construct($interface, $dapr_type, $client);
+	}
 
-    public function get_proxy(string $id): InternalProxy
-    {
-        $current_proxy = new InternalProxy();
-        $interface = ClassType::from($this->interface);
-        $methods = $this->get_methods($interface);
-        $current_proxy->DAPR_TYPE = $this->dapr_type;
+	#[\Override]
+	public function get_proxy(string $id): InternalProxy
+	{
+		$current_proxy = new InternalProxy();
+		$interface = InterfaceType::from($this->interface);
+		$methods = $this->get_methods($interface);
+		$current_proxy->DAPR_TYPE = $this->dapr_type;
 
-        $reflection = new \ReflectionClass($current_proxy);
-        $client =$reflection->getProperty('client');
-        $client->setAccessible(true);
-        $client->setValue($current_proxy, $this->client);
-        $reference = $reflection->getProperty('reference');
-        $actor_reference = new ActorReference($id, $this->dapr_type);
-        $reference->setAccessible(true);
-        $reference->setValue($current_proxy, $actor_reference);
+		$reflection = new \ReflectionClass($current_proxy);
+		$client = $reflection->getProperty('client');
+		$client->setValue($current_proxy, $this->client);
+		$reference = $reflection->getProperty('reference');
+		$actor_reference = new ActorReference($id, $this->dapr_type);
+		$reference->setValue($current_proxy, $actor_reference);
 
-        foreach ($methods as $method) {
-            $current_proxy->{$method->getName()} = $this->generate_method($method, $id);
-        }
+		foreach ($methods as $method) {
+			$current_proxy->{$method->getName()} = $this->generate_method($method, $id);
+		}
 
-        $current_proxy->_get_actor_reference = fn() => $actor_reference;
+		$current_proxy->_get_actor_reference = fn(): \Dapr\Actors\ActorReference => $actor_reference;
 
-        return $current_proxy;
-    }
+		return $current_proxy;
+	}
 
-    protected function generate_failure_method(Method $method): callable
-    {
-        return function () use ($method) {
-            throw new LogicException("Cannot call {$method->getName()} from outside the actor.");
-        };
-    }
+	#[\Override]
+	protected function generate_failure_method(Method $method): callable
+	{
+		return function () use ($method) {
+			throw new LogicException("Cannot call {$method->getName()} from outside the actor.");
+		};
+	}
 
-    protected function generate_proxy_method(Method $method, string $id): callable
-    {
-        $http_method = count($method->getParameters()) == 0 ? 'GET' : 'POST';
-        foreach ($method->getAttributes() as $attribute) {
-            $http_method = match ($attribute->getName()) {
-                Get::class => 'GET',
-                Post::class => 'POST',
-                Put::class => 'PUT',
-                Delete::class => 'DELETE',
-                default => $http_method
-            };
-        }
-        $reference = new ActorReference($id, $this->dapr_type);
-        $actor_method = $method->getName();
-        $return_type = $method->getReturnType();
+	#[\Override]
+	protected function generate_proxy_method(Method $method, string $id): callable
+	{
+		$http_method = count($method->getParameters()) == 0 ? 'GET' : 'POST';
+		foreach ($method->getAttributes() as $attribute) {
+			$http_method = match ($attribute->getName()) {
+				Get::class => 'GET',
+				Post::class => 'POST',
+				Put::class => 'PUT',
+				Delete::class => 'DELETE',
+				default => $http_method
+			};
+		}
+		$reference = new ActorReference($id, $this->dapr_type);
+		$actor_method = $method->getName();
+		$return_type = $method->getReturnType();
 
-        return function (...$params) use ($id, $http_method, $reference, $actor_method, $return_type) {
-            /**
-             * @var DaprClient $client
-             */
-            $result = $this->client->invokeActorMethod(
-                $http_method,
-                $reference,
-                $actor_method,
-                $params[0] ?? null,
-                $return_type ?? 'array'
-            );
+		return function (...$params) use ($id, $http_method, $reference, $actor_method, $return_type) {
+			/**
+			 * @var DaprClient $client
+			 */
+			$result = $this->client->invokeActorMethod(
+				$http_method,
+				$reference,
+				$actor_method,
+				$params[0] ?? null,
+				$return_type ?? 'array',
+			);
 
-            if ($return_type) {
-                return $result;
-            }
+			if ($return_type) {
+				return $result;
+			}
 
-            return;
-        };
-    }
+			return;
+		};
+	}
 
-    protected function generate_get_id(Method $method, string $id): callable
-    {
-        return function () use ($id) {
-            return $id;
-        };
-    }
+	#[\Override]
+	protected function generate_get_id(Method $method, string $id): callable
+	{
+		return function () use ($id) {
+			return $id;
+		};
+	}
 }

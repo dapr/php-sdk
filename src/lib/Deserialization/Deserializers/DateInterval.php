@@ -19,6 +19,7 @@ class DateInterval implements IDeserialize
      * @return PhpDateInterval
      * @throws Exception
      */
+    #[\Override]
     public static function deserialize(mixed $value, IDeserializer $deserializer): PhpDateInterval
     {
         return new PhpDateInterval($value);

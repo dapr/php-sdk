@@ -24,6 +24,7 @@ class Serializer implements ISerializer
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function as_json(mixed $value, int $flags = 0): string
     {
         return json_encode($this->as_array($value), $flags);
@@ -32,6 +33,7 @@ class Serializer implements ISerializer
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function as_array(mixed $value): mixed
     {
         switch (true) {

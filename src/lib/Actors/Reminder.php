@@ -58,6 +58,7 @@ class Reminder implements ISerialize, IDeserialize
         );
     }
 
+    #[\Override]
     public static function deserialize(mixed $value, IDeserializer $deserializer): mixed
     {
         return new Reminder(
@@ -78,6 +79,7 @@ class Reminder implements ISerialize, IDeserialize
         ];
     }
 
+    #[\Override]
     public function serialize(mixed $value, ISerializer $serializer): mixed
     {
         if ($this->repetitions >= 0) {

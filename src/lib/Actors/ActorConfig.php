@@ -109,6 +109,7 @@ class ActorConfig implements ISerialize
         return $this->drain_enabled ?? null;
     }
 
+    #[\Override]
     #[ArrayShape([
         'entities' => "",
         'drainRebalancedActors' => "",

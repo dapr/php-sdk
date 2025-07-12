@@ -43,6 +43,7 @@ class StateManagerOld implements IManageState
      * @inheritDoc
      * @throws DaprException
      */
+    #[\Override]
     public function save_state(
         string $store_name,
         StateItem $item
@@ -57,6 +58,7 @@ class StateManagerOld implements IManageState
      * @inheritDoc
      * @throws DaprException
      */
+    #[\Override]
     public function load_state(
         string $store_name,
         string $key,
@@ -74,6 +76,7 @@ class StateManagerOld implements IManageState
         throw new DaprException('Failed to retrieve state');
     }
 
+    #[\Override]
     public function delete_keys(string $store_name, array $keys, array $metadata = []): void
     {
         foreach ($keys as $key) {
@@ -85,6 +88,7 @@ class StateManagerOld implements IManageState
      * @inheritDoc
      * @throws DaprException
      */
+    #[\Override]
     public function save_object(
         object $item,
         string $prefix = '',
@@ -123,6 +127,7 @@ class StateManagerOld implements IManageState
      * @inheritDoc
      * @throws DaprException|ReflectionException
      */
+    #[\Override]
     public function load_object(object $into, string $prefix = '', int $parallelism = 10, array $metadata = []): void
     {
         $this->logger->debug('Loading state');

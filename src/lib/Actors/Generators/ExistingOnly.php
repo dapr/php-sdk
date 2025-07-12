@@ -34,6 +34,7 @@ class ExistingOnly extends GenerateProxy
      * @throws DependencyException
      * @throws NotFoundException
      */
+    #[\Override]
     public function get_proxy(string $id)
     {
         $reflection = new \ReflectionClass($this->get_full_class_name());
@@ -47,6 +48,7 @@ class ExistingOnly extends GenerateProxy
      * @codeCoverageIgnore Never happens
      * @param Method $method
      */
+    #[\Override]
     protected function generate_failure_method(Method $method): void
     {
         throw new LogicException();
@@ -57,6 +59,7 @@ class ExistingOnly extends GenerateProxy
      * @param Method $method
      * @param string $id
      */
+    #[\Override]
     protected function generate_proxy_method(Method $method, string $id): void
     {
         throw new LogicException();
@@ -67,6 +70,7 @@ class ExistingOnly extends GenerateProxy
      * @param Method $method
      * @param string $id
      */
+    #[\Override]
     protected function generate_get_id(Method $method, string $id): void
     {
         throw new LogicException();

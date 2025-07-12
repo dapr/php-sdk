@@ -24,7 +24,7 @@ class AppTest extends DaprTests
         $app        = $this->container->get(App::class);
         $callback   = fn() => null;
         $with_param = fn($param) => [$param, '/', $callback];
-        $mock_router->expects($this->exactly(7))->method('addRoute')->withConsecutive(
+        $mock_router->expects($this->exactly(7))->method('addRoute')->willReturnOnConsecutiveCalls(
             $with_param('GET'),
             $with_param('POST'),
             $with_param('OPTIONS'),
@@ -101,7 +101,7 @@ class AppTest extends DaprTests
         /**
          * @var ResponseInterface $parameter
          */
-        $parameter = $invocations[0]->getParameters()[0];
+        $parameter = $invocations[0]->parameters()[0];
         $parameter->getBody()->rewind();
         $this->assertSame($response->getBody()->getContents(), $parameter->getBody()->getContents());
         $this->assertEquals($response->withBody($new_body), $parameter->withBody($new_body));
@@ -115,7 +115,6 @@ class AppTest extends DaprTests
         $parent_props = [];
 
         foreach ($parent->getProperties() as $p) {
-            $p->setAccessible(true);
             $parent_props[$p->getName()] = $p->getValue($spy);
         }
 

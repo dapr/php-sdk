@@ -64,6 +64,7 @@ class FileCache extends MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function flush_cache(): void
     {
         $this->serialize_cache();

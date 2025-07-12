@@ -22,6 +22,7 @@ class MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function get_key(string $key): mixed
     {
         if ($this->has_key($key)) {
@@ -33,6 +34,7 @@ class MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function set_key(string $key, mixed $data): void
     {
         $this->data[$key] = $data;
@@ -41,6 +43,7 @@ class MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function evict(string $key): void
     {
         unset($this->data[$key]);
@@ -49,6 +52,7 @@ class MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function reset(): void
     {
         $this->data = [];
@@ -57,10 +61,12 @@ class MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function flush_cache(): void
     {
     }
 
+    #[\Override]
     public function has_key(string $key): bool
     {
         return array_key_exists($key, $this->data);

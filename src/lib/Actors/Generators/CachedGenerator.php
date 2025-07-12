@@ -37,6 +37,7 @@ class CachedGenerator extends ExistingOnly
         $this->cache_dir = $dir;
     }
 
+    #[\Override]
     public function get_proxy(string $id): object
     {
         if ( ! class_exists($this->get_full_class_name())) {

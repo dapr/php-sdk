@@ -24,6 +24,7 @@ final class ActorReference implements IActorReference, ISerialize, IDeserialize
     /**
      * @inheritDoc
      */
+    #[\Override]
     public static function get(mixed $actor): IActorReference
     {
         $id = $actor?->get_id();
@@ -54,6 +55,7 @@ final class ActorReference implements IActorReference, ISerialize, IDeserialize
         return $type_attribute;
     }
 
+    #[\Override]
     public static function deserialize(mixed $value, IDeserializer $deserializer): mixed
     {
         return new ActorReference(id: $value['ActorId'], actor_type: $value['ActorType']);
@@ -62,6 +64,7 @@ final class ActorReference implements IActorReference, ISerialize, IDeserialize
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function bind(string $interface, ProxyFactory $proxy_factory): mixed
     {
         return $proxy_factory->get_generator($interface, $this->actor_type)->get_proxy(
@@ -72,6 +75,7 @@ final class ActorReference implements IActorReference, ISerialize, IDeserialize
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function get_actor_id(): string
     {
         return $this->id;
@@ -80,6 +84,7 @@ final class ActorReference implements IActorReference, ISerialize, IDeserialize
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function get_actor_type(): string
     {
         return $this->actor_type;
@@ -91,6 +96,7 @@ final class ActorReference implements IActorReference, ISerialize, IDeserialize
      *
      * @return array
      */
+    #[\Override]
     public function serialize(mixed $value, ISerializer $serializer): array
     {
         return ['ActorId' => $value->id, 'ActorType' => $value->actor_type];

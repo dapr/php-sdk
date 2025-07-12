@@ -11,6 +11,7 @@ use InvalidArgumentException;
  */
 class DateTime implements ISerialize
 {
+    #[\Override]
     public function serialize(mixed $value, ISerializer $serializer): string
     {
         if ($value instanceof \DateTime) {

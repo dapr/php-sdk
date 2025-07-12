@@ -421,6 +421,7 @@ class App implements MiddlewareInterface
         return $response;
     }
 
+    #[\Override]
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $this->add_dapr_routes($this);

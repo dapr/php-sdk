@@ -15,6 +15,7 @@ class TokenAuth implements IRequestMiddleware
 {
     use HttpTokenTrait;
 
+    #[\Override]
     public function request(RequestInterface $request): RequestInterface
     {
         $token = $this->getAppToken();

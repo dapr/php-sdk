@@ -14,6 +14,7 @@ class DateInterval implements ISerialize
     private const CLEAN_DT = ['S', 'M', 'H', 'DT', 'M', 'P', 'Y', 'P'];
     private const DEFAULT_DT = 'PT0S';
 
+    #[\Override]
     public function serialize(mixed $value, ISerializer $serializer): string
     {
         return rtrim(

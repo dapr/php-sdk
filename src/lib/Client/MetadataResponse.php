@@ -8,6 +8,7 @@ use Dapr\Deserialization\Attributes\ArrayOf;
  * Class MetadataResponse
  * @package Dapr\Client
  */
+#[\AllowDynamicProperties]
 class MetadataResponse
 {
     /**
@@ -32,6 +33,7 @@ class MetadataResponse
  * Class RegisteredActor
  * @package Dapr\Client
  */
+#[\AllowDynamicProperties]
 class RegisteredActor
 {
     public function __construct(public string $type, public int $count)
@@ -39,6 +41,7 @@ class RegisteredActor
     }
 }
 
+#[\AllowDynamicProperties]
 class RegisteredComponent
 {
     public function __construct(public string $name, public string $type, public string $version)

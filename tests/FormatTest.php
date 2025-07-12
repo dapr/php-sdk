@@ -1,11 +1,12 @@
 <?php
 
 use Dapr\Formats;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class FormatTest extends TestCase
 {
-    public function get_date_intervals(): array
+    public static function get_date_intervals(): array
     {
         return [
             [new DateInterval('PT1S'), '0h0m1s0us'],
@@ -21,6 +22,7 @@ class FormatTest extends TestCase
      *
      * @dataProvider get_date_intervals
      */
+	#[DataProvider('get_date_intervals')]
     public function testNormalizeInterval($actual, $expected)
     {
         $this->assertSame($expected, Formats::normalize_interval($actual));
@@ -45,6 +47,7 @@ class FormatTest extends TestCase
      * @dataProvider get_date_intervals
      * @throws Exception
      */
+	#[DataProvider('get_date_intervals')]
     public function testFromDapr(?DateInterval $expected, $actual)
     {
         $converted = Formats::from_dapr_interval($actual);

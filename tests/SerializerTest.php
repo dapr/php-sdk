@@ -8,6 +8,7 @@ use Dapr\Serialization\ISerializer;
 use Dapr\Serialization\Serializer;
 use Dapr\Serialization\Serializers\ISerialize;
 use Fixtures\TestObj;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class ASpecialType implements ISerialize
 {
@@ -25,7 +26,7 @@ class ASpecialType implements ISerialize
  */
 final class SerializerTest extends DaprTests
 {
-    public function generate_serializer(): array
+    public static function generate_serializer(): array
     {
         $obj      = new TestObj();
         $obj->foo = 'bar';
@@ -116,6 +117,7 @@ JSON
     /**
      * @dataProvider generate_serializer
      */
+	#[DataProvider('generate_serializer')]
     public function testSerializer($value, $expected)
     {
         $serializer = $this->container->get(Serializer::class);
@@ -132,7 +134,7 @@ JSON
                 'message'   => 'testing',
                 'errorCode' => 'Exception',
                 'file'      => __FILE__,
-                'line'      => 129,
+                'line'      => 131,
                 'inner'     => null,
             ],
             $serialized

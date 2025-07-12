@@ -18,19 +18,23 @@ abstract class Actor implements IActor
     {
     }
 
+    #[\Override]
     public function get_id(): mixed
     {
         return $this->id;
     }
 
+    #[\Override]
     public function remind(string $name, Reminder $data): void
     {
     }
 
+    #[\Override]
     public function on_activation(): void
     {
     }
 
+    #[\Override]
     public function on_deactivation(): void
     {
     }

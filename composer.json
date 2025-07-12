@@ -24,7 +24,7 @@
     "nikic/fast-route": "^1.3",
     "nyholm/psr7": "^1.8.2",
     "nyholm/psr7-server": "^1.1",
-    "php": "^8.0",
+    "php": "^8.4",
     "php-di/invoker": "^2.3.6",
     "php-di/php-di": "^7.0.11",
     "psr/log": "^1.1|^2.0|^3.0.2",
@@ -42,7 +42,7 @@
     }
   },
   "scripts": {
-    "test": "./vendor/bin/phpunit --testdox tests --coverage-clover coverage.xml tests --whitelist src",
+    "test": "./vendor/bin/phpunit --testdox tests --coverage-clover coverage.xml tests",
     "start": [
       "COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose build --pull",
       "docker-compose up -d"

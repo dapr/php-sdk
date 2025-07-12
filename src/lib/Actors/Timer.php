@@ -26,6 +26,7 @@ class Timer implements ISerialize
     ) {
     }
 
+    #[\Override]
     public function serialize(mixed $value, ISerializer $serializer): mixed
     {
         return $this->to_array();

@@ -2,12 +2,14 @@
 
 namespace Dapr\Actors\Internal;
 
+use AllowDynamicProperties;
 use Dapr\Actors\ActorTrait;
 
 /**
  * Class InternalProxy
  * @package Dapr
  */
+#[AllowDynamicProperties]
 class InternalProxy
 {
     use ActorTrait;

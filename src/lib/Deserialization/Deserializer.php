@@ -34,6 +34,7 @@ class Deserializer implements IDeserializer
     /**
      * @inheritDoc
      */
+    #[\Override]
     #[Pure] public function is_exception(mixed $item): bool
     {
         return is_array($item) && isset($item['errorCode'], $item['message']);
@@ -42,6 +43,7 @@ class Deserializer implements IDeserializer
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function get_exception(array $array): Exception
     {
         return DaprException::deserialize_from_array($array);
@@ -50,6 +52,7 @@ class Deserializer implements IDeserializer
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function detect_from_parameter(ReflectionParameter $parameter, mixed $data): mixed
     {
         if ($array_of = $this->is_array_of($parameter)) {
@@ -78,6 +81,7 @@ class Deserializer implements IDeserializer
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function from_array_of(string $as, array $array): array
     {
         return array_map(fn($item) => $this->from_value($as, $item), $array);
@@ -86,6 +90,7 @@ class Deserializer implements IDeserializer
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function from_value(string $as, mixed $value): mixed
     {
         if (str_ends_with($as, '[]')) {
@@ -150,6 +155,7 @@ class Deserializer implements IDeserializer
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function detect_from_property(ReflectionProperty $property, mixed $data): mixed
     {
         if ($array_of = $this->is_array_of($property)) {
@@ -185,6 +191,7 @@ class Deserializer implements IDeserializer
         return 'mixed';
     }
 
+    #[\Override]
     public function detect_type_name_from_property(ReflectionProperty $property): string
     {
         if ($array_of = $this->is_array_of($property)) {
@@ -201,6 +208,7 @@ class Deserializer implements IDeserializer
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function detect_from_method(ReflectionMethod $method, mixed $data): mixed
     {
         if ($array_of = $this->is_array_of($method)) {
@@ -220,6 +228,7 @@ class Deserializer implements IDeserializer
      * @inheritDoc
      * @codeCoverageIgnore
      */
+    #[\Override]
     public function from_json(string $as, string $json): mixed
     {
         return $this->from_value($as, json_decode($json, true));
@@ -232,6 +241,7 @@ class Deserializer implements IDeserializer
      * @return mixed
      * @codeCoverageIgnore Same implementation
      */
+    #[\Override]
     public function detect_from_generator_method(Method $method, mixed $data): mixed
     {
         if ($array_of = $this->is_array_of($method)) {
