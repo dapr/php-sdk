@@ -3,7 +3,6 @@
 $examples = [
     'actor',
     'secrets',
-    'laravel'
 ];
 
 $branch = getenv('GIT_BRANCH') ?: trim(`git rev-parse --abbrev-ref HEAD`);
