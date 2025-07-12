@@ -1,4 +1,4 @@
-FROM php:8.0-fpm AS base
+FROM php:8.4-fpm AS base
 ENV VERSION=1
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 RUN apt-get update && apt-get install -y wget git unzip && apt-get clean && rm -rf /var/cache/apt/lists
