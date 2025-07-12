@@ -40,9 +40,9 @@ class Topic
         }
         if ($event instanceof CloudEvent) {
             $content_type = 'application/cloudevents+json';
-            $this->client->extra_headers = [
-                'Content-Type: application/cloudevents+json',
-            ];
+            //$this->client->extra_headers = [
+            //    'Content-Type: application/cloudevents+json',
+            //];
 
             $event = $event->to_array();
         }
