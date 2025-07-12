@@ -193,7 +193,7 @@ jobs:
           cache-to: type=local,mode=max,dest=/tmp/.${{ matrix.image }}-cache
           build-args: ${{ matrix.args || '' }}
       - name: upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.image }}
           path: /tmp/${{ matrix.image }}.tar
