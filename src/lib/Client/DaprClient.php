@@ -114,11 +114,13 @@ abstract class DaprClient
 
     /**
      * @template T
+     *
      * @param string $httpMethod
-     * @param string $appId
+     * @param AppId $appId
      * @param string $methodName
      * @param T|null $data
      * @param array<array-key, string> $metadata
+     *
      * @return ResponseInterface
      */
     abstract public function invokeMethod(
@@ -131,11 +133,13 @@ abstract class DaprClient
 
     /**
      * @template T
+     *
      * @param string $httpMethod
-     * @param string $appId
+     * @param AppId $appId
      * @param string $methodName
      * @param T|null $data
      * @param array<array-key, string> $metadata
+     *
      * @return PromiseInterface<ResponseInterface>
      */
     abstract public function invokeMethodAsync(
@@ -293,7 +297,6 @@ abstract class DaprClient
      * @param string $storeName
      * @param StateItem[] $stateItems
      * @param array $metadata
-     * @return bool
      */
     abstract public function saveBulkStateAsync(string $storeName, array $stateItems): PromiseInterface;
 

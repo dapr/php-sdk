@@ -10,10 +10,12 @@ namespace Dapr\Client;
 class BindingResponse
 {
     /**
+     *
      * BindingResponse constructor.
+     *
      * @param BindingRequest $request
      * @param T $data
-     * @param iterable<string, string> $metadata
+     * @param array $metadata
      */
     public function __construct(public BindingRequest $request, public mixed $data, public array $metadata)
     {

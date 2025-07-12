@@ -16,11 +16,18 @@
         </ignoreFiles>
     </projectFiles>
     <issueHandlers>
-        <UndefinedAttributeClass>
-            <errorLevel type="suppress">
-                <directory name="src"/>
-                <directory name="tests"/>
-            </errorLevel>
-        </UndefinedAttributeClass>
+        <UnusedMethod errorLevel="suppress"/>
+        <UnusedVariable errorLevel="suppress"/>
+        <MissingOverrideAttribute errorLevel="suppress" />
+        <UnusedClass errorLevel="suppress"/>
+        <PossiblyUnusedParam errorLevel="suppress"/>
+        <UnusedProperty errorLevel="suppress"/>
+        <PossiblyUnusedReturnValue errorLevel="suppress"/>
+        <UnusedClosureParam errorLevel="suppress"/>
+        <UnsupportedPropertyReferenceUsage  errorLevel="suppress"/>
+        <UnusedDocblockParam errorLevel="suppress"/>
+        <UnusedMethodCall errorLevel="suppress"/>
+        <UnnecessaryVarAnnotation errorLevel="suppress"/>
+        <InaccessibleProperty errorLevel="suppress"/>
     </issueHandlers>
 </psalm>

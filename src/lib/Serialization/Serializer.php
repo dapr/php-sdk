@@ -23,11 +23,13 @@ class Serializer implements ISerializer
 
     /**
      * @inheritDoc
+     *
+     * @return string
      */
     #[\Override]
     public function as_json(mixed $value, int $flags = 0): string
     {
-        return json_encode($this->as_array($value), $flags);
+        return json_encode($this->as_array($value), $flags) ?: throw new Exception('Unable to encode to json');
     }
 
     /**
