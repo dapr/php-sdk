@@ -220,7 +220,7 @@ jobs:
       - name: Integration Environment Startup
         env:
           DAPR_VERSION: ${{ matrix.dapr-version }}
-        run: docker-compose up -d
+        run: docker compose up -d
       - name: Wait for environment stabilization
         run: sleep 10
       - name: Execute Tests
@@ -272,7 +272,7 @@ jobs:
           if [ -f start.php ]; then
             php start.php
           else
-            docker-compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
+            docker compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
           fi
       - name: Wait for stability
         run: sleep 10
