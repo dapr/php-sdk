@@ -12,6 +12,7 @@ use Dapr\exceptions\DaprException;
 use DI\DependencyException;
 use DI\NotFoundException;
 use JetBrains\PhpStorm\ArrayShape;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @param $obj
@@ -33,7 +34,7 @@ final class DeserializerTest extends DaprTests
         'Nested'  => "array",
         'Complex' => "array",
         'Null'    => "array",
-    ])] public function generate_deserializers(): array
+    ])] public static function generate_deserializers(): array
     {
         $obj = new class {
             public string $foo = 'bar';
@@ -69,6 +70,7 @@ final class DeserializerTest extends DaprTests
      * @throws DependencyException
      * @throws NotFoundException
      */
+	#[DataProvider('generate_deserializers')]
     public function testDeserializeValues($value, $expected)
     {
         $deserializer = $this->container->get(Deserializer::class);

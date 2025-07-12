@@ -23,7 +23,10 @@ final class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 
 
 	#[\Dapr\Deserialization\Attributes\ArrayOf('string')]
-	public function a_function(#[\Dapr\Deserialization\Attributes\AsClass('SimpleObject')] $value): array
+	public function a_function(
+		#[\Dapr\Deserialization\Attributes\AsClass('SimpleObject')]
+		$value,
+	): array
 	{
 		$data = $value;
 		$current_method = 'a_function';
@@ -78,8 +81,9 @@ final class dapr_proxy_TestActor implements \Fixtures\ITestActor, IActor
 	}
 
 
-	public function __construct(private DaprClient $client)
-	{
+	public function __construct(
+		private DaprClient $client,
+	) {
 	}
 
 

@@ -22,10 +22,13 @@ trait PromiseHandlingTrait
         if (empty($transformResult)) {
             $transformResult = fn(
                 ResponseInterface|DaprException $response
-            ) => $response instanceof DaprException ? throw $response : $response;
+            ): \Psr\Http\Message\ResponseInterface => $response instanceof DaprException ? throw $response : $response;
         }
         if (empty($errorTransformer)) {
-            $errorTransformer = fn(\Throwable $exception) => match ($exception::class) {
+            $errorTransformer = /**
+             * @return never
+             */
+            fn(\Throwable $exception) => match ($exception::class) {
                 ServerException::class, ClientException::class => throw new DaprException(
                     $exception->hasResponse()
                         ? $exception->getResponse()->getBody()->getContents()

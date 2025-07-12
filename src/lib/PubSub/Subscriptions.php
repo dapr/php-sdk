@@ -27,6 +27,7 @@ class Subscriptions implements ISerialize
      * @return mixed
      * @codeCoverageIgnore via integration tests
      */
+    #[\Override]
     public function serialize(mixed $value, ISerializer $serializer): mixed
     {
         return $serializer->as_array($this->subscriptions);

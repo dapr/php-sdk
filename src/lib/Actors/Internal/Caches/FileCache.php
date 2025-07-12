@@ -39,7 +39,7 @@ class FileCache extends MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
-    private function unserialize_cache()
+    private function unserialize_cache(): void
     {
         if (file_exists($this->cache_file)) {
             $this->data = unserialize(file_get_contents($this->cache_file));
@@ -64,6 +64,7 @@ class FileCache extends MemoryCache implements CacheInterface
     /**
      * @inheritDoc
      */
+    #[\Override]
     public function flush_cache(): void
     {
         $this->serialize_cache();
@@ -71,6 +72,8 @@ class FileCache extends MemoryCache implements CacheInterface
 
     /**
      * @inheritDoc
+     *
+     * @return void
      */
     private function serialize_cache()
     {

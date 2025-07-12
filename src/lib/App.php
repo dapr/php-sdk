@@ -86,7 +86,7 @@ class App implements MiddlewareInterface
      * @throws Exception
      * @codeCoverageIgnore Not testable
      */
-    public static function create(ContainerInterface $container = null, callable $configure = null): App
+    public static function create(ContainerInterface|null $container = null, callable|null $configure = null): App
     {
         if ($container === null) {
             $builder = new ContainerBuilder();
@@ -421,6 +421,7 @@ class App implements MiddlewareInterface
         return $response;
     }
 
+    #[\Override]
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $this->add_dapr_routes($this);

@@ -179,6 +179,7 @@ class CloudEvent implements IDeserialize
      * @return CloudEvent
      * @throws Exception
      */
+    #[\Override]
     public static function deserialize(mixed $value, IDeserializer $deserializer): CloudEvent
     {
         return self::from_array($value);

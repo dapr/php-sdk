@@ -21,6 +21,7 @@ class StateManager implements IManageState
         self::$objMap ??= new \WeakMap();
     }
 
+    #[\Override]
     public function save_state(string $store_name, StateItem $item): void
     {
         $this->client->trySaveState(
@@ -33,6 +34,7 @@ class StateManager implements IManageState
         );
     }
 
+    #[\Override]
     public function load_state(
         string $store_name,
         string $key,
@@ -50,6 +52,7 @@ class StateManager implements IManageState
         );
     }
 
+    #[\Override]
     public function delete_keys(string $store_name, array $keys, array $metadata = []): void
     {
         foreach ($keys as $key) {
@@ -57,6 +60,7 @@ class StateManager implements IManageState
         }
     }
 
+    #[\Override]
     public function save_object(
         object $item,
         string $prefix = '',
@@ -80,6 +84,7 @@ class StateManager implements IManageState
         $this->client->saveBulkState($store->name, $items);
     }
 
+    #[\Override]
     public function load_object(
         object|string $into,
         string $prefix = '',

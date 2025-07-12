@@ -36,7 +36,7 @@ class DeserializationConfig
      * @param string $type
      * @param IDeserialize $deserializer
      */
-    public function add(string $type, IDeserialize $deserializer)
+    public function add(string $type, IDeserialize $deserializer): void
     {
         $this->deserializers[$type] = $deserializer;
     }

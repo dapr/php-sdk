@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@2.9.0
         with:
-          php-version: 8.0
+          php-version: 8.4
           extensions: xdebug
       - name: Validate composer.json and install tools
         run: |
@@ -23,7 +23,7 @@ jobs:
 
       - name: Cache Composer packages
         id: composer-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: vendor
           key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -46,17 +46,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@2.9.0
         with:
-          php-version: 8.0
+          php-version: 8.4
           extensions: xdebug
       - name: Validate composer.json and composer.lock
         run: composer validate && make tools
 
       - name: Cache Composer packages
         id: composer-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: vendor
           key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -90,7 +90,6 @@ jobs:
           - php-secrets-http
           - php-secret-client-service
           - php-secret-client-http
-          - sail-app
         include:
           - image: caddy
             dockerfile: images/caddy.Dockerfile
@@ -146,19 +145,11 @@ jobs:
             context: examples/secrets
             args: |
               SERVICE=client
-          - image: sail-app
-            context: examples/laravel/vendor/laravel/sail/runtimes/8.0
-            dockerfile: examples/laravel/vendor/laravel/sail/runtimes/8.0/Dockerfile
-            args: |
-              WWWGROUP=1000
-            pre-built: |
-              cd examples/laravel
-              composer install
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@2.9.0
         with:
-          php-version: 8.0
+          php-version: 8.4
       - name: Update examples
         env:
           GIT_BRANCH: ${{ github.head_ref || 'main' }}
@@ -172,7 +163,7 @@ jobs:
         with:
           install: true
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.${{ matrix.image }}-cache
           key: ${{ runner.os }}-${{ matrix.image }}-${{ github.sha }}
@@ -193,7 +184,7 @@ jobs:
           cache-to: type=local,mode=max,dest=/tmp/.${{ matrix.image }}-cache
           build-args: ${{ matrix.args || '' }}
       - name: upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.image }}
           path: /tmp/${{ matrix.image }}.tar
@@ -204,15 +195,15 @@ jobs:
     timeout-minutes: 5
     strategy:
       matrix:
-        dapr-version: [ 1.5.2, 1.6.1, 1.7.0 ]
+        dapr-version: [ 1.15.0 ]
     steps:
       - name: Download Caddy Image
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: caddy
           path: /tmp
       - name: Download Tests Image
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: tests
           path: /tmp
@@ -223,13 +214,13 @@ jobs:
       - uses: actions/checkout@v2
       - uses: shivammathur/setup-php@2.9.0
         with:
-          php-version: 8.0
+          php-version: 8.4
       - name: Validate composer.json and composer.lock
         run: composer validate
       - name: Integration Environment Startup
         env:
           DAPR_VERSION: ${{ matrix.dapr-version }}
-        run: docker-compose up -d
+        run: docker compose up -d
       - name: Wait for environment stabilization
         run: sleep 10
       - name: Execute Tests
@@ -237,7 +228,7 @@ jobs:
           STATUSCODE=$(curl --silent --output /tmp/test-results.json --write-out "%{http_code}" -H 'dapr-api-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c' http://localhost:9502/do_tests)
           cat /tmp/test-results.json | jq -C .
           if test $STATUSCODE -ne 200; then
-            docker-compose logs dev
+            docker compose logs dev
             exit 1
           fi
   examples:
@@ -248,25 +239,22 @@ jobs:
     strategy:
       matrix:
         dapr-version:
-          - 1.5.2
-          - 1.6.1
-          - 1.7.0
+          - 1.15.0
         example:
           - actor
           - secrets
-          - laravel
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@2.9.0
         with:
-          php-version: 8.0
+          php-version: 8.4
       - name: Update examples
         env:
           GIT_BRANCH: ${{ github.head_ref || 'main' }}
         run:
           php update-examples.php
       - name: Download images
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           path: /tmp/images
       - name: Import images
@@ -284,7 +272,7 @@ jobs:
           if [ -f start.php ]; then
             php start.php
           else
-            docker-compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
+            docker compose -f docker-compose.yml -f ../docker-compose.common.yml up -d
           fi
       - name: Wait for stability
         run: sleep 10

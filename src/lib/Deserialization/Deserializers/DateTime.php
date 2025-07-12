@@ -17,6 +17,7 @@ class DateTime implements IDeserialize
      * @return \DateTime
      * @throws \Exception
      */
+    #[\Override]
     public static function deserialize(mixed $value, IDeserializer $deserializer): \DateTime
     {
         return new \DateTime($value);

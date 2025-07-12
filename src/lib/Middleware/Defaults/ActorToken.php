@@ -16,6 +16,7 @@ class ActorToken implements IRequestMiddleware, IResponseMiddleware
     // this is intentionally left undefined in order to throw if the client is created before detecting a reentrant token
     public static array $token;
 
+    #[\Override]
     public function request(RequestInterface $request): RequestInterface
     {
         if ($request->hasHeader('Dapr-Reentrancy-Id')) {
@@ -27,6 +28,7 @@ class ActorToken implements IRequestMiddleware, IResponseMiddleware
         return $request;
     }
 
+    #[\Override]
     public function response(ResponseInterface $response): ResponseInterface
     {
         if (!empty(self::$token)) {

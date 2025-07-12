@@ -10,6 +10,7 @@ use Dapr\Serialization\ISerializer;
  */
 class StateItem implements ISerialize
 {
+    #[\Override]
     public function serialize(mixed $value, ISerializer $serializer): mixed
     {
         if ($value instanceof \Dapr\State\StateItem) {

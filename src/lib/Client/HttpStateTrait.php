@@ -28,7 +28,7 @@ trait HttpStateTrait
         string $storeName,
         string $key,
         string $asType = 'array',
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): mixed {
         return $this->getStateAsync($storeName, $key, $asType, $consistency, $metadata)->wait();
@@ -38,7 +38,7 @@ trait HttpStateTrait
         string $storeName,
         string $key,
         string $asType = 'array',
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): PromiseInterface {
         return $this->handlePromise(
@@ -219,7 +219,7 @@ trait HttpStateTrait
     public function deleteState(
         string $storeName,
         string $key,
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): void {
         $this->deleteStateAsync($storeName, $key, $consistency, $metadata)->wait();
@@ -228,7 +228,7 @@ trait HttpStateTrait
     public function deleteStateAsync(
         string $storeName,
         string $key,
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): PromiseInterface {
         return $this->tryDeleteStateAsync($storeName, $key, null, $consistency ?? new EventualLastWrite(), $metadata);
@@ -238,7 +238,7 @@ trait HttpStateTrait
         string $storeName,
         string $key,
         string $etag,
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): PromiseInterface {
         $consistency ??= new EventualFirstWrite();
@@ -270,7 +270,7 @@ trait HttpStateTrait
         string $storeName,
         string $key,
         string $etag,
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): bool {
         return $this->tryDeleteStateAsync($storeName, $key, $etag, $consistency, $metadata)->wait();

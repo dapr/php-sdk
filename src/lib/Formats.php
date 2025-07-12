@@ -61,6 +61,10 @@ abstract class Formats
      */
     public static function from_dapr_interval(string $dapr_interval): ?DateInterval
     {
+		// since we always use intervals ...
+		// todo: we should probably make this better...
+		$dapr_interval = str_replace('@every ', '', $dapr_interval);
+
         if (empty($dapr_interval)) {
             return null;
         }

@@ -1,9 +1,7 @@
-FROM php:8.0-fpm AS base
+FROM dunglas/frankenphp:latest AS base
 ENV VERSION=1
-COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 RUN apt-get update && apt-get install -y wget git unzip && apt-get clean && rm -rf /var/cache/apt/lists
-RUN install-php-extensions curl intl zip sodium opcache apcu @composer && mkdir -p /app
-WORKDIR /app
+RUN install-php-extensions curl intl zip sodium opcache apcu @composer
 
 FROM base AS vendor
 COPY composer.json composer.json
@@ -13,16 +11,15 @@ RUN composer install --no-dev -o -n
 FROM base AS config
 ARG SERVICE
 ENV SERVICE=$SERVICE
-COPY services/$SERVICE services/$SERVICE
-COPY --from=vendor /app/vendor vendor
-COPY index.php index.php
-COPY global-config.php global-config.php
+COPY services/$SERVICE public/services/$SERVICE
+COPY --from=vendor /app/vendor public/vendor
+COPY index.php public/index.php
+COPY global-config.php public/global-config.php
 
 FROM config AS production
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 ENV PHP_CLI_SERVER_WORKERS=100
 COPY images/opcache.ini /tmp/opcache.ini
-COPY images/fpm.conf /usr/local/etc/php-fpm.d/www.conf
 RUN cat /tmp/opcache.ini >> $PHP_INI_DIR/php.ini
 
 FROM production AS development

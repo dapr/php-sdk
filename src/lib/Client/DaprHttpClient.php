@@ -55,6 +55,7 @@ class DaprHttpClient extends DaprClient
         $this->httpClient = new Client($options);
     }
 
+    #[\Override]
     public function isDaprHealthy(): bool
     {
         try {
@@ -68,6 +69,7 @@ class DaprHttpClient extends DaprClient
         }
     }
 
+    #[\Override]
     public function getMetadata(): MetadataResponse|null
     {
         try {
@@ -78,9 +80,10 @@ class DaprHttpClient extends DaprClient
         }
     }
 
+    #[\Override]
     public function shutdown(bool $afterRequest = true): void
     {
-        $shutdown = fn() => $this->httpClient->post('/v1.0/shutdown');
+        $shutdown = fn(): \Psr\Http\Message\ResponseInterface => $this->httpClient->post('/v1.0/shutdown');
         if ($afterRequest) {
             register_shutdown_function($shutdown);
             return;

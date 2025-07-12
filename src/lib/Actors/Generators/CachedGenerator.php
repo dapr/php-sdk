@@ -33,10 +33,11 @@ class CachedGenerator extends ExistingOnly
      *
      * @param string $dir
      */
-    public function set_cache_dir(string $dir) {
+    public function set_cache_dir(string $dir): void {
         $this->cache_dir = $dir;
     }
 
+    #[\Override]
     public function get_proxy(string $id): object
     {
         if ( ! class_exists($this->get_full_class_name())) {

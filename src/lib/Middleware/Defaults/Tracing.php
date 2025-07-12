@@ -16,6 +16,7 @@ class Tracing implements IRequestMiddleware, IResponseMiddleware
     public string|null $trace_parent = null;
     public string|null $trace_state = null;
 
+    #[\Override]
     public function request(RequestInterface $request): RequestInterface
     {
         if ($request->hasHeader('traceparent')) {
@@ -26,6 +27,7 @@ class Tracing implements IRequestMiddleware, IResponseMiddleware
         return $request;
     }
 
+    #[\Override]
     public function response(ResponseInterface $response): ResponseInterface
     {
         if ($this->trace_parent !== null) {

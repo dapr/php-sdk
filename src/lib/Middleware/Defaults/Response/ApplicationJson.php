@@ -11,6 +11,7 @@ use Psr\Http\Message\ResponseInterface;
  */
 class ApplicationJson implements IResponseMiddleware
 {
+    #[\Override]
     public function response(ResponseInterface $response): ResponseInterface
     {
         if ($response->hasHeader('Content-Type')) {

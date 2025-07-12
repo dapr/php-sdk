@@ -114,11 +114,13 @@ abstract class DaprClient
 
     /**
      * @template T
+     *
      * @param string $httpMethod
-     * @param string $appId
+     * @param AppId $appId
      * @param string $methodName
      * @param T|null $data
      * @param array<array-key, string> $metadata
+     *
      * @return ResponseInterface
      */
     abstract public function invokeMethod(
@@ -131,11 +133,13 @@ abstract class DaprClient
 
     /**
      * @template T
+     *
      * @param string $httpMethod
-     * @param string $appId
+     * @param AppId $appId
      * @param string $methodName
      * @param T|null $data
      * @param array<array-key, string> $metadata
+     *
      * @return PromiseInterface<ResponseInterface>
      */
     abstract public function invokeMethodAsync(
@@ -160,7 +164,7 @@ abstract class DaprClient
         string $storeName,
         string $key,
         string $asType = 'array',
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): PromiseInterface;
 
@@ -206,7 +210,7 @@ abstract class DaprClient
         string $storeName,
         string $key,
         string $asType = 'array',
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): mixed;
 
@@ -293,7 +297,6 @@ abstract class DaprClient
      * @param string $storeName
      * @param StateItem[] $stateItems
      * @param array $metadata
-     * @return bool
      */
     abstract public function saveBulkStateAsync(string $storeName, array $stateItems): PromiseInterface;
 
@@ -362,7 +365,7 @@ abstract class DaprClient
     abstract public function deleteStateAsync(
         string $storeName,
         string $key,
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): PromiseInterface;
 
@@ -375,7 +378,7 @@ abstract class DaprClient
     abstract public function deleteState(
         string $storeName,
         string $key,
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): void;
 
@@ -391,7 +394,7 @@ abstract class DaprClient
         string $storeName,
         string $key,
         string $etag,
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): PromiseInterface;
 
@@ -407,7 +410,7 @@ abstract class DaprClient
         string $storeName,
         string $key,
         string $etag,
-        Consistency $consistency = null,
+        Consistency|null $consistency = null,
         array $metadata = []
     ): bool;
 
