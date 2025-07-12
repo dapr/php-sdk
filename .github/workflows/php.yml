@@ -198,12 +198,12 @@ jobs:
         dapr-version: [ 1.15.0 ]
     steps:
       - name: Download Caddy Image
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: caddy
           path: /tmp
       - name: Download Tests Image
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: tests
           path: /tmp
@@ -254,7 +254,7 @@ jobs:
         run:
           php update-examples.php
       - name: Download images
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           path: /tmp/images
       - name: Import images
