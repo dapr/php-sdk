@@ -22,21 +22,21 @@ weigh during development and in production.
 
 It can be set with `dapr.actors.proxy.generation` configuration key.
 
-{{< tabs "GENERATED" "GENERATED_CACHED" "ONLY_EXISTING" "DYNAMIC" >}}
-{{% codetab %}}
+{{< tabpane text=true >}}
+{{% tab header="GENERATED" %}}
 
 This is the default mode. In this mode, a class is generated and `eval`'d on every request. It's mostly for development
 and shouldn't be used in production.
 
-{{% /codetab %}}
-{{% codetab %}}
+{{% /tab %}}
+{{% tab header="GENERATED_CACHED" %}}
 
 This is the same as `ProxyModes::GENERATED` except the class is stored in a tmp file so it doesn't need to be
 regenerated on every request. It doesn't know when to update the cached class, so using it in development is discouraged
 but is offered for when manually generating the files isn't possible.
 
-{{% /codetab %}}
-{{% codetab %}}
+{{% /tab %}}
+{{% tab header="ONLY_EXISTING" %}}
 
 In this mode, an exception is thrown if the proxy class doesn't exist. This is useful for when you don't want to 
 generate code in production. You'll have to make sure the class is generated and pre-/autoloaded.
@@ -104,15 +104,15 @@ return [
 ];
 ```
 
-{{% /codetab %}}
-{{% codetab %}}
+{{% /tab %}}
+{{% tab header="DYNAMIC" %}}
 
 In this mode, the proxy satisfies the interface contract, however, it does not actually implement the interface itself
 (meaning `instanceof` will be `false`). This mode takes advantage of a few quirks in PHP to work and exists for cases
 where code cannot be `eval`'d or generated.
 
-{{% /codetab %}}
-{{< /tabs >}}
+{{% /tab %}}
+{{< /tabpane >}}
 
 ### Requests
 

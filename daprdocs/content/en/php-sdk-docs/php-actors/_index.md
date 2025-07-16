@@ -8,7 +8,7 @@ no_list: true
 ---
 
 If you're new to the actor pattern, the best place to learn about the actor pattern is in
-the [Actor Overview.]({{< ref actors-overview.md >}})
+the [Actor Overview.]({{% ref actors-overview.md %}})
 
 In the PHP SDK, there are two sides to an actor, the Client, and the Actor (aka, the Runtime). As a client of an actor,
 you'll interact with a remote actor via the `ActorProxy` class. This class generates a proxy class on-the-fly using one
@@ -109,9 +109,9 @@ class CountState extends \Dapr\Actors\ActorState {
 
 Dapr expects to know what actors a service may host at startup. You need to add it to the configuration:
 
-{{< tabs "Production" "Development" >}}
+{{< tabpane text=true >}}
 
-{{% codetab %}}
+{{% tab header="Production" %}}
 
 If you want to take advantage of pre-compiled dependency injection, you need to use a factory:
 
@@ -137,8 +137,8 @@ $app = \Dapr\App::create(
 $app->start();
 ```
 
-{{% /codetab %}}
-{{% codetab %}}
+{{% /tab %}}
+{{% tab header="Development" %}}
 
 ```php
 <?php
@@ -160,5 +160,5 @@ $app = \Dapr\App::create(configure: fn(\DI\ContainerBuilder $builder) => $builde
 $app->start();
 ```
 
-{{% /codetab %}}
-{{< /tabs >}}
+{{% /tab %}}
+{{< /tabpane >}}
