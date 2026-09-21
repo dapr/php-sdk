@@ -385,7 +385,7 @@ abstract class DaprClient
     /**
      * @param string $storeName
      * @param string $key
-     * @param string $etag
+     * @param string|null $etag
      * @param Consistency|null $consistency
      * @param array<array-key, string> $metadata
      * @return PromiseInterface<bool>
@@ -393,7 +393,7 @@ abstract class DaprClient
     abstract public function tryDeleteStateAsync(
         string $storeName,
         string $key,
-        string $etag,
+        string|null $etag,
         Consistency|null $consistency = null,
         array $metadata = []
     ): PromiseInterface;
@@ -401,7 +401,7 @@ abstract class DaprClient
     /**
      * @param string $storeName
      * @param string $key
-     * @param string $etag
+     * @param string|null $etag
      * @param Consistency|null $consistency
      * @param array<array-key, string> $metadata
      * @return bool
@@ -409,7 +409,7 @@ abstract class DaprClient
     abstract public function tryDeleteState(
         string $storeName,
         string $key,
-        string $etag,
+        string|null $etag,
         Consistency|null $consistency = null,
         array $metadata = []
     ): bool;
