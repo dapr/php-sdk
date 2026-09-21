@@ -237,7 +237,7 @@ trait HttpStateTrait
     public function tryDeleteStateAsync(
         string $storeName,
         string $key,
-        string $etag,
+        string|null $etag,
         Consistency|null $consistency = null,
         array $metadata = []
     ): PromiseInterface {
@@ -269,7 +269,7 @@ trait HttpStateTrait
     public function tryDeleteState(
         string $storeName,
         string $key,
-        string $etag,
+        string|null $etag,
         Consistency|null $consistency = null,
         array $metadata = []
     ): bool {
