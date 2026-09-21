@@ -79,6 +79,29 @@ $client->getSecret(storeName: 'kubernetes', key: 'test');
 $client->getBulkSecret(storeName: 'kubernetes');
 ```
 
+# Accessing Configuration
+
+You can read configuration items from a configuration store and subscribe to changes:
+
+```php
+<?php
+
+// get specific configuration items (omit keys to get all items)
+$items = $client->getConfiguration(storeName: 'configstore', keys: ['orderId1', 'orderId2']);
+foreach ($items as $key => $item) {
+    // $item is a \Dapr\Configuration\ConfigurationItem with ->value, ->version, ->metadata
+}
+
+// subscribe to changes; returns a subscription id. The sidecar pushes updates to your
+// app's `/configuration/<store-name>` route.
+$id = $client->subscribeConfiguration(storeName: 'configstore', keys: ['orderId1']);
+
+// later, unsubscribe
+$client->unsubscribeConfiguration(storeName: 'configstore', id: $id);
+```
+
+Parse pushed updates in your app route with `\Dapr\Configuration\ConfigurationUpdate::parse($json)`.
+
 # Accessing State
 
 There are several ways to access state. You can access state directly via the client or abstract access via an object.

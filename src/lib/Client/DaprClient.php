@@ -5,6 +5,7 @@ namespace Dapr\Client;
 use Dapr\Actors\IActorReference;
 use Dapr\Actors\Reminder;
 use Dapr\Actors\Timer;
+use Dapr\Configuration\ConfigurationItem;
 use Dapr\consistency\Consistency;
 use Dapr\Deserialization\DeserializationConfig;
 use Dapr\Deserialization\IDeserializer;
@@ -443,6 +444,73 @@ abstract class DaprClient
      * @return array<array-key, array<array-key, string>>
      */
     abstract public function getBulkSecret(string $storeName, array $metadata = []): array;
+
+    /**
+     * Get configuration items from a configuration store.
+     *
+     * @param string $storeName The name of the configuration store
+     * @param array<array-key, string> $keys The keys of the configuration items to get; all items if empty
+     * @param array<array-key, string> $metadata Optional metadata passed to the configuration store
+     *
+     * @return array<string, ConfigurationItem> The configuration items, keyed by their configuration key
+     */
+    abstract public function getConfiguration(string $storeName, array $keys = [], array $metadata = []): array;
+
+    /**
+     * @param string $storeName
+     * @param array<array-key, string> $keys
+     * @param array<array-key, string> $metadata
+     *
+     * @return PromiseInterface<array<string, ConfigurationItem>>
+     */
+    abstract public function getConfigurationAsync(
+        string $storeName,
+        array $keys = [],
+        array $metadata = []
+    ): PromiseInterface;
+
+    /**
+     * Subscribe to configuration changes in a configuration store. The sidecar pushes updates to the
+     * application's `/configuration/<store-name>` route; parse them with ConfigurationUpdate::parse().
+     *
+     * @param string $storeName The name of the configuration store
+     * @param array<array-key, string> $keys The keys to subscribe to; all keys if empty
+     * @param array<array-key, string> $metadata Optional metadata passed to the configuration store
+     *
+     * @return string The subscription id, used to unsubscribe
+     */
+    abstract public function subscribeConfiguration(string $storeName, array $keys = [], array $metadata = []): string;
+
+    /**
+     * @param string $storeName
+     * @param array<array-key, string> $keys
+     * @param array<array-key, string> $metadata
+     *
+     * @return PromiseInterface<string>
+     */
+    abstract public function subscribeConfigurationAsync(
+        string $storeName,
+        array $keys = [],
+        array $metadata = []
+    ): PromiseInterface;
+
+    /**
+     * Unsubscribe from configuration changes.
+     *
+     * @param string $storeName The name of the configuration store
+     * @param string $id The subscription id returned by subscribeConfiguration()
+     *
+     * @return bool True if the unsubscription succeeded
+     */
+    abstract public function unsubscribeConfiguration(string $storeName, string $id): bool;
+
+    /**
+     * @param string $storeName
+     * @param string $id
+     *
+     * @return PromiseInterface<bool>
+     */
+    abstract public function unsubscribeConfigurationAsync(string $storeName, string $id): PromiseInterface;
 
     /**
      * Check if the daprd instance is up and running.
