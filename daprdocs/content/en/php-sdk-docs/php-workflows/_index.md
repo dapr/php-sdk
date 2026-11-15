@@ -54,3 +54,5 @@ The asynchronous variants are `terminateWorkflowAsync()` and `getWorkflowAsync()
 ## API compatibility
 
 The PHP SDK currently uses Dapr's HTTP workflow API at `/v1.0/workflows`. Dapr marks this HTTP API as deprecated in favor of workflow SDK clients that use gRPC. The PHP SDK does not currently provide a gRPC workflow client.
+
+**Runtime compatibility:** the termination-reason runtime change is still in draft. The current [Dapr runtime PR](https://github.com/dapr/dapr/pull/11140) adds the reason to the gRPC workflow request and metadata, but does not yet update the HTTP workflow handler to map the `reason` query parameter into that request. The PHP client sends the intended HTTP query parameter; the reason will only be persisted once that handler change is included in a runtime build.
