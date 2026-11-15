@@ -18,6 +18,7 @@ class DaprHttpClient extends DaprClient
     use HttpSecretsTrait;
     use HttpInvokeTrait;
     use HttpPubSubTrait;
+    use HttpWorkflowTrait;
     use HttpBindingTrait;
     use HttpActorTrait;
     use HttpTokenTrait;
