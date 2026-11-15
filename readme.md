@@ -278,7 +278,7 @@ More detail here: https://docs.dapr.io/developing-applications/building-blocks/a
 The client can terminate a workflow instance and retrieve its metadata. A runtime with workflow termination-reason support is required to persist and return the reason.
 
 ```php
-$client = \\Dapr\\Client\\DaprClient::clientBuilder()->build();
+$client = \Dapr\Client\DaprClient::clientBuilder()->build();
 
 // The reason is optional and is stored separately from the workflow output.
 $client->terminateWorkflow(
