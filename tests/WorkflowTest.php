@@ -76,7 +76,7 @@ class WorkflowTest extends DaprTests
             'lastUpdatedAt' => '2026-11-16T00:01:00Z',
             'runtimeStatus' => 'TERMINATED',
             'properties' => [
-                'dapr.workflow.termination_reason' => 'cancelled by operator',
+                'dapr.workflow.custom_status' => 'cancelled by operator',
             ],
         ], JSON_THROW_ON_ERROR);
 
@@ -88,7 +88,7 @@ class WorkflowTest extends DaprTests
         $this->assertSame('TERMINATED', $workflow['runtimeStatus']);
         $this->assertSame(
             'cancelled by operator',
-            $workflow['properties']['dapr.workflow.termination_reason']
+            $workflow['properties']['dapr.workflow.custom_status']
         );
 
         $request = $stack->history[0]['request'];
@@ -104,7 +104,7 @@ class WorkflowTest extends DaprTests
             'instanceID' => 'order-123',
             'runtimeStatus' => 'TERMINATED',
             'properties' => [
-                'dapr.workflow.termination_reason' => 'operator request',
+                'dapr.workflow.custom_status' => 'operator request',
             ],
         ], JSON_THROW_ON_ERROR);
 
@@ -113,7 +113,7 @@ class WorkflowTest extends DaprTests
 
         $workflow = $client->getWorkflowAsync('dapr', 'order-123')->wait();
 
-        $this->assertSame('operator request', $workflow['properties']['dapr.workflow.termination_reason']);
+        $this->assertSame('operator request', $workflow['properties']['dapr.workflow.custom_status']);
         $this->assertRequestMethod('GET', $stack->history[0]['request']);
         $this->assertSame('', $stack->history[0]['request']->getUri()->getQuery());
     }
