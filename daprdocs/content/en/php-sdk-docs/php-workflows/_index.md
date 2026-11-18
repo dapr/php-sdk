@@ -11,7 +11,7 @@ The PHP client exposes the Dapr workflow termination and metadata HTTP APIs. Use
 
 ## Terminate a workflow
 
-Pass a reason to record why an instance was terminated. The reason is optional and is stored separately from the workflow output.
+Pass a reason to record why an instance was terminated. The reason is optional and is stored as the workflow termination input, exposed through the existing custom-status property.
 
 ```php
 $client->terminateWorkflow(
@@ -36,7 +36,7 @@ A null reason is omitted. Passing an empty string explicitly sends an empty reas
 
 ## Read the termination reason
 
-Retrieve the workflow metadata and read the reason from the `properties` map:
+Retrieve the workflow metadata and read the reason from the `properties` map under `dapr.workflow.custom_status`:
 
 ```php
 $workflow = $client->getWorkflow(
@@ -44,10 +44,10 @@ $workflow = $client->getWorkflow(
     instanceId: 'order-123'
 );
 
-$terminationReason = $workflow['properties']['dapr.workflow.termination_reason'] ?? null;
+$terminationReason = $workflow['properties']['dapr.workflow.custom_status'] ?? null;
 ```
 
-The property is absent for workflows that have not been terminated with a reason, and when the connected runtime does not expose termination reasons.
+When no reason is supplied, the existing workflow custom status remains unchanged.
 
 The asynchronous variants are `terminateWorkflowAsync()` and `getWorkflowAsync()`.
 
@@ -55,4 +55,4 @@ The asynchronous variants are `terminateWorkflowAsync()` and `getWorkflowAsync()
 
 The PHP SDK currently uses Dapr's HTTP workflow API at `/v1.0/workflows`. Dapr marks this HTTP API as deprecated in favor of workflow SDK clients that use gRPC. The PHP SDK does not currently provide a gRPC workflow client.
 
-**Runtime compatibility:** the termination-reason runtime change is still in draft. The current [Dapr runtime PR](https://github.com/dapr/dapr/pull/11140) adds the reason to the gRPC workflow request and metadata, but does not yet update the HTTP workflow handler to map the `reason` query parameter into that request. The PHP client sends the intended HTTP query parameter; the reason will only be persisted once that handler change is included in a runtime build.
+**Runtime compatibility:** the termination-reason runtime change is still in draft. The Dapr runtime maps the optional `reason` query parameter to its workflow termination request and exposes a supplied reason through `dapr.workflow.custom_status`.
