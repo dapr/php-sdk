@@ -273,6 +273,35 @@ $client->invokeActorMethod(
 
 More detail here: https://docs.dapr.io/developing-applications/building-blocks/actors/actors-overview/
 
+# Workflows
+
+The client can terminate a workflow instance and retrieve its metadata. A runtime with workflow termination-reason support is required to persist the reason and expose it through `dapr.workflow.custom_status`.
+
+```php
+$client = \Dapr\Client\DaprClient::clientBuilder()->build();
+
+// The reason is optional and is stored as the workflow termination input, exposed through the existing custom-status property.
+$client->terminateWorkflow(
+    workflowComponent: 'dapr',
+    instanceId: 'order-123',
+    reason: 'cancelled by operator'
+);
+
+// Read the reason from workflow metadata later.
+$workflow = $client->getWorkflow(
+    workflowComponent: 'dapr',
+    instanceId: 'order-123'
+);
+
+$terminationReason = $workflow['properties']['dapr.workflow.custom_status'] ?? null;
+```
+
+Both operations have asynchronous variants: `terminateWorkflowAsync()` and `getWorkflowAsync()`. Pass `appId` to target a workflow hosted by another application in the same namespace, subject to that application's workflow access policy.
+
+The workflow HTTP API is deprecated by Dapr in favor of SDK workflow clients using gRPC. This PHP client currently uses the HTTP API.
+
+**Runtime compatibility:** the termination-reason runtime change is still in draft. The Dapr runtime maps the optional `reason` query parameter to its workflow termination request and exposes a supplied reason through `dapr.workflow.custom_status`.
+
 # Pub/Sub
 
 Delivering events around your application is an important aspect of any application. This is supported by Dapr, and

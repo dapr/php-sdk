@@ -459,6 +459,51 @@ abstract class DaprClient
     abstract public function getMetadata(): MetadataResponse|null;
 
     /**
+     * Terminate a workflow instance.
+     *
+     * @param string $workflowComponent The workflow component name, usually dapr.
+     * @param string $instanceId The workflow instance ID.
+     * @param string|null $reason Optional termination reason.
+     * @param string|null $appId Optional ID of the app hosting the workflow.
+     */
+    abstract public function terminateWorkflow(
+        string $workflowComponent,
+        string $instanceId,
+        ?string $reason = null,
+        ?string $appId = null
+    ): void;
+
+    /**
+     * @return PromiseInterface<null>
+     */
+    abstract public function terminateWorkflowAsync(
+        string $workflowComponent,
+        string $instanceId,
+        ?string $reason = null,
+        ?string $appId = null
+    ): PromiseInterface;
+
+    /**
+     * Retrieve workflow instance metadata, including the termination reason when present.
+     *
+     * @return array<array-key, mixed>
+     */
+    abstract public function getWorkflow(
+        string $workflowComponent,
+        string $instanceId,
+        ?string $appId = null
+    ): array;
+
+    /**
+     * @return PromiseInterface<array<array-key, mixed>>
+     */
+    abstract public function getWorkflowAsync(
+        string $workflowComponent,
+        string $instanceId,
+        ?string $appId = null
+    ): PromiseInterface;
+
+    /**
      * Shutdown the Daprd sidecar
      *
      * @param bool $afterRequest If true, schedules a php shutdown function, otherwise fires the request immediately.
