@@ -20,8 +20,8 @@ trait HttpWorkflowTrait
     /**
      * Terminates a workflow instance.
      *
-     * The reason is optional and is persisted separately from the workflow
-     * output by runtimes that support workflow termination reasons.
+     * The reason is optional and is recorded as the termination input. The runtime
+     * exposes it through the workflow custom-status property.
      *
      * @throws \Dapr\exceptions\DaprException
      */
@@ -38,7 +38,7 @@ trait HttpWorkflowTrait
      * Terminates a workflow instance asynchronously.
      *
      * A null reason is omitted from the request. An explicitly empty reason is
-     * sent as reason=, preserving protobuf field presence semantics.
+     * sent as reason=, preserving the distinction between an omitted reason and an explicit empty reason.
      *
      * @return PromiseInterface<null>
      */
@@ -73,7 +73,7 @@ trait HttpWorkflowTrait
      * Gets workflow instance metadata.
      *
      * The termination reason, when present, is exposed at
-     * properties['dapr.workflow.termination_reason'].
+     * properties['dapr.workflow.custom_status'].
      *
      * @return array<array-key, mixed>
      * @throws \Dapr\exceptions\DaprException
