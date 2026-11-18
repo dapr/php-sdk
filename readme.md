@@ -275,12 +275,12 @@ More detail here: https://docs.dapr.io/developing-applications/building-blocks/a
 
 # Workflows
 
-The client can terminate a workflow instance and retrieve its metadata. A runtime with workflow termination-reason support is required to persist and return the reason.
+The client can terminate a workflow instance and retrieve its metadata. A runtime with workflow termination-reason support is required to persist the reason and expose it through `dapr.workflow.custom_status`.
 
 ```php
 $client = \Dapr\Client\DaprClient::clientBuilder()->build();
 
-// The reason is optional and is stored separately from the workflow output.
+// The reason is optional and is stored as the workflow termination input, exposed through the existing custom-status property.
 $client->terminateWorkflow(
     workflowComponent: 'dapr',
     instanceId: 'order-123',
@@ -293,14 +293,14 @@ $workflow = $client->getWorkflow(
     instanceId: 'order-123'
 );
 
-$terminationReason = $workflow['properties']['dapr.workflow.termination_reason'] ?? null;
+$terminationReason = $workflow['properties']['dapr.workflow.custom_status'] ?? null;
 ```
 
 Both operations have asynchronous variants: `terminateWorkflowAsync()` and `getWorkflowAsync()`. Pass `appId` to target a workflow hosted by another application in the same namespace, subject to that application's workflow access policy.
 
 The workflow HTTP API is deprecated by Dapr in favor of SDK workflow clients using gRPC. This PHP client currently uses the HTTP API.
 
-**Runtime compatibility:** the termination-reason runtime change is still in draft. The current [Dapr runtime PR](https://github.com/dapr/dapr/pull/11140) adds the reason to the gRPC workflow request and metadata, but does not yet update the HTTP workflow handler to map the `reason` query parameter into that request. The PHP client sends the intended HTTP query parameter; the reason will only be persisted once that handler change is included in a runtime build.
+**Runtime compatibility:** the termination-reason runtime change is still in draft. The Dapr runtime maps the optional `reason` query parameter to its workflow termination request and exposes a supplied reason through `dapr.workflow.custom_status`.
 
 # Pub/Sub
 
