@@ -34,10 +34,12 @@ The `App` object also implements a PSR-15 compatible middleware which implements
 for you.
 
 ```php
-$app = \Dapr\App::create(configure: [
+$app = \Dapr\App::create(configure: fn(\DI\ContainerBuilder $builder) => $builder->addDefinitions([
     // custom configuration
-]);
-use_middleware($app);
+]));
+
+// add $app to your PSR-15 framework's middleware stack, which then calls:
+// $app->process($request, $handler);
 ```
 
 # Accessing Secrets
