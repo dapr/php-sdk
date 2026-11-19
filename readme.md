@@ -1,51 +1,26 @@
-# Using this library
+# Dapr SDK for PHP
 
 [![PHP Composer](https://github.com/dapr/php-sdk/actions/workflows/php.yml/badge.svg)](https://github.com/dapr/php-sdk/actions/workflows/php.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dapr/php-sdk/blob/main/LICENSE)
+[![Discord](https://img.shields.io/discord/778680217417809931?label=Discord&style=flat&logo=discord)](https://bit.ly/dapr-discord)
 
-This library is licensed with the MIT license.
+The Dapr SDK for PHP lets PHP applications use [Dapr](https://dapr.io) for state management, actors, pub/sub and
+secrets, and ships a PSR-15 middleware that serves the actor and subscription routes for you.
 
-Add the library to your `composer.json`:
+- Documentation: [docs.dapr.io/developing-applications/sdks/php](https://docs.dapr.io/developing-applications/sdks/php/)
+- Community: [Dapr Discord](https://bit.ly/dapr-discord)
+- Other Dapr SDKs: [docs.dapr.io/developing-applications/sdks](https://docs.dapr.io/developing-applications/sdks/)
 
-> composer require dapr/php-sdk
+# Installation
 
-Some basic documentation is below, more documentation can be
-found [in the docs](https://docs.dapr.io/developing-applications/sdks/php/);
+This library requires PHP 8.4 or later. Add it to your project with Composer:
 
-# Migrating to 1.2
+```sh
+composer require dapr/php-sdk
+```
 
-In preparation for gRPC support in this SDK, there's now a new DaprClient in `\Dapr\Client\DaprClient`. Please update
-your code to use the new client.
-
-There shouldn't be many changes to your code to upgrade to 1.2+ from a prior version. Namely, there are some
-deprecations:
-
-## Deprecations
-
-The following have been deprecated and will be removed in 1.4+.
-
-### \Dapr\SecretManager has been deprecated
-
-Simply use the new client instead.
-
-### \Dapr\Client has been deprecated
-
-Simply use the new client: `\Dapr\Client\DaprClient`.
-
-### \Dapr\PubSub\Publish has been deprecated
-
-Simply instantiate `\Dapr\PubSub\Topic` directly or use the new client directly.
-
-## Fallbacks and Upgrades
-
-### \Dapr\State\StateManager
-
-This class has been upgraded to use the new client. It shouldn't require any changes to your code, however, the old
-behavior can be utilized with `\Dapr\State\StateManagerOld`.
-
-### \Dapr\State\TransactionalState
-
-This class has been upgrade to use the new client. It shouldn't require any changes to your code, however, the old
-behavior can be utilized with `\Dapr\State\TransactionalStateOld`.
+Some basic documentation is below; more documentation can be
+found [in the docs](https://docs.dapr.io/developing-applications/sdks/php/).
 
 # Creating a Dapr Client
 
@@ -87,7 +62,7 @@ There are several ways to access state. You can access state directly via the cl
 
 ```php
 ['value' => $value, 'etag' => $etag] = $client->getStateAndEtag(storeName: 'statestore', key: 'key', asType: SomeClass::class, consistency: \Dapr\consistency\EventualLastWrite::instance());
-$value = $client->getState(storeName: 'statestore', key: 'key', asType: 'string',consistency: \Dapr\consistency\StrongFirstWrite::instance())
+$value = $client->getState(storeName: 'statestore', key: 'key', asType: 'string',consistency: \Dapr\consistency\StrongFirstWrite::instance());
 ```
 
 ## Abstract via Object
@@ -150,7 +125,7 @@ objects or commit transactions directly.
 ```php
 $transaction = [
     \Dapr\Client\StateTransactionRequest::upsert(key: 'key', value: $client->serializer->as_json($new_value)),
-    \Dapr\Client\StateTransactionRequest::delete(key: 'key');
+    \Dapr\Client\StateTransactionRequest::delete(key: 'key'),
 ];
 $client->executeStateTransaction(storeName: 'statestore', operations: $transaction);
 ```
@@ -248,7 +223,7 @@ use Dapr\Actors\ActorProxy;
  $app->get('/increment/{actorId}[/{amount:\d+}]', function(string $actorId, ActorProxy $actorProxy, int $amount = 1) {
     $counter = $actorProxy->get(ICounter::class, $actorId);
     $counter->increment($amount);
-    $counter->create_reminder('increment', new \Dapr\Actors\Reminder('increment', new DateInterval('PT10M'), data: 10 ));
+    $counter->create_reminder(new \Dapr\Actors\Reminder('increment', new DateInterval('PT10M'), data: 10 ));
  });
 $app->start();
 ```
@@ -335,8 +310,44 @@ $app->start();
 $client = \Dapr\Client\DaprClient::clientBuilder()
     ->withDeserializationConfig($configuration)
     ->withSerializationConfig($configuration)
-    ->build()
+    ->build();
 ```
+
+# Migrating to 1.2
+
+In preparation for gRPC support in this SDK, there's now a new DaprClient in `\Dapr\Client\DaprClient`. Please update
+your code to use the new client.
+
+There shouldn't be many changes to your code to upgrade to 1.2+ from a prior version. Namely, there are some
+deprecations:
+
+## Deprecations
+
+The following have been deprecated and will be removed in 1.4+.
+
+### \Dapr\SecretManager has been deprecated
+
+Simply use the new client instead.
+
+### \Dapr\Client has been deprecated
+
+Simply use the new client: `\Dapr\Client\DaprClient`.
+
+### \Dapr\PubSub\Publish has been deprecated
+
+Simply instantiate `\Dapr\PubSub\Topic` directly or use the new client directly.
+
+## Fallbacks and Upgrades
+
+### \Dapr\State\StateManager
+
+This class has been upgraded to use the new client. It shouldn't require any changes to your code, however, the old
+behavior can be utilized with `\Dapr\State\StateManagerOld`.
+
+### \Dapr\State\TransactionalState
+
+This class has been upgrade to use the new client. It shouldn't require any changes to your code, however, the old
+behavior can be utilized with `\Dapr\State\TransactionalStateOld`.
 
 # Development
 
